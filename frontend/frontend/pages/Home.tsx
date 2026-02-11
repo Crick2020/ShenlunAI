@@ -18,19 +18,36 @@ const Home: React.FC<HomeProps> = ({ onSelectPaper }) => {
   });
  
 
-  // 3. 新增：去后端抓取数据的逻辑
+  // 3. 去后端抓取试卷列表（带超时，避免 Render 冷启动时一直转圈）
+  const [listError, setListError] = useState<string | null>(null);
   useEffect(() => {
-    fetch('https://shenlun-backend.onrender.com/api/list')
-      .then(res => res.json())
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 28000);
+
+    fetch('https://shenlun-backend.onrender.com/api/list', { signal: controller.signal })
+      .then(res => {
+        clearTimeout(timeoutId);
+        if (!res.ok) throw new Error(`请求失败: ${res.status}`);
+        return res.json();
+      })
       .then(data => {
         console.log("后端试卷列表:", data);
-        setPapers(data);
-        setIsLoading(false);
+        setPapers(Array.isArray(data) ? data : []);
+        setListError(null);
       })
       .catch(err => {
+        clearTimeout(timeoutId);
         console.error("加载试卷失败:", err);
-        setIsLoading(false);
-      });
+        setPapers([]);
+        setListError(err.name === 'AbortError'
+          ? '后端响应超时，可能正在唤醒，请稍后刷新页面'
+          : '加载试卷列表失败，请检查网络或稍后重试');
+      })
+      .finally(() => setIsLoading(false));
+    return () => {
+      clearTimeout(timeoutId);
+      controller.abort();
+    };
   }, []);
 
   useEffect(() => {
@@ -163,6 +180,16 @@ const Home: React.FC<HomeProps> = ({ onSelectPaper }) => {
       {/* 状态显示：加载中 或 试卷列表 */}
       {isLoading ? (
         <div className="text-center py-20 text-gray-400">正在从后端加载试卷...</div>
+      ) : listError ? (
+        <div className="col-span-full py-16 md:py-24 text-center bg-white/40 rounded-[32px] border border-dashed border-black/10 mx-2">
+          <p className="text-[#1d1d1f] font-bold text-base">{listError}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-4 px-6 py-2 bg-[#0071e3] text-white rounded-full text-sm font-bold"
+          >
+            刷新页面
+          </button>
+        </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
           {filteredPapers.length > 0 ? (
