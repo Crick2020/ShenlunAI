@@ -1,3 +1,6 @@
-frontend/node_modules
-.cursor
-__pycache__
+.DS_Store
+.next/
+node_modules/
+.env
+.vscode/
+dist/
