@@ -13,7 +13,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, type, onClose, onPa
   const [showExampleMobile, setShowExampleMobile] = useState(false);
   
   if (!isOpen) return null;
-  const price = type === QuestionType.SMALL ? 1 : 2;
+  const originalPrice = type === QuestionType.SMALL ? 2 : 3;
 
   return (
     <div className="fixed inset-0 z-[110] flex items-center justify-center p-0 md:p-6 lg:p-8 animate-in fade-in duration-300">
@@ -47,14 +47,17 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, type, onClose, onPa
               <p className="text-[10px] md:text-xs font-bold text-[#86868b] uppercase tracking-[0.2em] mb-4">
                 {type === QuestionType.SMALL ? '小题智能批改' : '大作文深度精批'}
               </p>
-              <div className="flex items-center justify-center text-[#0071e3]">
-                <span className="text-2xl font-black mr-1">¥</span>
-                <span className="text-6xl md:text-7xl font-black tracking-tighter">{price}.00</span>
+              <div className="flex flex-col items-center justify-center gap-2">
+                <div className="flex items-center justify-center text-[#86868b]">
+                  <span className="text-lg md:text-xl font-bold mr-1 line-through">¥</span>
+                  <span className="text-2xl md:text-3xl font-bold tracking-tighter line-through">{originalPrice}.00</span>
+                </div>
+                <div className="text-[#34c759] font-black text-2xl md:text-3xl tracking-tight">限时免费</div>
               </div>
             </div>
 
-            {/* QR Code Area - Reduced sizes to fit better */}
-            <div className="flex flex-col items-center pt-1">
+            {/* QR Code Area - 先隐藏 */}
+            <div className="hidden flex-col items-center pt-1">
               <div className="bg-white p-4 rounded-[32px] shadow-[0_15px_40px_rgba(0,0,0,0.06)] border border-black/[0.03] mb-4 group transition-transform hover:scale-105 duration-500">
                 <img 
                   src="https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=pay-mock" 
