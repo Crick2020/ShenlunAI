@@ -201,8 +201,12 @@ def grade_essay(payload: dict):
                         questions_for_model.append(q)
                         break
 
-    # 取材料
-    materials = payload.get("materials") or (paper.get("materials") if paper else []) or []
+    # 取材料：优先用 payload 中的非空 materials，否则用试卷里的（避免前端传空数组覆盖试卷材料）
+    payload_materials = payload.get("materials")
+    materials = (payload_materials if payload_materials else (paper.get("materials") if paper else [])) or []
+    print(f"[批改] paper_id={paper_id}, paper_loaded={paper is not None}, materials_count={len(materials)}, questions_count={len(questions_for_model)}, answers_keys={list(answers.keys())}")
+    if not materials:
+        print("警告：材料为空，请检查 data 目录是否有对应试卷 JSON 或前端是否传递 materials")
 
     # 构造发给模型的简洁上下文（只包含需要的部分）
     model_input = {
