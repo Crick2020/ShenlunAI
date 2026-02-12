@@ -1,5 +1,4 @@
-
-import React from 'react';
+import React, { useState } from 'react';
 import { GradingResult, HistoryRecord } from '../types';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from 'recharts';
 
@@ -9,7 +8,10 @@ interface ReportProps {
 }
 
 const Report: React.FC<ReportProps> = ({ record, onBack }) => {
-  const { result, userAnswer, paperName, questionTitle } = record;
+  const { result, userAnswer, paperName, questionTitle, rawGradingResponse } = record;
+  const [showRawJson, setShowRawJson] = useState(false);
+  const rawText = result.modelRawOutput ?? rawGradingResponse?.modelRawOutput ?? '';
+  const hasFullRaw = rawText || (rawGradingResponse && Object.keys(rawGradingResponse).length > 0);
 
   // 兜底：防止后端未返回 radarData 导致前端报错
   const safeRadar = result.radarData || {
@@ -154,6 +156,45 @@ const Report: React.FC<ReportProps> = ({ record, onBack }) => {
             </div>
           </div>
         </div>
+
+        {/* AI 完整返回：原文 + 解析后 JSON */}
+        {hasFullRaw && (
+          <div className="bg-white rounded-3xl md:rounded-[40px] apple-card-shadow border border-black/[0.06] overflow-hidden">
+            <div className="px-6 py-4 md:px-10 md:py-6 border-b border-black/[0.06] bg-[#f5f5f7]">
+              <h3 className="text-lg md:text-xl font-bold text-[#1d1d1f] flex items-center">
+                <span className="w-1.5 h-6 bg-[#0071e3] rounded-full mr-3"></span>
+                AI 批改完整返回
+              </h3>
+              <p className="text-[#86868b] text-sm mt-1">以下为模型返回的全文（文本/JSON），便于核对与调试。</p>
+            </div>
+            <div className="p-6 md:p-10 space-y-6">
+              {rawText && (
+                <div>
+                  <h4 className="text-sm font-bold text-[#86868b] uppercase tracking-wider mb-2">模型原始输出</h4>
+                  <pre className="bg-[#1d1d1f] text-white/90 text-sm md:text-base rounded-2xl p-4 md:p-6 overflow-auto max-h-[50vh] whitespace-pre-wrap break-words font-mono select-text">
+                    {rawText}
+                  </pre>
+                </div>
+              )}
+              {rawGradingResponse && (
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => setShowRawJson(!showRawJson)}
+                    className="text-sm font-semibold text-[#0071e3] hover:underline mb-2"
+                  >
+                    {showRawJson ? '收起' : '展开'}解析后完整数据 (JSON)
+                  </button>
+                  {showRawJson && (
+                    <pre className="bg-[#fbfbfd] border border-black/[0.08] text-[#1d1d1f] text-xs md:text-sm rounded-2xl p-4 md:p-6 overflow-auto max-h-[60vh] whitespace-pre-wrap break-words font-mono select-text">
+                      {JSON.stringify(rawGradingResponse, null, 2)}
+                    </pre>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

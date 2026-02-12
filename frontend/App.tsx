@@ -114,7 +114,6 @@ const App: React.FC = () => {
         detailedComments: rawResult?.detailedComments ?? [],
         modelAnswer:
           rawResult?.modelAnswer ||
-          // 如果后端按 perQuestion 返回参考答案，这里尝试提取第一题的参考答案
           (() => {
             const perQ = rawResult?.perQuestion;
             if (perQ && typeof perQ === 'object') {
@@ -126,6 +125,8 @@ const App: React.FC = () => {
             }
             return '（模型暂未提供参考答案，请根据总评与扣分点自行调整作答。）';
           })(),
+        modelRawOutput: rawResult?.modelRawOutput,
+        perQuestion: rawResult?.perQuestion,
       };
 
       const newRecord: HistoryRecord = {
@@ -135,7 +136,8 @@ const App: React.FC = () => {
         score: normalizedResult.score,
         timestamp: Date.now(),
         result: normalizedResult,
-        userAnswer: pendingGrading.answer
+        userAnswer: pendingGrading.answer,
+        rawGradingResponse: rawResult,
       };
 
       const updatedHistory = [newRecord, ...history];
