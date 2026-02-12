@@ -2,6 +2,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import json
 import os
+import re
 import urllib.request
 import urllib.error
 from typing import Optional, List, Dict, Any
@@ -90,6 +91,31 @@ def get_paper(id: str):
         return data
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"试卷解析失败: {str(e)}")
+
+
+def _fallback_grading_result(model_input: dict, message: str, raw: str) -> dict:
+    """Gemini 返回无法解析时，返回前端可用的兜底结构。"""
+    questions = model_input.get("questions") or []
+    per_question = {}
+    total_max = 0
+    for q in questions:
+        qid = q.get("id") or str(len(per_question) + 1)
+        maxs = q.get("maxScore") or 100
+        total_max += maxs
+        per_question[qid] = {
+            "score": 0,
+            "maxScore": maxs,
+            "deductions": [],
+            "referenceAnswer": "（模型未返回有效结果）",
+        }
+    return {
+        "score": 0,
+        "maxScore": total_max or 100,
+        "overallEvaluation": f"【解析异常】{message}",
+        "detailedComments": [],
+        "perQuestion": per_question,
+        "modelRawOutput": raw or "",
+    }
 
 
 # ---------------------------------------------------------
@@ -216,20 +242,40 @@ def grade_essay(payload: dict):
     prompt_lines.append("\n请先分析整套题目考察的核心能力与作答思路，然后基于材料原文尽量使用材料中的表述作为参考答案或点评依据；逐题给出参考答案、本题分值与扣分要点，并说明扣分理由。总分按题目 maxScore 的和计算（若无则按 100 分满分制）。")
     prompt = "\n".join(prompt_lines)
 
-    # 尝试调用 Gemini（如果环境变量设置了）
     gemini_raw = call_gemini_system(prompt)
     if gemini_raw:
-        # 如果模型返回了文本，尝试解析 JSON
+        body = gemini_raw.strip()
+        if not body:
+            print("Gemini 返回为空文本")
+            return _fallback_grading_result(model_input, "模型未返回内容（可能被截断或安全过滤）", gemini_raw)
+
+        result = None
         try:
-            # 有些模型会返回包裹的文本，尽量提取第一个 JSON 对象
-            body = gemini_raw.strip()
-            # 直接尝试解析
             result = json.loads(body)
+        except json.JSONDecodeError:
+            m = re.search(r"```(?:json)?\s*(\{[\s\S]*?\})\s*```", body)
+            if m:
+                try:
+                    result = json.loads(m.group(1))
+                except json.JSONDecodeError:
+                    pass
+            if result is None:
+                start, end = body.find("{"), body.rfind("}")
+                if start != -1 and end != -1 and end > start:
+                    try:
+                        result = json.loads(body[start : end + 1])
+                    except json.JSONDecodeError:
+                        pass
+
+        if result is not None and isinstance(result, dict):
+            if result.get("error") and "score" not in result:
+                print("Gemini API 返回错误:", result.get("error"))
+                return _fallback_grading_result(model_input, "API 错误: " + str(result.get("error")), gemini_raw)
             result["modelRawOutput"] = body
             return result
-        except Exception as e:
-            print("解析 Gemini 返回为 JSON 失败，返回原始文本供调试:", e)
-            return {"score": None, "maxScore": None, "overallEvaluation": "模型返回非 JSON，见 modelRawOutput", "modelRawOutput": gemini_raw}
+
+        print("解析 Gemini 返回为 JSON 失败. body 前 200 字:", body[:200] if len(body) > 200 else body)
+        return _fallback_grading_result(model_input, "模型返回格式无法解析，请查看 modelRawOutput", gemini_raw)
 
     # 如果没有可用的 Gemini，则走模拟逻辑：根据 answers 生成每题评分
     # 简单模拟：每题默认分值 100/题数，若有 maxScore 则按 maxScore 分配
@@ -306,7 +352,7 @@ def call_gemini_system(prompt: str) -> Optional[str]:
         ],
         "generationConfig": {
             "temperature": 0.0,
-            "maxOutputTokens": 800,
+            "maxOutputTokens": 4096,
         },
     }
 
@@ -319,19 +365,24 @@ def call_gemini_system(prompt: str) -> Optional[str]:
         },
     )
     try:
-        with urllib.request.urlopen(req, timeout=30) as resp:
+        with urllib.request.urlopen(req, timeout=60) as resp:
             raw = resp.read().decode("utf-8")
-            # Google Gemini 返回的是 JSON，需要从中提取文本内容
+            if not raw or not raw.strip():
+                print("Gemini API 返回空 body")
+                return None
             try:
                 obj = json.loads(raw)
             except Exception:
-                # 如果解析失败，直接把原始内容返回，后续逻辑会做兜底处理
                 return raw
+
+            if obj.get("error"):
+                print("Gemini API 错误:", obj.get("error"))
+                return None
 
             candidates = obj.get("candidates") or []
             if not candidates:
-                # 没有候选内容，返回原始 JSON 供调试
-                return raw
+                print("Gemini API 无 candidates，原始响应:", raw[:500])
+                return None
 
             first = candidates[0] or {}
             content = first.get("content") or {}
@@ -341,8 +392,10 @@ def call_gemini_system(prompt: str) -> Optional[str]:
                 if isinstance(p, dict) and "text" in p:
                     texts.append(p["text"])
             merged = "\n".join(texts).strip()
-            # 如果成功提取到文本，就返回文本（期望是严格 JSON 字符串）
-            return merged or raw
+            if not merged:
+                print("Gemini 候选内容无文本，可能被安全过滤。finishReason:", first.get("finishReason"))
+                return None
+            return merged
     except Exception as e:
         print("call_gemini_system failed:", e)
         return None
