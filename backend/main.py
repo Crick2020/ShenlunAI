@@ -117,6 +117,17 @@ def get_paper(id: str):
         raise HTTPException(status_code=500, detail=f"试卷解析失败: {str(e)}")
 
 
+def _parse_score_from_markdown(text: str) -> tuple:
+    """从 Gemini 返回的 Markdown 中尝试解析 得分：X/满分Y 或 得分：X/Y。返回 (score, max_score) 或 (None, None)。"""
+    if not text:
+        return (None, None)
+    # 常见写法：得分：15/20、得分：15/满分20、**得分**：15/20
+    m = re.search(r"得分[：:\s]*(\d+)\s*[/／]\s*(?:满分)?\s*(\d+)", text, re.IGNORECASE)
+    if m:
+        return (int(m.group(1)), int(m.group(2)))
+    return (None, None)
+
+
 def _fallback_grading_result(model_input: dict, message: str, raw: str) -> dict:
     """Gemini 返回无法解析时，返回前端可用的兜底结构。"""
     questions = model_input.get("questions") or []
@@ -278,22 +289,22 @@ def grade_essay(payload: dict):
             "maxScore": q.get("maxScore") or q.get("score") or None,
         })
 
-    # 构造 prompt：材料全文发给 Gemini，便于依据材料评分
+    # 构造 prompt：材料全文发给 Gemini，要求以 Markdown 直接输出（不要求 JSON）
     prompt_lines = []
-    prompt_lines.append("角色与任务：你是一位资深的申论老师，分析下面这道题目及其材料，并给出作答思路，同时按照该省份要求评析考生答案，给出扣分点，并进行打分，最后按照题目要求给出参考答案，参考答案尽可能使用材料原词。")
+    prompt_lines.append("请以一个资深申论老师的视角，分析这道题目及其材料，给出审题关键点、材料深度解析和作答思路，同时按照本省要求评析用户的答案，给出扣分点，并进行打分，然后按照题目要求给出参考答案，参考答案尽可能使用材料原词。")
     region = model_input.get("region")
     if region:
         prompt_lines.append(f"本套试卷的地区（供评分标准参考）：{region}。在评分时，请优先参考该地区公务员申论考试的常见评分要求进行分析。")
     else:
         prompt_lines.append("在评分时，请结合本题材料与一般公务员申论评分逻辑，自行归纳合理的评分尺度。")
-    prompt_lines.append("请严格按照 JSON 格式输出，不要包含其他多余文本。输出字段：score、maxScore、overallEvaluation、detailedComments（数组）、perQuestion（对象，键为题目id）。其中 overallEvaluation、detailedComments 中每条 comment、perQuestion 中各题的 referenceAnswer 及扣分说明等文本内容可使用 **Markdown** 格式（如 **加粗**、- 列表、分段），便于前端富文本展示。")
+    prompt_lines.append("请用 Markdown 格式直接输出你的分析报告（可使用标题、加粗、列表、分段等），不要输出 JSON。报告中请明确写出得分（例如：得分：X/满分Y），便于系统解析。")
     prompt_lines.append("材料（materials）如下（含完整正文，请依据材料原文评分、给出参考答案与扣分点）：")
     prompt_lines.append(json.dumps(materials_to_send, ensure_ascii=False))
     prompt_lines.append("\n题目（questions）如下（每题包含 id、title、requirements、maxScore）：")
     prompt_lines.append(json.dumps(model_input["questions"], ensure_ascii=False))
     prompt_lines.append("\n学生答案（answers，键为题目id）：")
     prompt_lines.append(json.dumps(answers, ensure_ascii=False))
-    prompt_lines.append("\n请先分析题目与材料并给出作答思路，再按省份要求评析考生答案、给出扣分点并打分，最后给出参考答案（尽可能使用材料原词）。总分按题目 maxScore 的和计算（若无则按 100 分满分制）。")
+    prompt_lines.append("\n请按上述要求，直接输出完整的 Markdown 分析报告。")
     prompt = "\n".join(prompt_lines)
 
     # 尝试调用 Gemini（如果环境变量设置了）
@@ -304,37 +315,21 @@ def grade_essay(payload: dict):
             print("Gemini 返回为空文本")
             return _fallback_grading_result(model_input, "模型未返回内容（可能被截断或安全过滤）", gemini_raw)
 
-        # 尝试解析 JSON：先直接解析，再尝试从 markdown 代码块或截断文本中提取
-        result = None
-        try:
-            result = json.loads(body)
-        except json.JSONDecodeError:
-            # 尝试从 ```json ... ``` 中提取
-            m = re.search(r"```(?:json)?\s*(\{[\s\S]*?\})\s*```", body)
-            if m:
-                try:
-                    result = json.loads(m.group(1))
-                except json.JSONDecodeError:
-                    pass
-            if result is None:
-                # 尝试找第一个 { 到最后一个 } 之间的内容
-                start = body.find("{")
-                end = body.rfind("}")
-                if start != -1 and end != -1 and end > start:
-                    try:
-                        result = json.loads(body[start : end + 1])
-                    except json.JSONDecodeError:
-                        pass
-
-        if result is not None and isinstance(result, dict):
-            if result.get("error") and "score" not in result:
-                print("Gemini API 返回错误:", result.get("error"))
-                return _fallback_grading_result(model_input, "API 错误: " + str(result.get("error")), gemini_raw)
-            result["modelRawOutput"] = body
-            return result
-
-        print("解析 Gemini 返回为 JSON 失败，返回原始文本供调试. body 前 200 字:", body[:200] if len(body) > 200 else body)
-        return _fallback_grading_result(model_input, "模型返回格式无法解析，请查看 modelRawOutput", gemini_raw)
+        # 不再解析 JSON，直接返回 Markdown 全文；尝试从正文中解析得分供前端列表展示
+        score, max_score = _parse_score_from_markdown(body)
+        if max_score is None:
+            total_max = sum((q.get("maxScore") or 100) for q in (model_input.get("questions") or []))
+            max_score = total_max if total_max else 100
+        return {
+            "content": body,
+            "modelRawOutput": body,
+            "score": score if score is not None else 0,
+            "maxScore": max_score,
+            "overallEvaluation": "",
+            "detailedComments": [],
+            "perQuestion": {},
+            "modelAnswer": "",
+        }
 
     # 如果没有可用的 Gemini，则走模拟逻辑：根据 answers 生成每题评分
     # 简单模拟：每题默认分值 100/题数，若有 maxScore 则按 maxScore 分配

@@ -100,7 +100,8 @@ const App: React.FC = () => {
         pendingGrading.images
       );
 
-      // 兼容后端返回的原始结构，统一整理成前端需要的 GradingResult 结构
+      // 后端现在直接返回 Markdown 正文（content/modelRawOutput），前端仅展示该内容
+      const mainContent = rawResult?.content ?? rawResult?.modelRawOutput ?? '';
       const normalizedResult: GradingResult = {
         score: rawResult?.score ?? 0,
         maxScore: rawResult?.maxScore ?? (pendingGrading.question.maxScore || 100),
@@ -110,22 +111,10 @@ const App: React.FC = () => {
           language: 80,
           format: 80,
         },
-        overallEvaluation: rawResult?.overallEvaluation || '（模型未返回总评，已使用占位说明）',
+        overallEvaluation: rawResult?.overallEvaluation || '',
         detailedComments: rawResult?.detailedComments ?? [],
-        modelAnswer:
-          rawResult?.modelAnswer ||
-          (() => {
-            const perQ = rawResult?.perQuestion;
-            if (perQ && typeof perQ === 'object') {
-              const firstKey = Object.keys(perQ)[0];
-              if (firstKey) {
-                const ref = perQ[firstKey]?.referenceAnswer;
-                if (typeof ref === 'string') return ref;
-              }
-            }
-            return '（模型暂未提供参考答案，请根据总评与扣分点自行调整作答。）';
-          })(),
-        modelRawOutput: rawResult?.modelRawOutput,
+        modelAnswer: rawResult?.modelAnswer ?? '',
+        modelRawOutput: mainContent,
         perQuestion: rawResult?.perQuestion,
       };
 
