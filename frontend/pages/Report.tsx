@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import ReactMarkdown from 'react-markdown';
 import { GradingResult, HistoryRecord } from '../types';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from 'recharts';
 
@@ -28,10 +29,30 @@ const Report: React.FC<ReportProps> = ({ record, onBack }) => {
     { subject: '规范', A: safeRadar.format ?? 0, fullMark: 100 },
   ];
 
-  const handleCopy = () => {
-    const text = `试卷：${paperName}\n题目：${questionTitle}\n得分：${result.score}/${result.maxScore}\n总评：${result.overallEvaluation}`;
-    navigator.clipboard.writeText(text);
-    alert('报告已复制到剪贴板');
+  const handleCopyAll = () => {
+    const parts = [
+      `# 申论批改报告`,
+      `**试卷**：${paperName}`,
+      `**题目**：${questionTitle}`,
+      `**得分**：${result.score} / ${result.maxScore}`,
+      ``,
+      `## 专家总评`,
+      result.overallEvaluation,
+      ``,
+      `## 考生作答`,
+      userAnswer,
+      ``,
+      `## 参考答案`,
+      result.modelAnswer,
+    ];
+    if (result.detailedComments?.length) {
+      parts.push(``, `## 逐句点评`);
+      result.detailedComments.forEach((c: any, i: number) => {
+        parts.push(`${i + 1}. "${c.originalText}"`, `${c.comment}`, ``);
+      });
+    }
+    const text = parts.join('\n');
+    navigator.clipboard.writeText(text).then(() => alert('已复制到剪贴板')).catch(() => alert('复制失败'));
   };
 
   return (
@@ -44,15 +65,9 @@ const Report: React.FC<ReportProps> = ({ record, onBack }) => {
           </div>
           <span className="text-sm font-semibold">返回列表</span>
         </button>
-        <div className="flex space-x-2 md:space-x-3 w-full md:w-auto">
-          <button onClick={handleCopy} className="flex-1 md:flex-none bg-white border border-black/[0.05] p-3 rounded-2xl text-[#1d1d1f] shadow-sm hover:bg-[#f5f5f7] transition-all">
-            <i className="far fa-copy mr-2 md:mr-0"></i>
-            <span className="md:hidden">复制</span>
-          </button>
-          <button className="flex-[2] md:flex-none bg-[#1d1d1f] text-white px-6 md:px-8 py-3 rounded-2xl text-sm font-bold shadow-xl shadow-black/10 hover:bg-black transition-all">
-            <i className="fas fa-file-export mr-2"></i> 下载报告
-          </button>
-        </div>
+        <button onClick={handleCopyAll} className="bg-[#1d1d1f] text-white px-6 md:px-8 py-3 rounded-2xl text-sm font-bold shadow-xl shadow-black/10 hover:bg-black transition-all">
+          <i className="far fa-copy mr-2"></i> 一键复制
+        </button>
       </div>
 
       <div className="space-y-8 md:space-y-10">
@@ -101,9 +116,9 @@ const Report: React.FC<ReportProps> = ({ record, onBack }) => {
                   <span className="w-1 md:w-1.5 h-6 bg-[#34c759] rounded-full mr-3"></span>
                   专家级总评
                 </h3>
-                <div className="bg-[#fbfbfd] rounded-3xl p-6 md:p-10 relative">
-                  <div className="relative z-10 text-[#1d1d1f] leading-[1.8] font-serif-sc text-base md:text-xl italic">
-                    {result.overallEvaluation}
+                <div className="bg-[#fbfbfd] rounded-3xl p-6 md:p-10 relative prose prose-slate max-w-none">
+                  <div className="relative z-10 text-[#1d1d1f] leading-[1.8] text-base md:text-lg">
+                    <ReactMarkdown>{result.overallEvaluation || ''}</ReactMarkdown>
                   </div>
                 </div>
               </div>
@@ -133,7 +148,7 @@ const Report: React.FC<ReportProps> = ({ record, onBack }) => {
                     </div>
                     <div>
                       <p className="text-[#1d1d1f] font-bold text-xs md:text-sm mb-2 opacity-80 italic">“{comment.originalText}”</p>
-                      <p className="text-[#86868b] text-[14px] md:text-[15px] font-medium leading-relaxed">{comment.comment}</p>
+                      <div className="text-[#86868b] text-[14px] md:text-[15px] font-medium leading-relaxed"><ReactMarkdown>{comment.comment || ''}</ReactMarkdown></div>
                     </div>
                   </div>
                 </div>
@@ -151,8 +166,8 @@ const Report: React.FC<ReportProps> = ({ record, onBack }) => {
               </div>
               <h3 className="text-xl md:text-2xl font-bold text-white">高分参考范文</h3>
             </div>
-            <div className="font-serif-sc text-lg md:text-xl leading-[2] md:leading-[2.4] text-white/90 whitespace-pre-wrap select-text selection:bg-blue-500/30">
-              {result.modelAnswer}
+            <div className="font-serif-sc text-lg md:text-xl leading-[2] md:leading-[2.4] text-white/90 select-text selection:bg-blue-500/30 prose prose-invert prose-p:my-2 max-w-none">
+              <ReactMarkdown>{result.modelAnswer || ''}</ReactMarkdown>
             </div>
           </div>
         </div>

@@ -280,20 +280,20 @@ def grade_essay(payload: dict):
 
     # 构造 prompt：材料全文发给 Gemini，便于依据材料评分
     prompt_lines = []
-    prompt_lines.append("你是一位资深的申论老师，负责根据下列材料与试题，对考生的作答进行评分和逐题点评。")
+    prompt_lines.append("角色与任务：你是一位资深的申论老师，分析下面这道题目及其材料，并给出作答思路，同时按照该省份要求评析考生答案，给出扣分点，并进行打分，最后按照题目要求给出参考答案，参考答案尽可能使用材料原词。")
     region = model_input.get("region")
     if region:
         prompt_lines.append(f"本套试卷的地区（供评分标准参考）：{region}。在评分时，请优先参考该地区公务员申论考试的常见评分要求进行分析。")
     else:
         prompt_lines.append("在评分时，请结合本题材料与一般公务员申论评分逻辑，自行归纳合理的评分尺度。")
-    prompt_lines.append("请严格按照 JSON 格式输出，不要包含其他多余文本。输出字段：score、maxScore、overallEvaluation、detailedComments（数组）、perQuestion（对象，键为题目id）和modelRawOutput（供调试用）。")
+    prompt_lines.append("请严格按照 JSON 格式输出，不要包含其他多余文本。输出字段：score、maxScore、overallEvaluation、detailedComments（数组）、perQuestion（对象，键为题目id）。其中 overallEvaluation、detailedComments 中每条 comment、perQuestion 中各题的 referenceAnswer 及扣分说明等文本内容可使用 **Markdown** 格式（如 **加粗**、- 列表、分段），便于前端富文本展示。")
     prompt_lines.append("材料（materials）如下（含完整正文，请依据材料原文评分、给出参考答案与扣分点）：")
     prompt_lines.append(json.dumps(materials_to_send, ensure_ascii=False))
     prompt_lines.append("\n题目（questions）如下（每题包含 id、title、requirements、maxScore）：")
     prompt_lines.append(json.dumps(model_input["questions"], ensure_ascii=False))
     prompt_lines.append("\n学生答案（answers，键为题目id）：")
     prompt_lines.append(json.dumps(answers, ensure_ascii=False))
-    prompt_lines.append("\n请先分析整套题目考察的核心能力与作答思路，然后基于材料原文尽量使用材料中的表述作为参考答案或点评依据；逐题给出参考答案、本题分值与扣分要点，并说明扣分理由。总分按题目 maxScore 的和计算（若无则按 100 分满分制）。")
+    prompt_lines.append("\n请先分析题目与材料并给出作答思路，再按省份要求评析考生答案、给出扣分点并打分，最后给出参考答案（尽可能使用材料原词）。总分按题目 maxScore 的和计算（若无则按 100 分满分制）。")
     prompt = "\n".join(prompt_lines)
 
     # 尝试调用 Gemini（如果环境变量设置了）
