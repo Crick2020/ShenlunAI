@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { GradingResult, HistoryRecord } from '../types';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from 'recharts';
 
@@ -116,9 +117,9 @@ const Report: React.FC<ReportProps> = ({ record, onBack }) => {
                   <span className="w-1 md:w-1.5 h-6 bg-[#34c759] rounded-full mr-3"></span>
                   专家级总评
                 </h3>
-                <div className="bg-[#fbfbfd] rounded-3xl p-6 md:p-10 relative prose prose-slate max-w-none">
+                <div className="bg-[#fbfbfd] rounded-3xl p-6 md:p-10 relative prose prose-slate max-w-none prose-p:my-2 prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5">
                   <div className="relative z-10 text-[#1d1d1f] leading-[1.8] text-base md:text-lg">
-                    <ReactMarkdown>{result.overallEvaluation || ''}</ReactMarkdown>
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{result.overallEvaluation || ''}</ReactMarkdown>
                   </div>
                 </div>
               </div>
@@ -131,8 +132,8 @@ const Report: React.FC<ReportProps> = ({ record, onBack }) => {
           {/* User Answer Card */}
           <div className="bg-white rounded-3xl md:rounded-[40px] apple-card-shadow border border-black/[0.03] p-6 md:p-10 space-y-6">
             <h3 className="text-lg md:text-xl font-bold text-[#1d1d1f]">考生原卷</h3>
-            <div className="font-serif-sc text-base md:text-lg leading-[2] text-[#1d1d1f] bg-[#fbfbfd] p-6 md:p-8 rounded-2xl border border-black/[0.02]">
-              {userAnswer}
+            <div className="font-serif-sc text-base md:text-lg leading-[2] text-[#1d1d1f] bg-[#fbfbfd] p-6 md:p-8 rounded-2xl border border-black/[0.02] prose prose-slate max-w-none prose-p:my-2 prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>{userAnswer || ''}</ReactMarkdown>
             </div>
           </div>
 
@@ -148,7 +149,7 @@ const Report: React.FC<ReportProps> = ({ record, onBack }) => {
                     </div>
                     <div>
                       <p className="text-[#1d1d1f] font-bold text-xs md:text-sm mb-2 opacity-80 italic">“{comment.originalText}”</p>
-                      <div className="text-[#86868b] text-[14px] md:text-[15px] font-medium leading-relaxed"><ReactMarkdown>{comment.comment || ''}</ReactMarkdown></div>
+                      <div className="text-[#86868b] text-[14px] md:text-[15px] font-medium leading-relaxed prose prose-sm prose-slate max-w-none prose-p:my-1 prose-ul:my-1 prose-ol:my-1"><ReactMarkdown remarkPlugins={[remarkGfm]}>{comment.comment || ''}</ReactMarkdown></div>
                     </div>
                   </div>
                 </div>
@@ -166,8 +167,8 @@ const Report: React.FC<ReportProps> = ({ record, onBack }) => {
               </div>
               <h3 className="text-xl md:text-2xl font-bold text-white">高分参考范文</h3>
             </div>
-            <div className="font-serif-sc text-lg md:text-xl leading-[2] md:leading-[2.4] text-white/90 select-text selection:bg-blue-500/30 prose prose-invert prose-p:my-2 max-w-none">
-              <ReactMarkdown>{result.modelAnswer || ''}</ReactMarkdown>
+            <div className="font-serif-sc text-lg md:text-xl leading-[2] md:leading-[2.4] text-white/90 select-text selection:bg-blue-500/30 prose prose-invert prose-p:my-2 prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5 max-w-none">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>{result.modelAnswer || ''}</ReactMarkdown>
             </div>
           </div>
         </div>
