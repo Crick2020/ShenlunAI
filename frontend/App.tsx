@@ -93,6 +93,7 @@ const App: React.FC = () => {
     try {
       // 这里会调用 geminiService，它已经改成了连接你的 Python 后端
       const rawResult: any = await geminiService.gradeEssay(
+        selectedPaper.id,
         selectedPaper.materials,
         pendingGrading.question,
         pendingGrading.answer,
@@ -143,8 +144,9 @@ const App: React.FC = () => {
       
       setSelectedRecord(newRecord);
       setCurrentPage('report');
-    } catch (error) {
-      alert('连接 AI 批改服务失败，请确认后端 main.py 正在运行。');
+    } catch (error: any) {
+      const msg = error?.message || String(error);
+      alert('批改请求失败：' + (msg.includes('状态码') || msg.includes('Failed') ? msg : '请检查网络或后端是否运行（' + msg + '）'));
       console.error(error);
     } finally {
       setIsGrading(false);

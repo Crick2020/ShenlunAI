@@ -154,6 +154,11 @@ def grade_essay(payload: dict):
     paper_id = payload.get("paperId") or payload.get("id")
     if paper_id:
         paper = _load_paper_by_id(paper_id)
+    elif payload.get("user_answer") and not payload.get("answers") and not payload.get("question_id"):
+        raise HTTPException(
+            status_code=400,
+            detail="请求缺少 paperId 和 question_id，无法加载试卷。请重新部署前端（Vercel 等）并刷新页面后再试；前端需传 paperId、question_id、user_answer 或直接传 answers。",
+        )
 
     # 如果前端直接提供了 questions 或 materials，就使用前端的覆盖
     if not paper:
