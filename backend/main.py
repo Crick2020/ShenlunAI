@@ -311,7 +311,7 @@ def call_gemini_system(prompt: str) -> Optional[str]:
     # 这里按照 Google AI Studio 的 REST API 规范调用 Gemini 3 Pro（当前为 preview 模型）
     # 文档地址可参考：https://ai.google.dev/gemini-api/docs
     # 如果后续正式版 model name 有变，可以只改下面这一行。
-    model_name = "gemini-3-pro-preview"
+    model_name = "gemini-3-flash-preview"
     url = base_endpoint.rstrip('/') + f"/v1beta/models/{model_name}:generateContent?key={api_key}"
 
     payload = {
