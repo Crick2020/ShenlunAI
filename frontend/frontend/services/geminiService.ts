@@ -1,7 +1,5 @@
 import { GradingResult, Question, Material } from "../types";
-
-// 这里的 GoogleGenAI 引用被我注释掉了，因为我们不再需要在前端直接用它
-// import { GoogleGenAI, Type, GenerateContentResponse } from "@google/genai";
+import { API_BASE } from "../constants";
 
 export class GeminiService {
   
@@ -12,6 +10,7 @@ export class GeminiService {
   }
 
   async gradeEssay(
+    paperId: string,
     materials: Material[],
     question: Question,
     userAnswer: string,
@@ -21,22 +20,26 @@ export class GeminiService {
     console.log("正在请求 Python 后端进行批改...");
 
     try {
-      // ---------------------------------------------------------
-      // 核心修改：这里不再直接找 Google，而是找你部署在 Render 上的 Python 后端
-      // ---------------------------------------------------------
-      
-      const response = await fetch('https://shenlun-backend.onrender.com/api/grade', {
+      const response = await fetch(`${API_BASE}/api/grade`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        // 把试卷题目、用户写的答案打包发给 Python
         body: JSON.stringify({
+          paperId,
+          materials,
+          question: {
+            id: question.id,
+            type: question.type,
+            title: question.title,
+            requirements: question.requirements,
+            maxScore: question.maxScore,
+            materialIds: question.materialIds,
+          },
+          answers: { [question.id]: userAnswer },
           user_answer: userAnswer,
-          question_title: question.title,
-          requirements: question.requirements,
-          // 如果有图片，也可以放在这里传
-          has_images: images && images.length > 0
+          question_id: question.id,
+          has_images: images && images.length > 0,
         })
       });
 

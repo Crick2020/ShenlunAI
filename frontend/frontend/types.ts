@@ -17,6 +17,8 @@ export interface Question {
   maxScore: number;
   wordLimit: number;
   type: QuestionType;
+  /** 小题对应的材料 id 列表（如 "给定资料1-3" 则为 ["m1","m2","m3"]）；大作文可省略，后端会发全卷材料 */
+  materialIds?: string[];
 }
 
 export interface Paper {

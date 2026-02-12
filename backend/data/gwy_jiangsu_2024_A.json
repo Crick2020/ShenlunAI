@@ -53,7 +53,8 @@
             "requirements": "紧扣给定资料，全面、准确。篇幅不超过250字。",
             "maxScore": 20,
             "wordLimit": 250,
-            "type": "SMALL"
+            "type": "SMALL",
+            "materialIds": ["m1", "m2", "m3", "m4"]
         },
         {
             "id": "q2",
@@ -61,7 +62,8 @@
             "requirements": "归类合理，观点正确，分析透彻，见解深刻。篇幅300字左右。",
             "maxScore": 20,
             "wordLimit": 300,
-            "type": "SMALL"
+            "type": "SMALL",
+            "materialIds": ["m5", "m6"]
         },
         {
             "id": "q3",
@@ -69,7 +71,8 @@
             "requirements": "突出特色，内容全面；建议切当，条理清楚。篇幅350字左右。",
             "maxScore": 20,
             "wordLimit": 350,
-            "type": "SMALL"
+            "type": "SMALL",
+            "materialIds": ["m7"]
         },
         {
             "id": "q4",

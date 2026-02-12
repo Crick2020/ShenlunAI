@@ -53,7 +53,8 @@
             "requirements": "准确全面，语言简练，不列条目。不超过300字。",
             "maxScore": 20,
             "wordLimit": 300,
-            "type": "SMALL"
+            "type": "SMALL",
+            "materialIds": ["m1", "m2", "m3", "m4", "m5"]
         },
         {
             "id": "q2",
@@ -61,7 +62,8 @@
             "requirements": "分析合理，条理清晰，语言简练。不超过250字。",
             "maxScore": 15,
             "wordLimit": 250,
-            "type": "SMALL"
+            "type": "SMALL",
+            "materialIds": ["m5"]
         },
         {
             "id": "q3",
@@ -69,7 +71,8 @@
             "requirements": "建议合理可行，针对性强，条理清晰，语言简练。不超过400字。",
             "maxScore": 25,
             "wordLimit": 400,
-            "type": "SMALL"
+            "type": "SMALL",
+            "materialIds": ["m7"]
         },
         {
             "id": "q4",

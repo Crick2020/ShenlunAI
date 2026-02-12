@@ -93,6 +93,7 @@ const App: React.FC = () => {
     try {
       // 这里会调用 geminiService，它已经改成了连接你的 Python 后端
       const rawResult: any = await geminiService.gradeEssay(
+        selectedPaper.id,
         selectedPaper.materials,
         pendingGrading.question,
         pendingGrading.answer,

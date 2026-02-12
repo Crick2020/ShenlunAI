@@ -169,21 +169,40 @@ def grade_essay(payload: dict):
             if qobj:
                 questions_for_model.append(qobj)
             else:
-                # 如果没找到，尝试从 payload 的 questions 字段里寻找
-                for q in payload.get("questions", []):
-                    if isinstance(q, dict) and (q.get("id") == qid or q.get("qid") == qid):
-                        questions_for_model.append(q)
-                        break
+                # 若试卷中未匹配到，尝试 payload 的 question（单题）或 questions（列表）
+                single = payload.get("question")
+                if isinstance(single, dict) and (single.get("id") == qid or single.get("qid") == qid):
+                    questions_for_model.append(single)
+                else:
+                    for q in payload.get("questions", []):
+                        if isinstance(q, dict) and (q.get("id") == qid or q.get("qid") == qid):
+                            questions_for_model.append(q)
+                            break
 
-    # 取材料
+    # 取材料（完整列表，含 id、title、content）
     materials = payload.get("materials") or (paper.get("materials") if paper else []) or []
+
+    # 根据题目类型与 materialIds 决定发给 Gemini 的材料：大作文发全卷材料，小题只发对应材料
+    has_essay = any((q.get("type") or "").upper() == "ESSAY" for q in questions_for_model)
+    if has_essay:
+        materials_to_send = list(materials)
+    else:
+        mid_set = set()
+        for q in questions_for_model:
+            ids = q.get("materialIds") or q.get("material_ids")
+            if ids:
+                mid_set.update(ids if isinstance(ids, list) else [ids])
+        if mid_set:
+            materials_to_send = [m for m in materials if m.get("id") in mid_set]
+        else:
+            materials_to_send = list(materials)
 
     # 构造发给模型的简洁上下文（只包含需要的部分）
     model_input = {
         "paperId": paper.get("id") if paper else (paper_id or "unknown"),
         "paperName": paper.get("name") if paper else payload.get("paperName", ""),
         "region": (paper.get("region") if paper else payload.get("region")) or None,
-        "materials": materials,
+        "materials": materials_to_send,
         "questions": [],
         "answers": answers,
     }
@@ -196,19 +215,17 @@ def grade_essay(payload: dict):
             "maxScore": q.get("maxScore") or q.get("score") or None,
         })
 
-    # 构造 prompt：指示模型返回严格的 JSON，包含总分、每题得分、扣分点、参考答案等
+    # 构造 prompt：材料全文发给 Gemini，便于依据材料评分
     prompt_lines = []
     prompt_lines.append("你是一位资深的申论老师，负责根据下列材料与试题，对考生的作答进行评分和逐题点评。")
-    # 如果能够获取到地区信息，则显式告知模型
     region = model_input.get("region")
     if region:
         prompt_lines.append(f"本套试卷的地区（供评分标准参考）：{region}。在评分时，请优先参考该地区公务员申论考试的常见评分要求进行分析。")
     else:
-        # 理论上每套题目都会包含地区信息，这里仅作兜底说明
         prompt_lines.append("在评分时，请结合本题材料与一般公务员申论评分逻辑，自行归纳合理的评分尺度。")
     prompt_lines.append("请严格按照 JSON 格式输出，不要包含其他多余文本。输出字段：score、maxScore、overallEvaluation、detailedComments（数组）、perQuestion（对象，键为题目id）和modelRawOutput（供调试用）。")
-    prompt_lines.append("材料（materials）如下：")
-    prompt_lines.append(json.dumps(materials, ensure_ascii=False))
+    prompt_lines.append("材料（materials）如下（含完整正文，请依据材料原文评分、给出参考答案与扣分点）：")
+    prompt_lines.append(json.dumps(materials_to_send, ensure_ascii=False))
     prompt_lines.append("\n题目（questions）如下（每题包含 id、title、requirements、maxScore）：")
     prompt_lines.append(json.dumps(model_input["questions"], ensure_ascii=False))
     prompt_lines.append("\n学生答案（answers，键为题目id）：")
