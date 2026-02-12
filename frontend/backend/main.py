@@ -20,10 +20,32 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 辅助函数：获取 data 文件夹路径
+
+@app.on_event("startup")
+def startup_log():
+    data_dir = get_data_dir()
+    exists = os.path.isdir(data_dir)
+    files = list(os.listdir(data_dir)) if exists else []
+    print(f"[Startup] data_dir={data_dir}, exists={exists}, cwd={os.getcwd()}, files={files[:20]}")
+
+
 def get_data_dir():
     current_dir = os.path.dirname(os.path.abspath(__file__))
     return os.path.join(current_dir, "data")
+
+
+def _load_paper_by_id(paper_id: str):
+    data_dir = get_data_dir()
+    for base in [data_dir, os.path.abspath("data")]:
+        file_path = os.path.join(base, f"{paper_id}.json")
+        if os.path.isfile(file_path):
+            try:
+                with open(file_path, "r", encoding="utf-8") as f:
+                    return json.load(f)
+            except Exception as e:
+                print(f"读取试卷失败 {file_path}: {e}")
+    print(f"试卷未找到: paper_id={paper_id}, data_dir={data_dir}, cwd={os.getcwd()}")
+    return None
 
 
 # ---------------------------------------------------------
@@ -125,18 +147,11 @@ def _fallback_grading_result(model_input: dict, message: str, raw: str) -> dict:
 def grade_essay(payload: dict):
     print("收到前端提交的答案:", payload)
 
-    # 支持传入 paperId 来从 data 中读取试卷
+    # 支持传入 paperId 来从 data 中读取试卷（优先从文件加载，兼容 Render 部署）
     paper = None
     paper_id = payload.get("paperId") or payload.get("id")
-    data_dir = get_data_dir()
     if paper_id:
-        file_path = os.path.join(data_dir, f"{paper_id}.json")
-        if os.path.exists(file_path):
-            try:
-                with open(file_path, "r", encoding="utf-8") as f:
-                    paper = json.load(f)
-            except Exception as e:
-                print("读取试卷失败:", e)
+        paper = _load_paper_by_id(paper_id)
 
     # 如果前端直接提供了 questions 或 materials，就使用前端的覆盖
     if not paper:
@@ -195,18 +210,30 @@ def grade_essay(payload: dict):
             if qobj:
                 questions_for_model.append(qobj)
             else:
-                # 如果没找到，尝试从 payload 的 questions 字段里寻找
-                for q in payload.get("questions", []):
-                    if isinstance(q, dict) and (q.get("id") == qid or q.get("qid") == qid):
-                        questions_for_model.append(q)
-                        break
+                single = payload.get("question")
+                if isinstance(single, dict) and (single.get("id") == qid or single.get("qid") == qid):
+                    questions_for_model.append(single)
+                else:
+                    for q in payload.get("questions", []):
+                        if isinstance(q, dict) and (q.get("id") == qid or q.get("qid") == qid):
+                            questions_for_model.append(q)
+                            break
 
-    # 取材料：优先用 payload 中的非空 materials，否则用试卷里的（避免前端传空数组覆盖试卷材料）
+    # 取材料：优先用 payload 中的非空 materials，否则用试卷里的
     payload_materials = payload.get("materials")
     materials = (payload_materials if payload_materials else (paper.get("materials") if paper else [])) or []
     print(f"[批改] paper_id={paper_id}, paper_loaded={paper is not None}, materials_count={len(materials)}, questions_count={len(questions_for_model)}, answers_keys={list(answers.keys())}")
     if not materials:
-        print("警告：材料为空，请检查 data 目录是否有对应试卷 JSON 或前端是否传递 materials")
+        print("警告：材料为空")
+    if not materials or not questions_for_model or not answers:
+        detail = []
+        if not materials:
+            detail.append("材料为空")
+        if not questions_for_model:
+            detail.append("题目为空")
+        if not answers:
+            detail.append("答案为空")
+        raise HTTPException(status_code=400, detail="；".join(detail) + "。请确认：1) 后端 data 目录已部署且含对应试卷 JSON；2) 前端请求带有 paperId 与 answers。")
 
     # 构造发给模型的简洁上下文（只包含需要的部分）
     model_input = {

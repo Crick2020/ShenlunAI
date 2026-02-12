@@ -20,10 +20,34 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 辅助函数：获取 data 文件夹路径
+
+@app.on_event("startup")
+def startup_log():
+    """启动时打印 data 目录路径及文件，便于 Render 等环境排查试卷是否部署。"""
+    data_dir = get_data_dir()
+    exists = os.path.isdir(data_dir)
+    files = list(os.listdir(data_dir)) if exists else []
+    print(f"[Startup] data_dir={data_dir}, exists={exists}, cwd={os.getcwd()}, files={files[:20]}")
+
+# 辅助函数：获取 data 文件夹路径（绝对路径，不依赖 cwd）
 def get_data_dir():
     current_dir = os.path.dirname(os.path.abspath(__file__))
     return os.path.join(current_dir, "data")
+
+
+def _load_paper_by_id(paper_id: str):
+    """从 data 目录加载试卷，尝试主路径 + cwd/data 备用（兼容 Render 等部署）。"""
+    data_dir = get_data_dir()
+    for base in [data_dir, os.path.abspath("data")]:
+        file_path = os.path.join(base, f"{paper_id}.json")
+        if os.path.isfile(file_path):
+            try:
+                with open(file_path, "r", encoding="utf-8") as f:
+                    return json.load(f)
+            except Exception as e:
+                print(f"读取试卷失败 {file_path}: {e}")
+    print(f"试卷未找到: paper_id={paper_id}, data_dir={data_dir}, cwd={os.getcwd()}, data_dir_exists={os.path.isdir(data_dir)}")
+    return None
 
 
 # ---------------------------------------------------------
@@ -125,18 +149,11 @@ def _fallback_grading_result(model_input: dict, message: str, raw: str) -> dict:
 def grade_essay(payload: dict):
     print("收到前端提交的答案:", payload)
 
-    # 支持传入 paperId 来从 data 中读取试卷
+    # 支持传入 paperId 来从 data 中读取试卷（优先从文件加载，兼容 Render 部署）
     paper = None
     paper_id = payload.get("paperId") or payload.get("id")
-    data_dir = get_data_dir()
     if paper_id:
-        file_path = os.path.join(data_dir, f"{paper_id}.json")
-        if os.path.exists(file_path):
-            try:
-                with open(file_path, "r", encoding="utf-8") as f:
-                    paper = json.load(f)
-            except Exception as e:
-                print("读取试卷失败:", e)
+        paper = _load_paper_by_id(paper_id)
 
     # 如果前端直接提供了 questions 或 materials，就使用前端的覆盖
     if not paper:
@@ -211,6 +228,17 @@ def grade_essay(payload: dict):
     print(f"[批改] paper_id={paper_id}, paper_loaded={paper is not None}, materials_count={len(materials)}, questions_count={len(questions_for_model)}, answers_keys={list(answers.keys())}")
     if not materials:
         print("警告：材料为空，请检查 data 目录是否有对应试卷 JSON 或前端是否传递 materials")
+    # 若材料/题目/答案任一为空，不调用 Gemini，直接返回明确错误（避免模型回复「内容均为空」）
+    if not materials or not questions_for_model or not answers:
+        detail = []
+        if not materials:
+            detail.append("材料为空")
+        if not questions_for_model:
+            detail.append("题目为空")
+        if not answers:
+            detail.append("答案为空")
+        msg = "；".join(detail) + "。请确认：1) 后端 data 目录已部署且含对应试卷 JSON；2) 前端请求带有 paperId 与 answers。"
+        raise HTTPException(status_code=400, detail=msg)
 
     # 根据题目类型与 materialIds 决定发给 Gemini 的材料：大作文发全卷材料，小题只发对应材料
     has_essay = any((q.get("type") or "").upper() == "ESSAY" for q in questions_for_model)
