@@ -100,32 +100,21 @@ const App: React.FC = () => {
         pendingGrading.images
       );
 
-      // 兼容后端返回的原始结构，统一整理成前端需要的 GradingResult 结构
+      // 后端现在直接返回 Markdown 正文（content/modelRawOutput），前端仅展示该内容
+      const mainContent = (rawResult?.content ?? rawResult?.modelRawOutput ?? '').trim();
+      if (!mainContent) {
+        alert('批改服务暂未返回有效内容，请确认已配置 GEMINI_API_KEY 且后端正常运行。');
+        return;
+      }
       const normalizedResult: GradingResult = {
         score: rawResult?.score ?? 0,
         maxScore: rawResult?.maxScore ?? (pendingGrading.question.maxScore || 100),
-        radarData: rawResult?.radarData ?? {
-          points: 80,
-          logic: 80,
-          language: 80,
-          format: 80,
-        },
-        overallEvaluation: rawResult?.overallEvaluation || '（模型未返回总评，已使用占位说明）',
+        radarData: rawResult?.radarData ?? { points: 80, logic: 80, language: 80, format: 80 },
+        overallEvaluation: rawResult?.overallEvaluation || '',
         detailedComments: rawResult?.detailedComments ?? [],
-        modelAnswer:
-          rawResult?.modelAnswer ||
-          // 如果后端按 perQuestion 返回参考答案，这里尝试提取第一题的参考答案
-          (() => {
-            const perQ = rawResult?.perQuestion;
-            if (perQ && typeof perQ === 'object') {
-              const firstKey = Object.keys(perQ)[0];
-              if (firstKey) {
-                const ref = perQ[firstKey]?.referenceAnswer;
-                if (typeof ref === 'string') return ref;
-              }
-            }
-            return '（模型暂未提供参考答案，请根据总评与扣分点自行调整作答。）';
-          })(),
+        modelAnswer: rawResult?.modelAnswer ?? '',
+        modelRawOutput: mainContent,
+        perQuestion: rawResult?.perQuestion,
       };
 
       const newRecord: HistoryRecord = {
@@ -135,17 +124,17 @@ const App: React.FC = () => {
         score: normalizedResult.score,
         timestamp: Date.now(),
         result: normalizedResult,
-        userAnswer: pendingGrading.answer
+        userAnswer: pendingGrading.answer,
+        rawGradingResponse: rawResult,
       };
 
       const updatedHistory = [newRecord, ...history];
       setHistory(updatedHistory);
       localStorage.setItem('history', JSON.stringify(updatedHistory));
-      
       setSelectedRecord(newRecord);
       setCurrentPage('report');
     } catch (error) {
-      alert('连接 AI 批改服务失败，请确认后端 main.py 正在运行。');
+      alert('批改请求失败，请检查网络或确认后端是否运行。');
       console.error(error);
     } finally {
       setIsGrading(false);

@@ -101,7 +101,12 @@ const App: React.FC = () => {
       );
 
       // 后端现在直接返回 Markdown 正文（content/modelRawOutput），前端仅展示该内容
-      const mainContent = rawResult?.content ?? rawResult?.modelRawOutput ?? '';
+      const mainContent = (rawResult?.content ?? rawResult?.modelRawOutput ?? '').trim();
+      // 无 Gemini 返回内容（如后端未配置或报错占位）时不进入批改页，避免展示模拟/空白
+      if (!mainContent) {
+        alert('批改服务暂未返回有效内容，请确认已配置 GEMINI_API_KEY 且后端正常运行。');
+        return;
+      }
       const normalizedResult: GradingResult = {
         score: rawResult?.score ?? 0,
         maxScore: rawResult?.maxScore ?? (pendingGrading.question.maxScore || 100),
@@ -132,7 +137,6 @@ const App: React.FC = () => {
       const updatedHistory = [newRecord, ...history];
       setHistory(updatedHistory);
       localStorage.setItem('history', JSON.stringify(updatedHistory));
-      
       setSelectedRecord(newRecord);
       setCurrentPage('report');
     } catch (error: any) {

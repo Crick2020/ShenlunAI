@@ -47,6 +47,9 @@ export interface GradingResult {
     type: 'positive' | 'negative';
   }[];
   modelAnswer: string;
+  /** AI 原始返回全文（Markdown），批改页仅展示此项 */
+  modelRawOutput?: string;
+  perQuestion?: Record<string, any>;
 }
 
 export interface HistoryRecord {
@@ -57,6 +60,7 @@ export interface HistoryRecord {
   timestamp: number;
   result: GradingResult;
   userAnswer: string;
+  rawGradingResponse?: any;
 }
 
 export interface User {
