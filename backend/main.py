@@ -263,7 +263,12 @@ def grade_essay(payload: dict):
     # 根据题目类型与 materialIds 决定发给 Gemini 的材料：大作文发全卷材料，小题只发对应材料
     has_essay = any((q.get("type") or "").upper() == "ESSAY" for q in questions_for_model)
     if has_essay:
-        materials_to_send = list(materials)
+        # 大作文必须发全卷材料：优先用后端试卷文件中的完整 materials，避免前端 payload 漏传或截断
+        paper_materials = (paper.get("materials") if paper else []) or []
+        materials_to_send = list(paper_materials) if paper_materials else list(materials)
+        if not materials_to_send and materials:
+            materials_to_send = list(materials)
+        print(f"[批改] 大作文题，发送材料数: {len(materials_to_send)} (试卷文件: {len(paper_materials)}, payload: {len(materials)})")
     else:
         mid_set = set()
         for q in questions_for_model:
@@ -295,7 +300,7 @@ def grade_essay(payload: dict):
 
     # 构造 prompt：材料全文发给 Gemini，要求以 Markdown 直接输出（不要求 JSON）
     prompt_lines = []
-    prompt_lines.append("请以一个资深申论老师的视角，分析这道题目及其材料，给出审题关键点、材料深度解析和作答思路，同时按照本省要求评析用户的答案，给出扣分点，并进行打分，然后按照题目要求给出参考答案，参考答案尽可能使用材料原词。")
+    prompt_lines.append("请以一个资深申论老师的视角，分析这道题目及其材料，给出审题关键点、材料深度解析和作答思路，同时按照本省要求评析用户的答案，并优化用户作答思路，给出扣分点，并进行打分，然后按照题目要求给出参考答案以及用户的提升建议，同时给出材料的精彩例句，参考答案尽可能使用材料原词。")
     region = model_input.get("region")
     if region:
         prompt_lines.append(f"本套试卷的地区（供评分标准参考）：{region}。在评分时，请优先参考该地区公务员申论考试的常见评分要求进行分析。")
@@ -307,7 +312,8 @@ def grade_essay(payload: dict):
     prompt_lines.append("\n题目（questions）如下（每题包含 id、title、requirements、maxScore）：")
     prompt_lines.append(json.dumps(model_input["questions"], ensure_ascii=False))
     if answer_images:
-        prompt_lines.append("\n学生答案以图片形式提供（见下方图片），请识别图片中的手写/印刷内容并按上述要求批改。若同时有文字答案则见下方。")
+        prompt_lines.append("\n学生答案以图片形式提供，下方有多张图片，请将全部图片均视为同一道题的作答内容，按顺序识别并综合批改。若同时有文字答案则见下方。")
+        prompt_lines.append("【图片字数判定规则】根据图片估算字数时，按每行约 25 字计算。若题目有字数要求，而你估算的字数与要求相差超过 30%（过多或过少），则视为字数合适、不扣字数分，并在报告中说明为字数判断误差，不因此扣分。")
         if answers and not (list(answers.values())[0] or "").strip().startswith("（考生上传了作答图片"):
             prompt_lines.append("学生答案（文字补充）：")
             prompt_lines.append(json.dumps(answers, ensure_ascii=False))
