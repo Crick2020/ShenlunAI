@@ -15,26 +15,34 @@ export class GeminiService {
   ): Promise<GradingResult> {
     console.log("正在请求 Python 后端进行批改...", API_BASE);
 
+    // 拍照上传时以图片为答案发送；文字作答时以文字为答案。若仅有图片则传占位文字以满足后端校验，实际批改以 answer_images 为准
+    const hasImages = !!(images && images.length > 0);
+    const answerText = (userAnswer && userAnswer.trim()) || (hasImages ? "（考生上传了作答图片，请根据图片内容批改）" : "");
+
     try {
+      const body: Record<string, unknown> = {
+        paperId,
+        materials,
+        question: {
+          id: question.id,
+          type: question.type,
+          title: question.title,
+          requirements: question.requirements,
+          maxScore: question.maxScore,
+          materialIds: question.materialIds,
+        },
+        answers: { [question.id]: answerText },
+        user_answer: answerText,
+        question_id: question.id,
+        has_images: hasImages,
+      };
+      if (hasImages) {
+        body.answer_images = images;
+      }
       const response = await fetch(`${API_BASE}/api/grade`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          paperId,
-          materials,
-          question: {
-            id: question.id,
-            type: question.type,
-            title: question.title,
-            requirements: question.requirements,
-            maxScore: question.maxScore,
-            materialIds: question.materialIds,
-          },
-          answers: { [question.id]: userAnswer },
-          user_answer: userAnswer,
-          question_id: question.id,
-          has_images: !!(images && images.length > 0),
-        }),
+        body: JSON.stringify(body),
       });
 
       if (!response.ok) {

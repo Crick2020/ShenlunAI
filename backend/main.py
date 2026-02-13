@@ -186,6 +186,10 @@ def grade_essay(payload: dict):
     # 兼容单题提交格式（老格式）
     if not answers and payload.get("question_id") and payload.get("user_answer"):
         answers = { payload.get("question_id"): payload.get("user_answer") }
+    # 拍照上传：仅有 answer_images 时也视为有答案，用占位文字满足后续校验
+    answer_images: List[str] = payload.get("answer_images") or []
+    if answer_images and not answers and payload.get("question_id"):
+        answers = { payload.get("question_id"): "（考生上传了作答图片，请根据图片内容批改）" }
     # 或者前端可能发送 question_id(s) 列表（无答案）
     question_ids: List[str] = []
     if answers:
@@ -302,13 +306,19 @@ def grade_essay(payload: dict):
     prompt_lines.append(json.dumps(materials_to_send, ensure_ascii=False))
     prompt_lines.append("\n题目（questions）如下（每题包含 id、title、requirements、maxScore）：")
     prompt_lines.append(json.dumps(model_input["questions"], ensure_ascii=False))
-    prompt_lines.append("\n学生答案（answers，键为题目id）：")
-    prompt_lines.append(json.dumps(answers, ensure_ascii=False))
+    if answer_images:
+        prompt_lines.append("\n学生答案以图片形式提供（见下方图片），请识别图片中的手写/印刷内容并按上述要求批改。若同时有文字答案则见下方。")
+        if answers and not (list(answers.values())[0] or "").strip().startswith("（考生上传了作答图片"):
+            prompt_lines.append("学生答案（文字补充）：")
+            prompt_lines.append(json.dumps(answers, ensure_ascii=False))
+    else:
+        prompt_lines.append("\n学生答案（answers，键为题目id）：")
+        prompt_lines.append(json.dumps(answers, ensure_ascii=False))
     prompt_lines.append("\n请按上述要求，直接输出完整的 Markdown 分析报告。")
     prompt = "\n".join(prompt_lines)
 
-    # 尝试调用 Gemini（如果环境变量设置了）
-    gemini_raw = call_gemini_system(prompt)
+    # 有图片时走多模态接口，否则仅文本
+    gemini_raw = call_gemini_system_with_images(prompt, answer_images) if answer_images else call_gemini_system(prompt)
     if gemini_raw:
         body = gemini_raw.strip()
         if not body:
@@ -380,6 +390,86 @@ def grade_essay(payload: dict):
         "perQuestion": per_question,
         "detailedComments": [],
     }
+
+
+def _parse_data_url(data_url: str) -> tuple:
+    """从 data URL 解析出 mime_type 和 base64 字符串。返回 (mime_type, base64_str)，无法解析时返回 (None, None)。"""
+    if not data_url or not isinstance(data_url, str):
+        return (None, None)
+    s = data_url.strip()
+    if s.startswith("data:"):
+        # data:image/jpeg;base64,xxxx
+        idx = s.find(",")
+        if idx == -1:
+            return (None, None)
+        header = s[5:idx].strip()
+        payload = s[idx + 1 :].strip()
+        mime = "image/jpeg"
+        if ";" in header:
+            mime = header.split(";")[0].strip().lower() or mime
+        return (mime, payload)
+    # 已是纯 base64
+    return ("image/jpeg", s)
+
+
+def call_gemini_system_with_images(prompt: str, image_data_list: List[str]) -> Optional[str]:
+    """带图片的多模态调用 Gemini，image_data_list 为 data URL 或 base64 字符串列表。"""
+    api_key = os.getenv("GEMINI_API_KEY")
+    base_endpoint = os.getenv("GEMINI_ENDPOINT", "https://generativelanguage.googleapis.com")
+    if not api_key:
+        print("GEMINI not configured (GEMINI_API_KEY missing)")
+        return None
+    model_name = "gemini-3-flash-preview"
+    url = base_endpoint.rstrip("/") + f"/v1beta/models/{model_name}:generateContent?key={api_key}"
+
+    parts: List[Dict[str, Any]] = [{"text": prompt}]
+    for data_url in image_data_list:
+        mime, b64 = _parse_data_url(data_url)
+        if not b64:
+            continue
+        parts.append({
+            "inlineData": {
+                "mimeType": mime or "image/jpeg",
+                "data": b64,
+            }
+        })
+    if len(parts) <= 1:
+        return call_gemini_system(prompt)
+
+    payload = {
+        "contents": [{"role": "user", "parts": parts}],
+        "generationConfig": {"temperature": 0.0, "maxOutputTokens": 4096},
+    }
+    data = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+    req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"})
+    try:
+        with urllib.request.urlopen(req, timeout=90) as resp:
+            raw = resp.read().decode("utf-8")
+            if not raw or not raw.strip():
+                print("Gemini API 返回空 body")
+                return None
+            try:
+                obj = json.loads(raw)
+            except Exception:
+                return raw
+            if obj.get("error"):
+                print("Gemini API 错误:", obj.get("error"))
+                return None
+            candidates = obj.get("candidates") or []
+            if not candidates:
+                print("Gemini API 无 candidates")
+                return None
+            first = candidates[0] or {}
+            content = first.get("content") or {}
+            texts = []
+            for p in content.get("parts") or []:
+                if isinstance(p, dict) and "text" in p:
+                    texts.append(p["text"])
+            merged = "\n".join(texts).strip()
+            return merged if merged else None
+    except Exception as e:
+        print("call_gemini_system_with_images failed:", e)
+        return None
 
 
 def call_gemini_system(prompt: str) -> Optional[str]:
