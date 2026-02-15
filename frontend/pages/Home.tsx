@@ -79,13 +79,14 @@ const Home: React.FC<HomeProps> = ({ onSelectPaper }) => {
     }
   }, [availableRegions]);
 
-  // 4. 修改：不再过滤 MOCK_PAPERS，而是过滤从后端拿到的 papers
-  const filteredPapers = papers.filter(p => {
-    // 宽松匹配：如果后端没传某些字段，就不强行过滤
-    const matchType = p.examType ? p.examType === filters.type : true;
-    const matchRegion = p.region ? p.region === filters.region : true;
-    return matchType && matchRegion;
-  });
+  // 4. 修改：不再过滤 MOCK_PAPERS，而是过滤从后端拿到的 papers；同一地区内按年份降序（新年份在前）
+  const filteredPapers = papers
+    .filter(p => {
+      const matchType = p.examType ? p.examType === filters.type : true;
+      const matchRegion = p.region ? p.region === filters.region : true;
+      return matchType && matchRegion;
+    })
+    .sort((a, b) => (b.year - a.year));
 
   return (
     <div className="max-w-7xl mx-auto px-4 md:px-6 py-6 md:py-12">

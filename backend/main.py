@@ -84,7 +84,16 @@ def list_papers():
             except Exception as e:
                 print(f"读取文件 {filename} 出错: {e}")
                 continue
-                
+
+    # 按地区、再按年份降序排序：同一地区内新年份在前
+    def sort_key(p):
+        region = p.get("region", "全国")
+        year = p.get("year", 0)
+        # 全国放最前，其余按中文拼音
+        region_order = (0 if region == "全国" else 1, region)
+        return (region_order, -year)
+
+    papers.sort(key=sort_key)
     return papers
 
 
@@ -301,7 +310,7 @@ def grade_essay(payload: dict):
     # 构造 prompt：材料全文发给 Gemini，要求以 Markdown 直接输出（不要求 JSON）
     prompt_lines = []
     if has_essay:
-        prompt_lines.append("请以一个资深申论老师的视角，分析这道题目及其材料，给出审题关键点、材料深度解析和作答思路，同时按照本省要求评析用户的答案，评析答案时需要逐段点评，点评好的地方和需要优化的地方，并优化用户作答思路，给出扣分点，并进行打分，然后按照题目要求给出参考答案以及用户的提升建议，同时给出材料的精彩例句，参考答案尽可能使用材料原词。")
+        prompt_lines.append("请以一个资深申论老师的视角，分析这道题目及其材料，给出审题关键点、材料深度解析和作答思路，以及你来作答的话，怎么找论点、拟定标题、开头和结尾，同时按照本省要求评析用户的答案，评析答案时需要逐段点评，点评好的地方和需要优化的地方，并优化用户作答思路，给出扣分点，并进行打分，然后按照题目要求给出参考答案以及用户的提升建议，同时给出材料的精彩例句，参考答案尽可能使用材料原词。")
     else:
         prompt_lines.append("请以一个资深申论老师的视角，分析这道题目及其材料，给出审题关键点、材料深度解析和作答思路，同时按照本省要求评析用户的答案，并优化用户作答思路，给出扣分点，并进行打分，然后按照题目要求给出参考答案以及用户的提升建议，同时给出材料的精彩例句，参考答案尽可能使用材料原词。")
     region = model_input.get("region")
