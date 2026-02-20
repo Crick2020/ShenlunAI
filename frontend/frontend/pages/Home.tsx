@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { EXAM_TYPES, REGIONS } from '../constants';
+import { EXAM_TYPES, REGIONS, API_BASE } from '../constants';
 import { Paper } from '../types';
 
 interface HomeProps {
@@ -24,7 +24,7 @@ const Home: React.FC<HomeProps> = ({ onSelectPaper }) => {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 28000);
 
-    fetch('https://shenlun-backend.onrender.com/api/list', { signal: controller.signal })
+    fetch(`${API_BASE}/api/list`, { signal: controller.signal })
       .then(res => {
         clearTimeout(timeoutId);
         if (!res.ok) throw new Error(`请求失败: ${res.status}`);

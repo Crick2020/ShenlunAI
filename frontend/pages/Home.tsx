@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { EXAM_TYPES, REGIONS } from '../constants';
+import { EXAM_TYPES, REGIONS, API_BASE } from '../constants';
 import { Paper } from '../types';
 
 interface HomeProps {
@@ -20,7 +20,7 @@ const Home: React.FC<HomeProps> = ({ onSelectPaper }) => {
 
   // 3. 新增：去后端抓取数据的逻辑
   useEffect(() => {
-    fetch('https://shenlun-backend.onrender.com/api/list')
+    fetch(`${API_BASE}/api/list`)
       .then(res => res.json())
       .then(data => {
         console.log("后端试卷列表:", data);

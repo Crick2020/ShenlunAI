@@ -6,6 +6,7 @@ import Report from './pages/Report';
 import Profile from './pages/Profile';
 import PaymentModal from './components/PaymentModal';
 import { Paper, User, Question, HistoryRecord, GradingResult } from './types';
+import { API_BASE } from './constants';
 import { geminiService } from './services/geminiService';
 
 const App: React.FC = () => {
@@ -53,7 +54,7 @@ const App: React.FC = () => {
       console.log(`正在从后端获取试卷详情: ${summaryPaper.id}`);
       
       // 发起请求：/api/paper?id=xxx
-      const response = await fetch(`https://shenlun-backend.onrender.com/api/paper?id=${summaryPaper.id}`);
+      const response = await fetch(`${API_BASE}/api/paper?id=${summaryPaper.id}`);
       
       if (!response.ok) {
         throw new Error("试卷加载失败，可能是后端没有这个文件");

@@ -81,8 +81,8 @@ const ExamDetail: React.FC<ExamDetailProps> = ({ paper, onGrade }) => {
           </div>
           <div className="flex-1 overflow-y-auto p-5 md:p-10 lg:p-16 scroll-smooth pb-32 md:pb-16">
             <div className="max-w-2xl mx-auto">
-              <h2 className="text-base md:text-xl font-bold mb-4 md:mb-8 text-[#1d1d1f] tracking-tight">{paper.materials[activeMaterialIndex].title}</h2>
-              <p className="font-serif-sc text-sm md:text-lg leading-[1.8] md:leading-[2] text-[#1d1d1f] text-justify whitespace-pre-wrap select-text selection:bg-blue-100">
+              <h2 className="text-xl md:text-xl font-bold mb-4 md:mb-8 text-[#1d1d1f] tracking-tight">{paper.materials[activeMaterialIndex].title}</h2>
+              <p className="font-serif-sc text-lg md:text-lg leading-[1.8] md:leading-[2] text-[#1d1d1f] text-justify whitespace-pre-wrap select-text selection:bg-blue-100">
                 {paper.materials[activeMaterialIndex].content}
               </p>
             </div>
@@ -109,7 +109,7 @@ const ExamDetail: React.FC<ExamDetailProps> = ({ paper, onGrade }) => {
 
               <div className="space-y-4">
                 <div className="flex items-start justify-between">
-                  <h2 className="text-sm md:text-xl font-bold text-[#1d1d1f] tracking-tight leading-snug">
+                  <h2 className="text-lg md:text-xl font-bold text-[#1d1d1f] tracking-tight leading-snug">
                     {currentQuestion.title.includes('：') ? currentQuestion.title.split('：')[1] : currentQuestion.title}
                   </h2>
                   <span className="ml-3 bg-blue-50 text-[#0071e3] px-2.5 py-1 rounded-full text-[10px] md:text-xs font-bold shrink-0">
@@ -119,7 +119,7 @@ const ExamDetail: React.FC<ExamDetailProps> = ({ paper, onGrade }) => {
                 
                 <div className="bg-[#f5f5f7] rounded-2xl md:rounded-[32px] p-4 md:p-8 border border-black/[0.03]">
                   <p className="text-[12px] font-bold text-[#86868b] uppercase tracking-widest mb-3">作答要求</p>
-                  <div className="text-[12px] md:text-[13px] text-[#1d1d1f] leading-relaxed space-y-1.5 md:space-y-2 opacity-90">
+                  <div className="text-base md:text-[13px] text-[#1d1d1f] leading-relaxed space-y-1.5 md:space-y-2 opacity-90">
                      {currentQuestion.requirements.split('。').filter(r => r.trim()).map((req, i) => (
                        <p key={i} className="flex space-x-2">
                          <span className="text-[#0071e3] font-bold shrink-0">•</span>
@@ -137,7 +137,7 @@ const ExamDetail: React.FC<ExamDetailProps> = ({ paper, onGrade }) => {
                     value={currentAnswer}
                     onChange={handleAnswerChange}
                     placeholder="在此键入您的答案..."
-                    className="w-full min-h-[180px] md:min-h-[350px] p-5 md:p-10 bg-transparent text-[#1d1d1f] leading-relaxed outline-none resize-none font-serif-sc text-sm md:text-lg placeholder:text-[#d1d1d6]"
+                    className="w-full min-h-[180px] md:min-h-[350px] p-5 md:p-10 bg-transparent text-[#1d1d1f] leading-relaxed outline-none resize-none font-serif-sc text-lg md:text-lg placeholder:text-[#d1d1d6]"
                   />
                   
                   {currentQuestionImages.length > 0 && (

@@ -1,6 +1,9 @@
 
 import { Paper, QuestionType } from './types';
 
+/** 后端 API 根地址。本地开发时在 frontend 目录创建 .env.development 并设置 VITE_API_BASE=http://localhost:8000 */
+export const API_BASE = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_BASE) || 'https://shenlun-backend.onrender.com';
+
 export const EXAM_TYPES = ['公务员', '事业单位'];
 export const REGIONS = ['全国', '北京', '浙江', '广东', '山东', '江苏', '四川'];
 export const YEARS = [2025, 2024, 2023, 2022, 2021];
