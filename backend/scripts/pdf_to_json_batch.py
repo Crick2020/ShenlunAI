@@ -27,6 +27,179 @@ SHENLUN_BASE = Path("/Users/luzhipeng/Documents/学习及生活/申论")
 
 # 区域配置: (PDF目录, 区域名, 文件名->输出ID映射)
 REGIONS = {
+    "北京": (
+        SHENLUN_BASE / "北京",
+        "北京",
+        {
+            "2018年北京市公考《申论》题.pdf": "gwy_beijing_2018",
+            "2019年北京市公考《申论》题.pdf": "gwy_beijing_2019",
+            "2020年北京市公考《申论》题（乡镇）.pdf": "gwy_beijing_2020_XiangZhen",
+            "2020年北京市公考《申论》题（区级）.pdf": "gwy_beijing_2020_district",
+            "2021年北京市公考《申论》题（乡镇）.pdf": "gwy_beijing_2021_XiangZhen",
+            "2021年北京市公考《申论》题（区级）.pdf": "gwy_beijing_2021_district",
+            "2022年北京市公考《申论》题.pdf": "gwy_beijing_2022",
+            "2023年北京市公考《申论》题.pdf": "gwy_beijing_2023",
+            "2024年北京市公考《申论》题.pdf": "gwy_beijing_2024",
+            "2025年北京市公考《申论》题.pdf": "gwy_beijing_2025_A",
+        },
+    ),
+    "吉林": (
+        SHENLUN_BASE / "吉林",
+        "吉林",
+        {
+            "2023年公务员多省联考《申论》题（吉林乙卷）.pdf": "gwy_jilin_2023_B",
+        },
+    ),
+    "国家": (
+        SHENLUN_BASE / "国家",
+        "国家",
+        {
+            "2018年国家公考《申论》题（副省级）.pdf": "gwy_guojia_2018_Fushengji",
+            "2018年国家公考《申论》题（地市级）.pdf": "gwy_guojia_2018_Dishiji",
+            "2019年国家公考《申论》题（副省级）.pdf": "gwy_guojia_2019_Fushengji",
+            "2019年国家公考《申论》题（地市级）.pdf": "gwy_guojia_2019_Dishiji",
+            "2020年国家公考《申论》题（副省级）.pdf": "gwy_guojia_2020_Fushengji",
+            "2020年国家公考《申论》题（地市级）.pdf": "gwy_guojia_2020_Dishiji",
+            "2021年国家公考《申论》题（副省级）.pdf": "gwy_guojia_2021_Fushengji",
+            "2021年国家公考《申论》题（地市级）.pdf": "gwy_guojia_2021_Dishiji",
+            "2022年国家公考《申论》题（副省级）.pdf": "gwy_guojia_2022_Fushengji",
+            "2022年国家公考《申论》题（地市级）.pdf": "gwy_guojia_2022_Dishiji",
+            "2022年国家公考《申论》题（行政执法）.pdf": "gwy_guojia_2022_Xingzhengzhifa",
+            "2023年国家公考《申论》题（副省级）.pdf": "gwy_guojia_2023_Fushengji",
+            "2023年国家公考《申论》题（地市级）.pdf": "gwy_guojia_2023_Dishiji",
+            "2023年国家公考《申论》题（行政执法）.pdf": "gwy_guojia_2023_Xingzhengzhifa",
+            "2024年国家公考《申论》题（副省级）.pdf": "gwy_guojia_2024_Fushengji",
+            "2024年国家公考《申论》题（地市级）.pdf": "gwy_guojia_2024_Dishiji",
+            "2024年国家公考《申论》题（行政执法）.pdf": "gwy_guojia_2024_Xingzhengzhifa",
+            "2025年国家公考《申论》题（副省级）.pdf": "gwy_guojia_2025_Fushengji",
+            "2025年国家公考《申论》题（地市级）.pdf": "gwy_guojia_2025_Dishiji",
+            "2025年国家公考《申论》题（行政执法）.pdf": "gwy_guojia_2025_Xingzhengzhifa",
+            "2026年国家公考《申论》题（副省级）（网友回忆版）.pdf": "gwy_guojia_2026_fusheng",
+            "2026年国家公考《申论》题（行政执法）（网友回忆版）.pdf": "gwy_guojia_2026_xingzhengzhifa",
+        },
+    ),
+    "安徽": (
+        SHENLUN_BASE / "安徽",
+        "安徽",
+        {
+            "2018年公务员多省联考《申论》题（安徽A、普通选调卷）.pdf": "gwy_anhui_2018_A",
+            "2018年公务员多省联考《申论》题（安徽B卷）.pdf": "gwy_anhui_2018_B",
+            "2019年公务员多省联考《申论》题（安徽A、普通选调卷）.pdf": "gwy_anhui_2019_A",
+            "2019年公务员多省联考《申论》题（安徽B卷）.pdf": "gwy_anhui_2019_B",
+            "2020年0822公务员多省联考《申论》题（安徽A、普通选调卷）.pdf": "gwy_anhui_2020_A",
+            "2020年0822公务员多省联考《申论》题（安徽B卷）.pdf": "gwy_anhui_2020_B",
+            "2020年0822公务员多省联考《申论》题（安徽C卷）.pdf": "gwy_anhui_2020_C",
+            "2021年公务员多省联考《申论》题（安徽A、普通选调卷）.pdf": "gwy_anhui_2021_A",
+            "2021年公务员多省联考《申论》题（安徽B卷）.pdf": "gwy_anhui_2021_B",
+            "2021年公务员多省联考《申论》题（安徽C卷）.pdf": "gwy_anhui_2021_C",
+            "2022年公务员多省联考《申论》题（安徽A、普通选调卷）.pdf": "gwy_anhui_2022_A",
+            "2022年公务员多省联考《申论》题（安徽B卷）.pdf": "gwy_anhui_2022_B",
+            "2022年公务员多省联考《申论》题（安徽C卷）.pdf": "gwy_anhui_2022_C",
+            "2023年公务员多省联考《申论》题（安徽A、普通选调卷）.pdf": "gwy_anhui_2023_A",
+            "2023年公务员多省联考《申论》题（安徽B卷）.pdf": "gwy_anhui_2023_B",
+            "2023年公务员多省联考《申论》题（安徽C卷）.pdf": "gwy_anhui_2023_C",
+            "2023年安徽省乡镇机关专项考试《申论》题.pdf": "gwy_anhui_2023_township",
+            "2024年公务员多省联考《申论》题（安徽B卷）.pdf": "gwy_anhui_2024_B",
+            "2024年公务员多省联考《申论》题（安徽C卷）.pdf": "gwy_anhui_2024_C",
+            "2025年公务员多省联考《申论》题（安徽A、普通选调卷）.pdf": "gwy_anhui_2025_A",
+            "2025年公务员多省联考《申论》题（安徽B卷）.pdf": "gwy_anhui_2025_B",
+            "2025年公务员多省联考《申论》题（安徽C卷）.pdf": "gwy_anhui_2025_C",
+        },
+    ),
+    "河南": (
+        SHENLUN_BASE / "河南",
+        "河南",
+        {
+            "2017年河南省公考 《申论》题.pdf": "gwy_henan_2017",
+            "2019年公务员多省联考《申论》题（河南乡镇卷）.pdf": "gwy_henan_2019_XiangZhen",
+            "2019年公务员多省联考《申论》题（河南县级、普通选调卷）.pdf": "gwy_henan_2019_XianJi",
+            "2020年0725公务员多省联考《申论》题（河南乡镇卷）.pdf": "gwy_henan_2020_XiangZhen",
+            "2020年0725公务员多省联考《申论》题（河南县级卷）.pdf": "gwy_henan_2020_XianJi",
+            "2021年公务员多省联考《申论》题（河南乡镇卷）.pdf": "gwy_henan_2021_XiangZhen",
+            "2021年公务员多省联考《申论》题（河南县级卷）.pdf": "gwy_henan_2021_XianJi",
+            "2022年公务员多省联考《申论》题（河南乡镇卷）.pdf": "gwy_henan_2022_XiangZhen",
+            "2022年公务员多省联考《申论》题（河南县级卷）.pdf": "gwy_henan_2022_XianJi",
+            "2023年公务员多省联考《申论》题（河南县级卷）.pdf": "gwy_henan_2023_XianJi",
+            "2023年公务员多省联考《申论》题（河南市级卷）.pdf": "gwy_henan_2023_ShiJi",
+            "2024年公务员多省联考《申论》题（河南县级卷）.pdf": "gwy_henan_2024_XianJi",
+            "2024年公务员多省联考《申论》题（河南市级卷）.pdf": "gwy_henan_2024_ShiJi",
+            "2025年公务员多省联考《申论》题（河南县级卷）（网友回忆版）.pdf": "gwy_henan_2025_XianJi",
+            "2025年公务员多省联考《申论》题（河南市级卷）.pdf": "gwy_henan_2025_ShiJi",
+        },
+    ),
+    "海南": (
+        SHENLUN_BASE / "海南",
+        "海南",
+        {
+            "2017年公务员多省联考《申论》题（海南卷）.pdf": "gwy_hainan_2017",
+            "2018年公务员多省联考《申论》题（海南卷）.pdf": "gwy_hainan_2018",
+            "2019年公务员多省联考《申论》题（海南乡镇卷）.pdf": "gwy_hainan_2019_XiangZhen",
+            "2019年公务员多省联考《申论》题（海南县级卷）.pdf": "gwy_hainan_2019_XianJi",
+            "2020年0822公务员多省联考《申论》题（海南乡镇卷）.pdf": "gwy_hainan_2020_XiangZhen",
+            "2020年0822公务员多省联考《申论》题（海南县级卷）.pdf": "gwy_hainan_2020_XianJi",
+            "2021年公务员多省联考《申论》题（海南乡镇卷）.pdf": "gwy_hainan_2021_XiangZhen",
+            "2021年公务员多省联考《申论》题（海南县级卷）.pdf": "gwy_hainan_2021_XianJi",
+            "2022年公务员多省联考《申论》题（海南B卷）.pdf": "gwy_hainan_2022_B",
+            "2022年公务员多省联考《申论》题（海南C卷）.pdf": "gwy_hainan_2022_C",
+            "2023年公务员多省联考《申论》题（海南A卷）.pdf": "gwy_hainan_2023_A",
+            "2023年公务员多省联考《申论》题（海南B卷）.pdf": "gwy_hainan_2023_B",
+            "2023年公务员多省联考《申论》题（海南C卷）.pdf": "gwy_hainan_2023_C",
+            "2024年公务员多省联考《申论》题（海南A卷）.pdf": "gwy_hainan_2024_A",
+            "2025年公务员多省联考《申论》题（海南B卷）.pdf": "gwy_hainan_2025_B",
+        },
+    ),
+    "甘肃": (
+        SHENLUN_BASE / "甘肃",
+        "甘肃",
+        {
+            "2018年公务员多省联考《申论》题（甘肃卷）.pdf": "gwy_gansu_2018_General",
+            "2019年甘肃省公考《申论》题.pdf": "gwy_gansu_2019_General",
+            "2020年0822公务员多省联考《申论》题（甘肃乡镇卷）.pdf": "gwy_gansu_2020_XiangZhen",
+            "2020年0822公务员多省联考《申论》题（甘肃市县卷）.pdf": "gwy_gansu_2020_ShiXian",
+            "2020年0822公务员多省联考《申论》题（甘肃省级卷）.pdf": "gwy_gansu_2020_ShenJi",
+            "2021年公务员多省联考《申论》题（甘肃乡镇卷）.pdf": "gwy_gansu_2021_XiangZhen",
+            "2021年公务员多省联考《申论》题（甘肃省市县卷）.pdf": "gwy_gansu_2021_ShiXian",
+            "2022年公务员多省联考《申论》题（甘肃县乡卷）.pdf": "gwy_gansu_2022_XianXiang",
+            "2023年公务员多省联考《申论》题（甘肃县乡卷）.pdf": "gwy_gansu_2023_XianXiang",
+            "2024年公务员多省联考《申论》题（甘肃县乡卷）.pdf": "gwy_gansu_2024_XianXiang",
+        },
+    ),
+    "福建": (
+        SHENLUN_BASE / "福建",
+        "福建",
+        {
+            "2018年公务员多省联考《申论》题（福建乡镇卷）.pdf": "gwy_fujian_2018_XiangZhen",
+            "2018年公务员多省联考《申论》题（福建县级卷）.pdf": "gwy_fujian_2018_XianJi",
+            "2019年公务员多省联考《申论》题（福建乡镇卷）.pdf": "gwy_fujian_2019_XiangZhen",
+            "2019年公务员多省联考《申论》题（福建县级卷）.pdf": "gwy_fujian_2019_XianJi",
+            "2020年0725公务员多省联考《申论》题（福建乡镇卷）.pdf": "gwy_fujian_2020_XiangZhen",
+            "2020年0725公务员多省联考《申论》题（福建县级卷）.pdf": "gwy_fujian_2020_XianJi",
+            "2021年公务员多省联考《申论》题（福建乡镇卷）.pdf": "gwy_fujian_2021_XiangZhen",
+            "2021年公务员多省联考《申论》题（福建县级卷）.pdf": "gwy_fujian_2021_XianJi",
+            "2022年公务员多省联考《申论》题（福建县乡卷）.pdf": "gwy_fujian_2022_XianXiang",
+            "2022年公务员多省联考《申论》题（福建省市卷）.pdf": "gwy_fujian_2022_ShiShi",
+            "2022年公务员多省联考《申论》题（福建行政执法卷）.pdf": "gwy_fujian_2022_XingZhengZhiFa",
+            "2023年公务员多省联考《申论》题（福建县乡卷）.pdf": "gwy_fujian_2023_XianXiang",
+            "2023年公务员多省联考《申论》题（福建省市卷）.pdf": "gwy_fujian_2023_ShiShi",
+            "2024年公务员多省联考《申论》题（福建县乡卷）.pdf": "gwy_fujian_2024_XianXiang",
+            "2024年公务员多省联考《申论》题（福建省市卷）.pdf": "gwy_fujian_2024_ShiShi",
+            "2024年公务员多省联考《申论》题（福建行政执法卷）.pdf": "gwy_fujian_2024_XingZhengZhiFa",
+            "2025年公务员多省联考《申论》题（福建省市卷）.pdf": "gwy_fujian_2025_city",
+            "2025年公务员多省联考《申论》题（福建通用卷）.pdf": "gwy_fujian_2025_TongYong",
+        },
+    ),
+    "江苏": (
+        SHENLUN_BASE,
+        "江苏",
+        {
+            "2021年江苏省公考《申论》题（A、普通选调卷）.pdf": "gwy_jiangsu_2021_A",
+            "2022年江苏省公考《申论》题（A、普通选调卷）.pdf": "gwy_jiangsu_2022_A",
+            "2023年江苏省公考《申论》题（A、乡镇选调卷）.pdf": "gwy_jiangsu_2023_A",
+            "2024年江苏省公考《申论》题（A、乡镇选调卷）.pdf": "gwy_jiangsu_2024_A",
+            "2025年江苏省公考《申论》题（A、乡镇选调卷）.pdf": "gwy_jiangsu_2025_A",
+            "2025年江苏省公考《申论》题（C卷）.pdf": "gwy_jiangsu_2025_C",
+        },
+    ),
     "广西": (
         SHENLUN_BASE / "广西",
         "广西",
@@ -127,12 +300,78 @@ REGIONS = {
 }
 
 
+def get_underlined_spans(page) -> list:
+    # 1. Find horizontal lines
+    lines = page.lines
+    rects = page.rects
+    horizontal_lines = []
+    for line in lines:
+        if line['width'] > 5 and line['height'] < 2:
+            horizontal_lines.append(line)
+    for rect in rects:
+        if rect['width'] > 5 and rect['height'] < 2:
+            horizontal_lines.append(rect)
+    
+    if not horizontal_lines:
+        return []
+
+    # 2. Find overlapping words
+    words = page.extract_words(keep_blank_chars=True, x_tolerance=2, y_tolerance=2)
+    underlined_words = []
+    
+    for word in words:
+        is_underlined = False
+        for line in horizontal_lines:
+            v_dist = line['top'] - word['bottom']
+            h_overlap = max(0, min(word['x1'], line['x1']) - max(word['x0'], line['x0']))
+            if -2 < v_dist < 5 and h_overlap > (word['x1'] - word['x0']) * 0.5:
+                is_underlined = True
+                break
+        if is_underlined:
+            underlined_words.append(word)
+            
+    if not underlined_words:
+        return []
+
+    # 3. Group words into spans
+    # Sort by vertical position then horizontal
+    underlined_words.sort(key=lambda w: (round(w['top'], 1), w['x0']))
+    
+    spans = []
+    current_span = []
+    
+    for i, word in enumerate(underlined_words):
+        if not current_span:
+            current_span.append(word)
+            continue
+        
+        last_word = current_span[-1]
+        # Check if same line (similar top) and close horizontally
+        if abs(word['top'] - last_word['top']) < 5 and (word['x0'] - last_word['x1']) < 10:
+            current_span.append(word)
+        else:
+            # End of span
+            text = "".join([w['text'] for w in current_span])
+            spans.append(text)
+            current_span = [word]
+            
+    if current_span:
+        text = "".join([w['text'] for w in current_span])
+        spans.append(text)
+        
+    return spans
+
+
 def extract_full_text(pdf_path: Path) -> str:
     full = []
     with pdfplumber.open(pdf_path) as pdf:
         for p in pdf.pages:
             t = p.extract_text()
             if t:
+                spans = get_underlined_spans(p)
+                for span in spans:
+                    if span in t:
+                        t = t.replace(span, f"<u>{span}</u>")
                 full.append(t)
     raw = "\n".join(full)
     return unicodedata.normalize("NFKC", raw)
@@ -504,7 +743,7 @@ def process_guangdong(pdf_path: Path, paper_id: str, name: str, year: int) -> di
 
 
 def main():
-    regions_to_run = sys.argv[1:] if len(sys.argv) > 1 else ["广西", "广东", "贵州"]
+    regions_to_run = sys.argv[1:] if len(sys.argv) > 1 else list(REGIONS.keys())
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     success, fail = 0, 0
 
