@@ -82,8 +82,8 @@ const ExamDetail: React.FC<ExamDetailProps> = ({ paper, onGrade }) => {
           <div className="flex-1 overflow-y-auto p-5 md:p-10 lg:p-16 scroll-smooth pb-32 md:pb-16">
             <div className="max-w-2xl mx-auto">
               <h2 className="text-xl md:text-xl font-bold mb-4 md:mb-8 text-[#1d1d1f] tracking-tight">{paper.materials[activeMaterialIndex].title}</h2>
-              <p 
-                className="font-serif-sc text-lg md:text-lg leading-[1.8] md:leading-[2] text-[#1d1d1f] text-justify whitespace-pre-wrap select-text selection:bg-blue-100"
+              <div
+                className="material-content font-serif-sc text-lg md:text-lg leading-[1.8] md:leading-[2] text-[#1d1d1f] text-justify whitespace-pre-wrap select-text selection:bg-blue-100"
                 dangerouslySetInnerHTML={{ __html: paper.materials[activeMaterialIndex].content }}
               />
             </div>
