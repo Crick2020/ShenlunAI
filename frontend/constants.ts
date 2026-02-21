@@ -4,7 +4,7 @@ import { Paper, QuestionType } from './types';
 export const API_BASE = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_BASE) || 'https://shenlun-backend.onrender.com';
 
 export const EXAM_TYPES = ['公务员', '事业单位'];
-export const REGIONS = ['全国', '北京', '浙江', '广东', '山东', '江苏', '四川'];
+export const REGIONS = ['国考', '北京', '浙江', '广东', '山东', '江苏', '四川'];
 export const YEARS = [2025, 2024, 2023, 2022, 2021];
 
 export const MOCK_PAPERS: Paper[] = [
@@ -62,7 +62,7 @@ export const MOCK_PAPERS: Paper[] = [
     id: 'p2',
     name: '2024年国考公务员《申论》副省级',
     examType: '公务员',
-    region: '全国',
+    region: '国考',
     year: 2024,
     materials: [
       { id: 'm1', title: '资料1：科技创新与自立自强', content: '当前，我国正处于科技飞速发展的关键期...' },

@@ -14,7 +14,7 @@ const Home: React.FC<HomeProps> = ({ onSelectPaper }) => {
 
   const [filters, setFilters] = useState({
     type: '公务员',
-    region: '全国',
+    region: '国考',
   });
  
 
@@ -24,7 +24,12 @@ const Home: React.FC<HomeProps> = ({ onSelectPaper }) => {
       .then(res => res.json())
       .then(data => {
         console.log("后端试卷列表:", data);
-        setPapers(data);
+        // 把后端返回的 "国家" 映射为 "国考"
+        const mappedData = data.map((p: any) => ({
+          ...p,
+          region: p.region === '国家' ? '国考' : p.region
+        }));
+        setPapers(mappedData);
         setIsLoading(false);
       })
       .catch(err => {
@@ -34,7 +39,7 @@ const Home: React.FC<HomeProps> = ({ onSelectPaper }) => {
   }, []);
 
   useEffect(() => {
-    if (filters.type === '事业单位' && filters.region === '全国') {
+    if (filters.type === '事业单位' && filters.region === '国考') {
       setFilters(prev => ({ ...prev, region: '北京' }));
     }
   }, [filters.type]);
@@ -54,16 +59,16 @@ const Home: React.FC<HomeProps> = ({ onSelectPaper }) => {
       .filter(Boolean)
   ));
   const availableRegions = filters.type === '事业单位'
-    ? (regionsFromPapers.length ? regionsFromPapers.filter(r => r !== '全国') : REGIONS.filter(r => r !== '全国'))
+    ? (regionsFromPapers.length ? regionsFromPapers.filter(r => r !== '国考') : REGIONS.filter(r => r !== '国考'))
     : (regionsFromPapers.length ? regionsFromPapers : REGIONS);
 
-  // 把 "全国" 固定放前面，其他省市按首字拼音顺序排序（使用 localeCompare 对中文进行排序）
+  // 把 "国考" 固定放前面，其他省市按首字拼音顺序排序（使用 localeCompare 对中文进行排序）
   const displayedRegions = (() => {
     const arr = Array.from(new Set(availableRegions));
-    const hasNational = arr.includes('全国');
-    const rest = arr.filter(r => r !== '全国');
+    const hasNational = arr.includes('国考');
+    const rest = arr.filter(r => r !== '国考');
     rest.sort((a, b) => a.localeCompare(b, 'zh'));
-    return hasNational ? ['全国', ...rest] : rest;
+    return hasNational ? ['国考', ...rest] : rest;
   })();
 
   // 如果当前选中的 type/region 在可用列表中不存在，自动切换到第一个可用项
@@ -79,14 +84,41 @@ const Home: React.FC<HomeProps> = ({ onSelectPaper }) => {
     }
   }, [availableRegions]);
 
-  // 4. 修改：不再过滤 MOCK_PAPERS，而是过滤从后端拿到的 papers；同一地区内按年份降序（新年份在前）
+  // 从 paper.id 提取 variant 后缀（如 gwy_heilongjiang_2025_XianXiang -> XianXiang）
+  const getVariantOrder = (paper: Paper): number => {
+    const parts = (paper.id || '').split('_');
+    const suffix = parts.length >= 4 ? parts.slice(3).join('_') : (parts[parts.length - 1] || '');
+    const orderMap: Record<string, number> = {
+      Fushengji: 1, fushengji: 1,
+      ShengJi: 2, shengji: 2,
+      TongYong: 3, tongyong: 3,
+      General: 3, general: 3,
+      A: 4, B: 5, C: 6,
+      Jia: 7, Yi: 8, Bing: 9,
+      Dishiji: 10, dishiji: 10,
+      ShiJi: 11, shiji: 11, ShiShi: 11, ShiXian: 11, city: 11, district: 11,
+      XianJi: 12, xianji: 12,
+      Xiang: 13, xiang: 13,
+      XiangZhen: 14, xiangzhen: 14, XianZhen: 14, XianXiang: 14, township: 14,
+      XingZhengZhiFa: 15, Xingzhengzhifa: 15, xingzhengzhifa: 15,
+      GongAn: 16, gongan: 16,
+      ShengShi: 10, shengshi: 10, ShenJi: 11, shenji: 11,
+    };
+    const key = suffix || '';
+    return orderMap[key] ?? 999;
+  };
+
+  // 4. 修改：同一地区、同一年份内，按 variant 规则排序；年份降序（新年份在前）
   const filteredPapers = papers
     .filter(p => {
       const matchType = p.examType ? p.examType === filters.type : true;
       const matchRegion = p.region ? p.region === filters.region : true;
       return matchType && matchRegion;
     })
-    .sort((a, b) => (b.year - a.year));
+    .sort((a, b) => {
+      if (b.year !== a.year) return b.year - a.year;
+      return getVariantOrder(a) - getVariantOrder(b);
+    });
 
   return (
     <div className="max-w-7xl mx-auto px-4 md:px-6 py-6 md:py-12">

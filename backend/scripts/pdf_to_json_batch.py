@@ -43,11 +43,198 @@ REGIONS = {
             "2025年北京市公考《申论》题.pdf": "gwy_beijing_2025_A",
         },
     ),
+    "黑龙江": (
+        SHENLUN_BASE / "黑龙江",
+        "黑龙江",
+        {
+            "2018年公务员多省联考《申论》题（黑龙江A卷：省直）.pdf": "gwy_heilongjiang_2018_A",
+            "2018年公务员多省联考《申论》题（黑龙江B卷：公检法）.pdf": "gwy_heilongjiang_2018_B",
+            "2019年公务员多省联考《申论》题（黑龙江县乡、普通选调卷）.pdf": "gwy_heilongjiang_2019_XianXiang",
+            "2019年黑龙江省公考《申论》题（急需紧缺岗位）.pdf": "gwy_heilongjiang_2019_JiXu",
+            "2020年0822公务员多省联考《申论》题（黑龙江乡镇、普通选调卷）.pdf": "gwy_heilongjiang_2020_XiangZhen",
+            "2020年0822公务员多省联考《申论》题（黑龙江市县卷）.pdf": "gwy_heilongjiang_2020_ShiXian",
+            "2020年0822公务员多省联考《申论》题（黑龙江省级卷）.pdf": "gwy_heilongjiang_2020_ShengJi",
+            "2021年公务员多省联考《申论》题（黑龙江乡镇、普通选调卷）.pdf": "gwy_heilongjiang_2021_XiangZhen",
+            "2021年公务员多省联考《申论》题（黑龙江市县卷）.pdf": "gwy_heilongjiang_2021_ShiXian",
+            "2021年公务员多省联考《申论》题（黑龙江省级卷）.pdf": "gwy_heilongjiang_2021_ShengJi",
+            "2022年公务员多省联考《申论》题（黑龙江县乡、普通选调卷）.pdf": "gwy_heilongjiang_2022_XianXiang",
+            "2022年公务员多省联考《申论》题（黑龙江省直卷）.pdf": "gwy_heilongjiang_2022_ShengZhi",
+            "2022年公务员多省联考《申论》题（黑龙江行政执法卷）.pdf": "gwy_heilongjiang_2022_XingZhengZhiFa",
+            "2023年公务员多省联考《申论》题（黑龙江县乡、普通选调卷）.pdf": "gwy_heilongjiang_2023_XianXiang",
+            "2023年公务员多省联考《申论》题（黑龙江行政执法卷）.pdf": "gwy_heilongjiang_2023_XingZhengZhiFa",
+            "2024年公务员多省联考《申论》题（黑龙江县乡、普通选调卷）.pdf": "gwy_heilongjiang_2024_XianXiang",
+            "2024年公务员多省联考《申论》题（黑龙江省市卷）.pdf": "gwy_heilongjiang_2024_ShengShi",
+            "2024年公务员多省联考《申论》题（黑龙江行政执法卷）.pdf": "gwy_heilongjiang_2024_XingZhengZhiFa",
+            "2025年公务员多省联考《申论》题（黑龙江县乡卷、普通选调卷）.pdf": "gwy_heilongjiang_2025_XianXiang",
+            "2025年公务员多省联考《申论》题（黑龙江省市卷）.pdf": "gwy_heilongjiang_2025_ShengShi",
+        },
+    ),
+    "湖南": (
+        SHENLUN_BASE / "湖南",
+        "湖南",
+        {
+            "2018年公务员多省联考《申论》题（湖南乡镇卷）.pdf": "gwy_hunan_2018_XiangZhen",
+            "2018年公务员多省联考《申论》题（湖南通用卷）.pdf": "gwy_hunan_2018_TongYong",
+            "2019年公务员多省联考《申论》题（湖南乡镇、普通选调卷）.pdf": "gwy_hunan_2019_XiangZhen",
+            "2019年公务员多省联考《申论》题（湖南通用卷）.pdf": "gwy_hunan_2019_TongYong",
+            "2020年0725公务员多省联考《申论》题（湖南通用卷）.pdf": "gwy_hunan_2020_TongYong",
+            "2021年公务员多省联考《申论》题（湖南乡镇卷）.pdf": "gwy_hunan_2021_XiangZhen",
+            "2021年公务员多省联考《申论》题（湖南行政执法卷）.pdf": "gwy_hunan_2021_XingZhengZhiFa",
+            "2021年公务员多省联考《申论》题（湖南通用卷）.pdf": "gwy_hunan_2021_TongYong",
+            "2022年公务员多省联考《申论》题（湖南县乡卷）.pdf": "gwy_hunan_2022_XiangZhen",
+            "2022年公务员多省联考《申论》题（湖南行政执法卷）.pdf": "gwy_hunan_2022_XingZhengZhiFa",
+            "2023年公务员多省联考《申论》题（湖南县乡卷）.pdf": "gwy_hunan_2023_XiangZhen",
+            "2023年公务员多省联考《申论》题（湖南省市卷）.pdf": "gwy_hunan_2023_ShengShi",
+            "2023年公务员多省联考《申论》题（湖南行政执法卷）.pdf": "gwy_hunan_2023_XingZhengZhiFa",
+            "2024年公务员多省联考《申论》题（湖南省市卷）.pdf": "gwy_hunan_2024_ShengShi",
+            "2025年公务员多省联考《申论》题（湖南行政执法卷）.pdf": "gwy_hunan_2025_XingZhengZhiFa",
+        },
+    ),
+    "江苏": (
+        SHENLUN_BASE / "江苏",
+        "江苏",
+        {
+            "2018年江苏省公考《申论》题（A、普通选调卷）.pdf": "gwy_jiangsu_2018_A",
+            "2018年江苏省公考《申论》题（B卷）.pdf": "gwy_jiangsu_2018_B",
+            "2018年江苏省公考《申论》题（C卷）.pdf": "gwy_jiangsu_2018_C",
+            "2019年江苏省公考《申论》题（A、普通选调卷）.pdf": "gwy_jiangsu_2019_A",
+            "2019年江苏省公考《申论》题（B卷）.pdf": "gwy_jiangsu_2019_B",
+            "2019年江苏省公考《申论》题（C卷）.pdf": "gwy_jiangsu_2019_C",
+            "2020年江苏省公考《申论》题（A、普通选调卷）.pdf": "gwy_jiangsu_2020_A",
+            "2020年江苏省公考《申论》题（B卷）.pdf": "gwy_jiangsu_2020_B",
+            "2020年江苏省公考《申论》题（C卷）.pdf": "gwy_jiangsu_2020_C",
+            "2021年江苏省公考《申论》题（A、普通选调卷）.pdf": "gwy_jiangsu_2021_A",
+            "2021年江苏省公考《申论》题（B卷）.pdf": "gwy_jiangsu_2021_B",
+            "2021年江苏省公考《申论》题（C卷）.pdf": "gwy_jiangsu_2021_C",
+            "2022年江苏省公考《申论》题（A、普通选调卷）.pdf": "gwy_jiangsu_2022_A",
+            "2022年江苏省公考《申论》题（B卷）.pdf": "gwy_jiangsu_2022_B",
+            "2022年江苏省公考《申论》题（C卷）.pdf": "gwy_jiangsu_2022_C",
+            "2023年江苏省公考《申论》题（A、乡镇选调卷）.pdf": "gwy_jiangsu_2023_A",
+            "2023年江苏省公考《申论》题（B卷）.pdf": "gwy_jiangsu_2023_B",
+            "2023年江苏省公考《申论》题（C卷）.pdf": "gwy_jiangsu_2023_C",
+            "2024年江苏省公考《申论》题（A、乡镇选调卷）.pdf": "gwy_jiangsu_2024_A",
+            "2024年江苏省公考《申论》题（B卷）.pdf": "gwy_jiangsu_2024_B",
+            "2024年江苏省公考《申论》题（C卷）.pdf": "gwy_jiangsu_2024_C",
+            "2025年江苏省公考《申论》题（A、乡镇选调卷）.pdf": "gwy_jiangsu_2025_A",
+            "2025年江苏省公考《申论》题（B卷）.pdf": "gwy_jiangsu_2025_B",
+            "2025年江苏省公考《申论》题（C卷）.pdf": "gwy_jiangsu_2025_C",
+        },
+    ),
     "吉林": (
         SHENLUN_BASE / "吉林",
         "吉林",
         {
+            "2017年公务员多省联考《申论》题（吉林乙级卷）.pdf": "gwy_jilin_2017_B",
+            "2017年公务员多省联考《申论》题（吉林甲级卷）.pdf": "gwy_jilin_2017_A",
+            "2018年公务员多省联考《申论》题（吉林乙级卷）.pdf": "gwy_jilin_2018_B",
+            "2018年公务员多省联考《申论》题（吉林甲级、普通选调卷）.pdf": "gwy_jilin_2018_A",
+            "2019年公务员多省联考《申论》题（吉林乙卷）.pdf": "gwy_jilin_2019_B",
+            "2019年公务员多省联考《申论》题（吉林甲级、普通选调卷）.pdf": "gwy_jilin_2019_A",
+            "2020年0822公务员多省联考《申论》题（吉林乙卷）.pdf": "gwy_jilin_2020_B",
+            "2020年0822公务员多省联考《申论》题（吉林甲卷）.pdf": "gwy_jilin_2020_A",
+            "2021年公务员多省联考《申论》题（吉林乙卷）.pdf": "gwy_jilin_2021_B",
+            "2021年公务员多省联考《申论》题（吉林甲卷）.pdf": "gwy_jilin_2021_A",
+            "2022年公务员多省联考《申论》题（吉林丙卷）.pdf": "gwy_jilin_2022_C",
+            "2023年公务员多省联考《申论》题（吉林丙卷）.pdf": "gwy_jilin_2023_C",
             "2023年公务员多省联考《申论》题（吉林乙卷）.pdf": "gwy_jilin_2023_B",
+            "2023年公务员多省联考《申论》题（吉林甲卷）.pdf": "gwy_jilin_2023_A",
+        },
+    ),
+    "江西": (
+        SHENLUN_BASE / "江西",
+        "江西",
+        {
+            "2017年公务员多省联考《申论》题（江西卷）.pdf": "gwy_jiangxi_2017_General",
+            "2018年公务员多省联考《申论》题（江西卷）.pdf": "gwy_jiangxi_2018_General",
+            "2019年公务员多省联考《申论》题（江西乡镇卷）.pdf": "gwy_jiangxi_2019_XiangZhen",
+            "2019年公务员多省联考《申论》题（江西县级卷）.pdf": "gwy_jiangxi_2019_General",
+            "2020年0822公务员多省联考《申论》题（江西乡镇卷）.pdf": "gwy_jiangxi_2020_XiangZhen",
+            "2020年0822公务员多省联考《申论》题（江西市县卷）.pdf": "gwy_jiangxi_2020_General",
+            "2020年0822公务员多省联考《申论》题（江西省级卷）.pdf": "gwy_jiangxi_2020_General",
+            "2021年公务员多省联考《申论》题（江西乡镇卷）.pdf": "gwy_jiangxi_2021_XiangZhen",
+            "2021年公务员多省联考《申论》题（江西省市县卷）.pdf": "gwy_jiangxi_2021_ShengShi",
+            "2021年公务员多省联考《申论》题（江西行政执法卷）.pdf": "gwy_jiangxi_2021_XingZhengZhiFa",
+            "2022年公务员多省联考《申论》题（江西县乡卷）.pdf": "gwy_jiangxi_2022_XiangZhen",
+            "2022年公务员多省联考《申论》题（江西行政执法卷）.pdf": "gwy_jiangxi_2022_XingZhengZhiFa",
+            "2023年公务员多省联考《申论》题（江西县乡卷）.pdf": "gwy_jiangxi_2023_XiangZhen",
+            "2023年公务员多省联考《申论》题（江西省市卷）.pdf": "gwy_jiangxi_2023_ShengShi",
+            "2023年公务员多省联考《申论》题（江西行政执法卷）.pdf": "gwy_jiangxi_2023_XingZhengZhiFa",
+            "2024年公务员多省联考《申论》题（江西县乡卷）.pdf": "gwy_jiangxi_2024_XiangZhen",
+            "2024年公务员多省联考《申论》题（江西省市卷）.pdf": "gwy_jiangxi_2024_ShengShi",
+            "2024年公务员多省联考《申论》题（江西行政执法卷）.pdf": "gwy_jiangxi_2024_XingZhengZhiFa",
+            "2025年公务员多省联考《申论》题（江西省市卷）.pdf": "gwy_jiangxi_2025_ShengShi",
+        },
+    ),
+    "辽宁": (
+        SHENLUN_BASE / "辽宁",
+        "辽宁",
+        {
+            "2018年辽宁省公考《申论》题.pdf": "gwy_liaoning_2018_General",
+            "2019年辽宁省公考《申论》题.pdf": "gwy_liaoning_2019_General",
+            "2020年0822公务员多省联考《申论》题（辽宁A卷）.pdf": "gwy_liaoning_2020_A",
+            "2020年0822公务员多省联考《申论》题（辽宁B卷）.pdf": "gwy_liaoning_2020_B",
+            "2021年公务员多省联考《申论》题（辽宁A卷）.pdf": "gwy_liaoning_2021_A",
+            "2021年公务员多省联考《申论》题（辽宁B卷）.pdf": "gwy_liaoning_2021_B",
+            "2022年公务员多省联考《申论》题（辽宁A卷）.pdf": "gwy_liaoning_2022_A",
+            "2022年公务员多省联考《申论》题（辽宁B卷）.pdf": "gwy_liaoning_2022_B",
+            "2023年公务员多省联考《申论》题（辽宁A卷）.pdf": "gwy_liaoning_2023_A",
+            "2023年公务员多省联考《申论》题（辽宁B卷）.pdf": "gwy_liaoning_2023_B",
+            "2024年公务员多省联考《申论》题（辽宁A卷）.pdf": "gwy_liaoning_2024_A",
+            "2024年公务员多省联考《申论》题（辽宁B卷）.pdf": "gwy_liaoning_2024_B",
+            "2025年公务员多省联考《申论》题（辽宁A卷）.pdf": "gwy_liaoning_2025_A",
+            "2025年公务员多省联考《申论》题（辽宁B卷）.pdf": "gwy_liaoning_2025_B",
+        },
+    ),
+    "内蒙古": (
+        SHENLUN_BASE / "内蒙古",
+        "内蒙古",
+        {
+            "2018年公务员多省联考《申论》题（内蒙古卷）.pdf": "gwy_neimenggu_2018_General",
+            "2019年公务员多省联考《申论》题（内蒙古卷）.pdf": "gwy_neimenggu_2019_General",
+            "2020年0822公务员多省联考《申论》题（内蒙古乡镇卷） (1).pdf": "gwy_neimenggu_2020_XiangZhen",
+            "2020年0822公务员多省联考《申论》题（内蒙古乡镇卷）.pdf": "gwy_neimenggu_2020_XiangZhen",
+            "2020年0822公务员多省联考《申论》题（内蒙古县级卷）.pdf": "gwy_neimenggu_2020_General",
+            "2021年公务员多省联考《申论》题（内蒙古乡镇卷）.pdf": "gwy_neimenggu_2021_XiangZhen",
+            "2021年公务员多省联考《申论》题（内蒙古县级卷）.pdf": "gwy_neimenggu_2021_General",
+            "2022年公务员多省联考《申论》题（内蒙古旗县卷）.pdf": "gwy_neimenggu_2022_General",
+            "2022年公务员多省联考《申论》题（内蒙古盟市卷）.pdf": "gwy_neimenggu_2022_General",
+            "2023年公务员多省联考《申论》题（内蒙古旗县卷）.pdf": "gwy_neimenggu_2023_General",
+            "2024年公务员多省联考《申论》题（内蒙古旗县卷）.pdf": "gwy_neimenggu_2024_General",
+            "2024年公务员多省联考《申论》题（内蒙古盟市卷）.pdf": "gwy_neimenggu_2024_General",
+        },
+    ),
+    "宁夏": (
+        SHENLUN_BASE / "宁夏",
+        "宁夏",
+        {
+            "2018年公务员多省联考《申论》题（宁夏卷）.pdf": "gwy_ningxia_2018_General",
+            "2019年公务员多省联考《申论》题（宁夏卷）.pdf": "gwy_ningxia_2019_General",
+            "2020年0822公务员多省联考《申论》题（宁夏A卷）.pdf": "gwy_ningxia_2020_A",
+            "2020年0822公务员多省联考《申论》题（宁夏B卷）.pdf": "gwy_ningxia_2020_B",
+            "2021年公务员多省联考《申论》题（宁夏A卷）.pdf": "gwy_ningxia_2021_A",
+            "2021年公务员多省联考《申论》题（宁夏B卷）.pdf": "gwy_ningxia_2021_B",
+            "2021年公务员多省联考《申论》题（宁夏C卷）.pdf": "gwy_ningxia_2021_C",
+            "2022年公务员多省联考《申论》题（宁夏A卷）.pdf": "gwy_ningxia_2022_A",
+            "2022年公务员多省联考《申论》题（宁夏B卷）.pdf": "gwy_ningxia_2022_B",
+            "2022年公务员多省联考《申论》题（宁夏C卷）.pdf": "gwy_ningxia_2022_C",
+            "2023年公务员多省联考《申论》题（宁夏A卷）.pdf": "gwy_ningxia_2023_A",
+            "2023年公务员多省联考《申论》题（宁夏C卷）.pdf": "gwy_ningxia_2023_C",
+            "2024年公务员多省联考《申论》题（宁夏C卷）.pdf": "gwy_ningxia_2024_C",
+        },
+    ),
+    "青海": (
+        SHENLUN_BASE / "青海",
+        "青海",
+        {
+            "2018年公务员多省联考《申论》题（青海卷）.pdf": "gwy_qinghai_2018_General",
+            "2019年青海省公考《申论》题（省市州级）.pdf": "gwy_qinghai_2019_ShengShi",
+            "2020年0822公务员多省联考《申论》题（青海乡镇卷）.pdf": "gwy_qinghai_2020_XiangZhen",
+            "2020年0822公务员多省联考《申论》题（青海州县卷）.pdf": "gwy_qinghai_2020_General",
+            "2020年0822公务员多省联考《申论》题（青海省直卷）.pdf": "gwy_qinghai_2020_General",
+            "2021年公务员多省联考《申论》题（青海乡镇卷）.pdf": "gwy_qinghai_2021_XiangZhen",
+            "2021年公务员多省联考《申论》题（青海县级卷）.pdf": "gwy_qinghai_2021_General",
+            "2023年公务员多省联考《申论》题（青海行政执法卷）.pdf": "gwy_qinghai_2023_XingZhengZhiFa",
+            "2025年公务员多省联考《申论》题（青海行政执法卷）.pdf": "gwy_qinghai_2025_XingZhengZhiFa",
         },
     ),
     "国家": (
@@ -189,14 +376,32 @@ REGIONS = {
         },
     ),
     "江苏": (
-        SHENLUN_BASE,
+        SHENLUN_BASE / "江苏",
         "江苏",
         {
+            "2018年江苏省公考《申论》题（A、普通选调卷）.pdf": "gwy_jiangsu_2018_A",
+            "2018年江苏省公考《申论》题（B卷）.pdf": "gwy_jiangsu_2018_B",
+            "2018年江苏省公考《申论》题（C卷）.pdf": "gwy_jiangsu_2018_C",
+            "2019年江苏省公考《申论》题（A、普通选调卷）.pdf": "gwy_jiangsu_2019_A",
+            "2019年江苏省公考《申论》题（B卷）.pdf": "gwy_jiangsu_2019_B",
+            "2019年江苏省公考《申论》题（C卷）.pdf": "gwy_jiangsu_2019_C",
+            "2020年江苏省公考《申论》题（A、普通选调卷）.pdf": "gwy_jiangsu_2020_A",
+            "2020年江苏省公考《申论》题（B卷）.pdf": "gwy_jiangsu_2020_B",
+            "2020年江苏省公考《申论》题（C卷）.pdf": "gwy_jiangsu_2020_C",
             "2021年江苏省公考《申论》题（A、普通选调卷）.pdf": "gwy_jiangsu_2021_A",
+            "2021年江苏省公考《申论》题（B卷）.pdf": "gwy_jiangsu_2021_B",
+            "2021年江苏省公考《申论》题（C卷）.pdf": "gwy_jiangsu_2021_C",
             "2022年江苏省公考《申论》题（A、普通选调卷）.pdf": "gwy_jiangsu_2022_A",
+            "2022年江苏省公考《申论》题（B卷）.pdf": "gwy_jiangsu_2022_B",
+            "2022年江苏省公考《申论》题（C卷）.pdf": "gwy_jiangsu_2022_C",
             "2023年江苏省公考《申论》题（A、乡镇选调卷）.pdf": "gwy_jiangsu_2023_A",
+            "2023年江苏省公考《申论》题（B卷）.pdf": "gwy_jiangsu_2023_B",
+            "2023年江苏省公考《申论》题（C卷）.pdf": "gwy_jiangsu_2023_C",
             "2024年江苏省公考《申论》题（A、乡镇选调卷）.pdf": "gwy_jiangsu_2024_A",
+            "2024年江苏省公考《申论》题（B卷）.pdf": "gwy_jiangsu_2024_B",
+            "2024年江苏省公考《申论》题（C卷）.pdf": "gwy_jiangsu_2024_C",
             "2025年江苏省公考《申论》题（A、乡镇选调卷）.pdf": "gwy_jiangsu_2025_A",
+            "2025年江苏省公考《申论》题（B卷）.pdf": "gwy_jiangsu_2025_B",
             "2025年江苏省公考《申论》题（C卷）.pdf": "gwy_jiangsu_2025_C",
         },
     ),
@@ -384,6 +589,36 @@ def _clean_footer(text: str) -> str:
     return text
 
 
+def merge_paragraph_lines(text: str) -> str:
+    """
+    合并被PDF排版截断的行，但保留段落换行。
+    规则：如果上一行不以句子结束符（。！？）结尾，则与下一行合并。
+    """
+    lines = text.split('\n')
+    merged = []
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+        
+        if not merged:
+            merged.append(line)
+            continue
+            
+        last_line = merged[-1]
+        
+        # 检查上一行是否以句子结束符结尾
+        # 允许的结束符：。！？ 以及紧随其后的闭引号
+        if re.search(r'[。！？][”"’\']?$', last_line):
+            # 可能是段落结束，保留换行
+            merged.append(line)
+        else:
+            # 可能是排版换行，合并到上一行
+            merged[-1] += line
+            
+    return "\n".join(merged)
+
+
 def _find_zuoda_pos(text: str) -> int:
     for m in re.finditer(r"作答要求\s*\n\s*第[一二三四五六七八九十]+题", text):
         return m.start()
@@ -426,6 +661,10 @@ def parse_materials_liankao(text: str) -> list:
             content = _clean_footer(content)
             content = re.sub(r"[ \t]+", " ", content)
             content = re.sub(r"\n{3,}", "\n\n", content).strip()
+            
+            # 合并段落内被截断的行
+            content = merge_paragraph_lines(content)
+            
             if len(content) > 30:
                 materials.append({"id": f"m{num}", "title": f"材料{num}", "content": content})
     return materials
@@ -570,7 +809,13 @@ def parse_materials_guangdong(text: str) -> list:
     for p in parts:
         if not p["content"].strip():
             continue
-        content = re.sub(r"\s+", " ", p["content"])
+        
+        # 广东格式也需要合并行，但要先处理空白符
+        content = p["content"]
+        content = re.sub(r"[ \t]+", " ", content) # 将空格和制表符替换为空格，但保留换行符
+        content = re.sub(r"\n{3,}", "\n\n", content).strip()
+        content = merge_paragraph_lines(content)
+        
         # content = re.sub(r"\d{4}年[^题]+《申论》题", "", content) # Removed dangerous regex
         materials.append({"id": f"m{p['id']}", "title": p["title"], "content": content})
     return materials
