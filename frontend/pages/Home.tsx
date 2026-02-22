@@ -4,18 +4,13 @@ import { Paper } from '../types';
 
 interface HomeProps {
   onSelectPaper: (paper: Paper) => void;
+  filters: { type: string; region: string };
+  setFilters: React.Dispatch<React.SetStateAction<{ type: string; region: string }>>;
 }
 
-const Home: React.FC<HomeProps> = ({ onSelectPaper }) => {
-  // 1. 新增：用来存后端传来的真试卷数据
+const Home: React.FC<HomeProps> = ({ onSelectPaper, filters, setFilters }) => {
   const [papers, setPapers] = useState<Paper[]>([]);
-  // 2. 新增：加载状态
   const [isLoading, setIsLoading] = useState(true);
-
-  const [filters, setFilters] = useState({
-    type: '公务员',
-    region: '国考',
-  });
  
 
   // 3. 新增：去后端抓取数据的逻辑

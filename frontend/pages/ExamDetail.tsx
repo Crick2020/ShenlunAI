@@ -5,9 +5,10 @@ import { Paper, Question, Material, QuestionType } from '../types';
 interface ExamDetailProps {
   paper: Paper;
   onGrade: (question: Question, answer: string, images?: string[]) => void;
+  onBack: () => void;
 }
 
-const ExamDetail: React.FC<ExamDetailProps> = ({ paper, onGrade }) => {
+const ExamDetail: React.FC<ExamDetailProps> = ({ paper, onGrade, onBack }) => {
   const [activeMaterialIndex, setActiveMaterialIndex] = useState(0);
   const [activeQuestionIndex, setActiveQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
@@ -59,7 +60,21 @@ const ExamDetail: React.FC<ExamDetailProps> = ({ paper, onGrade }) => {
 
   return (
     <div className="flex flex-col h-[calc(100vh-56px)] md:h-[calc(100vh-64px)] overflow-hidden bg-white relative">
-      
+
+      {/* Top Header Bar */}
+      <div className="shrink-0 border-b border-black/[0.06] bg-white relative flex items-center justify-center h-12 md:h-14 px-4">
+        <button
+          onClick={onBack}
+          className="absolute left-4 top-1/2 -translate-y-1/2 text-[#1d1d1f] hover:text-[#0071e3] transition-colors p-1"
+          aria-label="返回"
+        >
+          <i className="fas fa-arrow-left text-base md:text-lg"></i>
+        </button>
+        <h1 className="text-sm md:text-base font-semibold text-[#1d1d1f] truncate max-w-[70%] text-center">
+          {paper.name}
+        </h1>
+      </div>
+
       {/* Main Content Area */}
       <div className="flex flex-1 overflow-hidden relative">
         

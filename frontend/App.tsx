@@ -13,6 +13,7 @@ const App: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<string>('home');
   const [selectedPaper, setSelectedPaper] = useState<Paper | null>(null);
   const [selectedRecord, setSelectedRecord] = useState<HistoryRecord | null>(null);
+  const [filters, setFilters] = useState({ type: '公务员', region: '国考' });
   const [user, setUser] = useState<User | null>({
     id: 'u-guest',
     nickname: '申论学习者',
@@ -168,11 +169,11 @@ const App: React.FC = () => {
       <main>
         {currentPage === 'home' && (
           // 这里传入新的 handleSelectPaper 函数
-          <Home onSelectPaper={handleSelectPaper} />
+          <Home onSelectPaper={handleSelectPaper} filters={filters} setFilters={setFilters} />
         )}
         
         {currentPage === 'exam' && selectedPaper && (
-          <ExamDetail paper={selectedPaper} onGrade={startGradingProcess} />
+          <ExamDetail paper={selectedPaper} onGrade={startGradingProcess} onBack={() => setCurrentPage('home')} />
         )}
 
         {currentPage === 'report' && selectedRecord && (
