@@ -59,10 +59,10 @@ const ExamDetail: React.FC<ExamDetailProps> = ({ paper, onGrade, onBack }) => {
   const wordCount = currentAnswer.length;
 
   return (
-    <div className="flex flex-col h-[calc(100vh-56px)] md:h-[calc(100vh-64px)] overflow-hidden bg-white relative">
+    <div className="flex flex-col h-screen overflow-hidden bg-white relative">
 
-      {/* Top Header Bar */}
-      <div className="shrink-0 border-b border-black/[0.06] bg-white relative flex items-center justify-center h-12 md:h-14 px-4">
+      {/* Top Header Bar — sticky */}
+      <div className="shrink-0 sticky top-0 z-50 border-b border-black/[0.06] bg-white relative flex items-center justify-center h-12 md:h-14 px-4">
         <button
           onClick={onBack}
           className="absolute left-4 top-1/2 -translate-y-1/2 text-[#1d1d1f] hover:text-[#0071e3] transition-colors p-1"

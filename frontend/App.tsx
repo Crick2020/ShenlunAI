@@ -153,18 +153,20 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navbar 
-        user={user} 
-        onLogin={() => {}} 
-        onLogout={handleLogout}
-        onNavigate={(page) => {
-          if (page === 'home') {
-            setSelectedPaper(null);
-            setSelectedRecord(null);
-          }
-          setCurrentPage(page);
-        }}
-      />
+      {currentPage !== 'exam' && (
+        <Navbar 
+          user={user} 
+          onLogin={() => {}} 
+          onLogout={handleLogout}
+          onNavigate={(page) => {
+            if (page === 'home') {
+              setSelectedPaper(null);
+              setSelectedRecord(null);
+            }
+            setCurrentPage(page);
+          }}
+        />
+      )}
 
       <main>
         {currentPage === 'home' && (
