@@ -73,7 +73,10 @@ def generate_map(region_name, folder_name):
             "辽宁": "liaoning",
             "内蒙古": "neimenggu",
             "宁夏": "ningxia",
-            "青海": "qinghai"
+            "青海": "qinghai",
+            "山东": "shandong",
+            "山西": "shanxi",
+            "陕西": "shaanxi"
         }.get(region_name, "unknown")
         
         paper_id = f"gwy_{region_pinyin}_{year}_{suffix}"
@@ -83,5 +86,6 @@ def generate_map(region_name, folder_name):
     print('    ),')
 
 print("# Generated Maps")
-generate_map("宁夏", "宁夏")
-generate_map("青海", "青海")
+generate_map("山东", "山东")
+generate_map("山西", "山西")
+generate_map("陕西", "陕西")
