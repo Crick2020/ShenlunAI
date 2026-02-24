@@ -45,7 +45,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onSuccess }) =
           </div>
           
           <div className="mt-10 text-[13px] text-[#86868b] font-medium leading-relaxed">
-            请使用微信扫描二维码登录<br/>开启您的 AI 申论提分之旅
+            请使用微信扫描二维码登录<br/>开启您的申论提分之旅
           </div>
         </div>
         <div className="bg-[#f5f5f7] px-10 py-5 text-center">

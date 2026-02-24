@@ -230,7 +230,7 @@ const App: React.FC = () => {
             </div>
           </div>
           <h2 className="text-2xl font-bold text-[#1d1d1f] mb-2">正在深度阅卷中</h2>
-          <p className="text-[#86868b] text-sm animate-pulse text-center px-6">AI阅卷老师正在逐段精批您的答卷，请稍候...</p>
+          <p className="text-[#86868b] text-sm animate-pulse text-center px-6">阅卷老师正在逐段精批您的答卷，请稍候...</p>
         </div>
       )}
 

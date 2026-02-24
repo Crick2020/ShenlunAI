@@ -45,7 +45,7 @@ export interface GradingResult {
     type: 'positive' | 'negative';
   }[];
   modelAnswer: string;
-  /** AI 原始返回全文（用于批改结果页完整展示） */
+  /** 原始返回全文（用于批改结果页完整展示） */
   modelRawOutput?: string;
   /** 每题详情（后端 perQuestion） */
   perQuestion?: Record<string, any>;
@@ -59,7 +59,7 @@ export interface HistoryRecord {
   timestamp: number;
   result: GradingResult;
   userAnswer: string;
-  /** 后端 /api/grade 的完整响应（用于「AI 完整返回」展示） */
+  /** 后端 /api/grade 的完整响应（用于完整返回展示） */
   rawGradingResponse?: any;
 }
 

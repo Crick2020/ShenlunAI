@@ -39,7 +39,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, type, onClose, onPa
         <div className={`w-full md:w-[380px] lg:w-[420px] shrink-0 bg-white p-6 md:p-10 flex flex-col border-b md:border-b-0 md:border-r border-black/[0.05] z-20 overflow-y-auto scrollbar-hide ${showExampleMobile ? 'hidden md:flex' : 'flex'}`}>
           <div className="flex-1 flex flex-col space-y-6 md:space-y-8">
             <div className="text-center md:text-left">
-              <h3 className="text-2xl md:text-3xl font-bold text-[#1d1d1f] tracking-tight">解锁AI深度批改</h3>
+              <h3 className="text-2xl md:text-3xl font-bold text-[#1d1d1f] tracking-tight">解锁深度批改</h3>
               <p className="text-[#86868b] text-sm mt-2 font-medium">支付后立享全维度专业诊断报告</p>
             </div>
             
@@ -92,7 +92,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, type, onClose, onPa
             </button>
 
             <p className="text-center text-[10px] text-[#86868b] font-medium leading-relaxed opacity-60 px-4">
-              支付成功后，AI阅卷系统将在15-30秒内完成深度诊断报告，支持随时回看
+              支付成功后，阅卷系统将在15-30秒内完成深度诊断报告，支持随时回看
             </p>
             {/* Mock pay button for desktop/testing */}
             <div className="hidden md:block mt-4">
@@ -180,7 +180,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, type, onClose, onPa
               </div>
             </section>
 
-            {/* Part 3: AI Diagnosis */}
+            {/* Part 3: 智能诊断 */}
             <section className="space-y-6 md:space-y-8">
               <div className="flex items-center space-x-4 text-[#1d1d1f]">
                 <div className="w-1.5 h-6 md:h-8 bg-[#34c759] rounded-full"></div>
@@ -238,7 +238,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, type, onClose, onPa
             <section className="space-y-6 md:space-y-8">
               <div className="flex items-center space-x-4 text-[#1d1d1f]">
                 <div className="w-1.5 h-6 md:h-8 bg-[#af52de] rounded-full"></div>
-                <h5 className="text-xl md:text-2xl font-bold tracking-tight">AI生成高分范文参考</h5>
+                <h5 className="text-xl md:text-2xl font-bold tracking-tight">高分范文参考</h5>
               </div>
               <div className="bg-[#1d1d1f] rounded-[48px] md:rounded-[64px] p-8 md:p-16 shadow-2xl relative overflow-hidden group">
                 <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-blue-500/10 blur-[100px] -mr-32 -mt-32"></div>

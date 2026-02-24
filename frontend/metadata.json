@@ -1,6 +1,6 @@
 {
-  "name": "AI申论智批 (AI Civil Service Essay Grading Platform)",
-  "description": "A professional AI-powered platform for civil service exam preparation, featuring split-screen reading, handwriting recognition, and expert-level essay grading using Gemini AI.",
+  "name": "申论智批 (Civil Service Essay Grading Platform)",
+  "description": "A professional platform for civil service exam preparation, featuring split-screen reading, handwriting recognition, and expert-level essay grading.",
   "requestFramePermissions": [
     "camera"
   ]

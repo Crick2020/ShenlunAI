@@ -49,7 +49,7 @@ const Report: React.FC<ReportProps> = ({ record, onBack }) => {
         <div className="bg-white rounded-[32px] md:rounded-[48px] apple-card-shadow border border-black/[0.03] overflow-hidden">
           <div className="bg-[#f5f5f7] px-6 py-6 md:px-12 md:py-10">
             <div className="inline-block bg-[#0071e3] text-white text-[9px] md:text-[11px] font-bold px-3 py-1 rounded-full uppercase tracking-[0.1em] mb-3">
-              AI 智能深度评阅
+              智能深度评阅
             </div>
             <h1 className="text-xl md:text-4xl font-extrabold text-[#1d1d1f] tracking-tight leading-tight">
               {questionTitle}

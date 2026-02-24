@@ -58,7 +58,7 @@ const Profile: React.FC<ProfileProps> = ({ history, onViewRecord }) => {
             <i className="fas fa-history text-2xl md:text-3xl"></i>
           </div>
           <p className="text-[#1d1d1f] font-bold text-base md:text-lg">暂无批改记录</p>
-          <p className="text-[#86868b] text-sm mt-1 px-10">完成您的第一次 AI 批改后，报告将出现在这里</p>
+          <p className="text-[#86868b] text-sm mt-1 px-10">完成您的第一次批改后，报告将出现在这里</p>
         </div>
       )}
     </div>
