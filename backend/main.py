@@ -1,6 +1,8 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.middleware.gzip import GZipMiddleware
+from fastapi.responses import JSONResponse, Response
+import hashlib
 import json
 import os
 import re
@@ -9,9 +11,12 @@ import urllib.error
 from typing import Optional, List, Dict, Any
 
 app = FastAPI()
+app.add_middleware(GZipMiddleware, minimum_size=500)
 
 _papers_index: list = []
 _papers_cache: Dict[str, dict] = {}
+_papers_index_json: bytes = b"[]"
+_papers_index_etag: str = '"empty"'
 
 # ---------------------------------------------------------
 # 1. 跨域配置 (CORS) - 允许前端访问后端
@@ -39,12 +44,14 @@ def _sort_key(p):
 
 def _build_index():
     """遍历 data 目录，将所有试卷加载到内存，构建排好序的索引列表。"""
-    global _papers_index, _papers_cache
+    global _papers_index, _papers_cache, _papers_index_json, _papers_index_etag
     data_dir = get_data_dir()
     if not os.path.isdir(data_dir):
         os.makedirs(data_dir, exist_ok=True)
         _papers_index = []
         _papers_cache = {}
+        _papers_index_json = b"[]"
+        _papers_index_etag = '"empty"'
         return
 
     papers = []
@@ -71,7 +78,9 @@ def _build_index():
     papers.sort(key=_sort_key)
     _papers_index = papers
     _papers_cache = cache
-    print(f"[Startup] 已加载 {len(papers)} 份试卷到内存缓存")
+    _papers_index_json = json.dumps(papers, ensure_ascii=False).encode("utf-8")
+    _papers_index_etag = f'"{hashlib.md5(_papers_index_json).hexdigest()}"'
+    print(f"[Startup] 已加载 {len(papers)} 份试卷到内存缓存, index_size={len(_papers_index_json)} bytes, etag={_papers_index_etag}")
 
 
 @app.on_event("startup")
@@ -104,10 +113,23 @@ def _load_paper_by_id(paper_id: str):
 # 2. 接口：获取试卷列表 (用于首页展示卡片)
 # ---------------------------------------------------------
 @app.get("/api/list")
-def list_papers():
-    return JSONResponse(
-        content=_papers_index,
-        headers={"Cache-Control": "public, max-age=300"},
+def list_papers(request: Request):
+    if_none_match = request.headers.get("if-none-match", "")
+    if if_none_match == _papers_index_etag:
+        return Response(
+            status_code=304,
+            headers={
+                "Cache-Control": "public, max-age=3600, stale-while-revalidate=86400",
+                "ETag": _papers_index_etag,
+            },
+        )
+    return Response(
+        content=_papers_index_json,
+        media_type="application/json",
+        headers={
+            "Cache-Control": "public, max-age=3600, stale-while-revalidate=86400",
+            "ETag": _papers_index_etag,
+        },
     )
 
 

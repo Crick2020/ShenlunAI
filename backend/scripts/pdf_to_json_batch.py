@@ -951,13 +951,13 @@ def parse_questions_liankao(text: str, material_ids: list) -> list:
                         req_lines.append(ln[: nq.start()].strip())
                         break
                     req_lines.append(ln)
-                req_part = " ".join(req_lines)
+                req_part = "\n".join(req_lines)
                 break
             
             title_lines.append(line)
         
         if req_found:
-            title_part = " ".join(title_lines)
+            title_part = "\n".join(title_lines)
         else:
             # Fallback to regex if keyword not found
             req_match = re.search(r"要求[：:]\s*(.+?)(?=第[一二三四五六七八九十]+题|$)", block, re.DOTALL)
@@ -965,13 +965,16 @@ def parse_questions_liankao(text: str, material_ids: list) -> list:
                 req_part = req_match.group(1).strip()
                 title_part = block.replace(req_match.group(0), "").strip()
             else:
-                title_part = " ".join(lines)
+                title_part = "\n".join(lines)
         
         if not title_part:
             title_part = lines[0] if lines else block[:100]
 
+        title_part = _clean_footer(title_part)
+        req_part = _clean_footer(req_part)
+
         title_part = re.sub(r"\s+", " ", title_part).strip()
-        req_part = re.sub(r"\s+", " ", _clean_footer(req_part)).strip()
+        req_part = re.sub(r"\s+", " ", req_part).strip()
 
         refs = re.findall(r'[「"]?给定资料(\d+)[」"]?|[「"]?材料(\d+)[」"]?', title_part)
         mat_refs = list({f"m{a or b}" for a, b in refs if (a or b) and f"m{a or b}" in material_ids})
@@ -1109,13 +1112,13 @@ def parse_questions_guangdong(text: str, materials: list) -> list:
                         req_lines.append(ln[: nq.start()].strip())
                         break
                     req_lines.append(ln)
-                requirements = " ".join(req_lines)
+                requirements = "\n".join(req_lines)
                 break
             
             title_lines.append(line)
 
         if req_found:
-            title = " ".join(title_lines)
+            title = "\n".join(title_lines)
         else:
             # Try to find requirements with regex if not found by keyword
             rm = re.search(r"要求[：:]\s*([\s\S]*?)(?=第[一二三四五六七八九十\d]+题|$)", block)
@@ -1123,7 +1126,7 @@ def parse_questions_guangdong(text: str, materials: list) -> list:
                 requirements = rm.group(1).strip()
                 title = block.replace(rm.group(0), "").strip()
             else:
-                title = " ".join(lines)
+                title = "\n".join(lines)
 
         if not title:
             title = lines[0] if lines else block[:100]
@@ -1131,7 +1134,13 @@ def parse_questions_guangdong(text: str, materials: list) -> list:
             rm = re.search(r"要求[：:]\s*([\s\S]*?)(?=第[一二三四五六七八九十\d]+题|$)", block)
             requirements = rm.group(1).strip() if rm else ""
 
+        requirements = _clean_footer(requirements)
+        title = _clean_footer(title)
+
         requirements = re.sub(r"\d{4}年[^题]+《申论》题", "", requirements).strip()
+        
+        title = re.sub(r"\s+", " ", title).strip()
+        requirements = re.sub(r"\s+", " ", requirements).strip()
 
         block_t = title + " " + block
         is_essay = (

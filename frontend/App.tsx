@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Navbar from './components/Navbar';
 import Home from './pages/Home';
 import ExamDetail from './pages/ExamDetail';
@@ -9,6 +9,52 @@ import { Paper, User, Question, HistoryRecord, GradingResult } from './types';
 import { API_BASE } from './constants';
 import { geminiService } from './services/geminiService';
 import { track } from './services/analytics';
+
+const LS_PAPERS_LIST = 'shenlun_papers_v1';
+const LS_PAPER_DETAIL_PREFIX = 'shenlun_pd_';
+const MAX_CACHED_DETAILS = 30;
+
+function readCachedList(): Paper[] {
+  try {
+    const raw = localStorage.getItem(LS_PAPERS_LIST);
+    return raw ? JSON.parse(raw) : [];
+  } catch { return []; }
+}
+
+function writeCachedList(papers: Paper[]) {
+  try { localStorage.setItem(LS_PAPERS_LIST, JSON.stringify(papers)); } catch {}
+}
+
+function readCachedDetail(id: string): Paper | null {
+  try {
+    const raw = localStorage.getItem(LS_PAPER_DETAIL_PREFIX + id);
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
+
+function writeCachedDetail(id: string, paper: Paper) {
+  try {
+    localStorage.setItem(LS_PAPER_DETAIL_PREFIX + id, JSON.stringify(paper));
+    evictOldDetails();
+  } catch {}
+}
+
+function evictOldDetails() {
+  try {
+    const keys: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k?.startsWith(LS_PAPER_DETAIL_PREFIX)) keys.push(k);
+    }
+    if (keys.length > MAX_CACHED_DETAILS) {
+      keys.sort();
+      const toRemove = keys.slice(0, keys.length - MAX_CACHED_DETAILS);
+      toRemove.forEach(k => localStorage.removeItem(k));
+    }
+  } catch {}
+}
+
+const cachedList = readCachedList();
 
 const App: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<string>('home');
@@ -22,17 +68,14 @@ const App: React.FC = () => {
   });
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [isGrading, setIsGrading] = useState(false);
-  
-  // 新增：加载试卷详情的 Loading 状态
   const [isLoadingPaper, setIsLoadingPaper] = useState(false);
-  
   const [history, setHistory] = useState<HistoryRecord[]>([]);
 
-  // 试卷列表缓存：提升到 App 层，避免每次回到首页都重新请求
-  const [papers, setPapers] = useState<Paper[]>([]);
-  const [isPapersLoading, setIsPapersLoading] = useState(true);
+  const [papers, setPapers] = useState<Paper[]>(cachedList);
+  const [isPapersLoading, setIsPapersLoading] = useState(cachedList.length === 0);
 
-  // Current grading context
+  const paperDetailMemCache = useRef<Map<string, Paper>>(new Map());
+
   const [pendingGrading, setPendingGrading] = useState<{
     question: Question;
     answer: string;
@@ -44,7 +87,6 @@ const App: React.FC = () => {
     if (savedHistory) setHistory(JSON.parse(savedHistory));
   }, []);
 
-  // 应用启动时加载一次试卷列表，后续页面切换不再重复请求
   useEffect(() => {
     fetch(`${API_BASE}/api/list`)
       .then(res => res.json())
@@ -55,6 +97,7 @@ const App: React.FC = () => {
         }));
         setPapers(mappedData);
         setIsPapersLoading(false);
+        writeCachedList(mappedData);
       })
       .catch(err => {
         console.error("加载试卷失败:", err);
@@ -77,34 +120,40 @@ const App: React.FC = () => {
     setCurrentPage('home');
   };
 
-  // ------------------------------------------------
-  // 🚀 核心修改：点击首页卡片时，去后端抓取详细内容
-  // ------------------------------------------------
   const handleSelectPaper = async (summaryPaper: Paper) => {
-    setIsLoadingPaper(true); // 开启加载动画
+    const memHit = paperDetailMemCache.current.get(summaryPaper.id);
+    if (memHit) {
+      setSelectedPaper(memHit);
+      setCurrentPage('exam');
+      return;
+    }
+
+    const lsHit = readCachedDetail(summaryPaper.id);
+    if (lsHit) {
+      paperDetailMemCache.current.set(summaryPaper.id, lsHit);
+      setSelectedPaper(lsHit);
+      setCurrentPage('exam');
+      return;
+    }
+
+    setIsLoadingPaper(true);
     try {
-      console.log(`正在从后端获取试卷详情: ${summaryPaper.id}`);
-      
-      // 发起请求：/api/paper?id=xxx
       const response = await fetch(`${API_BASE}/api/paper?id=${summaryPaper.id}`);
-      
       if (!response.ok) {
         throw new Error("试卷加载失败，可能是后端没有这个文件");
       }
-
       const fullPaperData = await response.json();
-      console.log("获取成功:", fullPaperData);
 
-      // 把完整的试卷数据存进去
+      paperDetailMemCache.current.set(summaryPaper.id, fullPaperData);
+      writeCachedDetail(summaryPaper.id, fullPaperData);
+
       setSelectedPaper(fullPaperData);
-      // 跳转到考试页
       setCurrentPage('exam');
-
     } catch (error) {
       console.error(error);
       alert(`无法打开试卷：${summaryPaper.name}\n请检查后端 data 文件夹里有没有对应的 JSON 文件。`);
     } finally {
-      setIsLoadingPaper(false); // 关闭加载动画
+      setIsLoadingPaper(false);
     }
   };
 
