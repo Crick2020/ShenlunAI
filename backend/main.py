@@ -1,5 +1,6 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 import json
 import os
 import re
@@ -8,6 +9,9 @@ import urllib.error
 from typing import Optional, List, Dict, Any
 
 app = FastAPI()
+
+_papers_index: list = []
+_papers_cache: Dict[str, dict] = {}
 
 # ---------------------------------------------------------
 # 1. 跨域配置 (CORS) - 允许前端访问后端
@@ -21,22 +25,68 @@ app.add_middleware(
 )
 
 
-@app.on_event("startup")
-def startup_log():
-    """启动时打印 data 目录路径及文件，便于 Render 等环境排查试卷是否部署。"""
-    data_dir = get_data_dir()
-    exists = os.path.isdir(data_dir)
-    files = list(os.listdir(data_dir)) if exists else []
-    print(f"[Startup] data_dir={data_dir}, exists={exists}, cwd={os.getcwd()}, files={files[:20]}")
-
-# 辅助函数：获取 data 文件夹路径（绝对路径，不依赖 cwd）
 def get_data_dir():
     current_dir = os.path.dirname(os.path.abspath(__file__))
     return os.path.join(current_dir, "data")
 
 
+def _sort_key(p):
+    region = p.get("region", "全国")
+    year = p.get("year", 0)
+    region_order = (0 if region == "全国" else 1, region)
+    return (region_order, -year)
+
+
+def _build_index():
+    """遍历 data 目录，将所有试卷加载到内存，构建排好序的索引列表。"""
+    global _papers_index, _papers_cache
+    data_dir = get_data_dir()
+    if not os.path.isdir(data_dir):
+        os.makedirs(data_dir, exist_ok=True)
+        _papers_index = []
+        _papers_cache = {}
+        return
+
+    papers = []
+    cache: Dict[str, dict] = {}
+    for filename in os.listdir(data_dir):
+        if not filename.endswith(".json"):
+            continue
+        file_path = os.path.join(data_dir, filename)
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                content = json.load(f)
+            pid = content.get("id", filename[:-5])
+            cache[pid] = content
+            papers.append({
+                "id": pid,
+                "name": content.get("name", "未命名试卷"),
+                "year": content.get("year", 2024),
+                "region": content.get("region", "全国"),
+                "examType": content.get("examType", "公务员"),
+            })
+        except Exception as e:
+            print(f"读取文件 {filename} 出错: {e}")
+
+    papers.sort(key=_sort_key)
+    _papers_index = papers
+    _papers_cache = cache
+    print(f"[Startup] 已加载 {len(papers)} 份试卷到内存缓存")
+
+
+@app.on_event("startup")
+def startup_load():
+    """启动时预加载所有试卷到内存，后续请求零磁盘 I/O。"""
+    data_dir = get_data_dir()
+    exists = os.path.isdir(data_dir)
+    print(f"[Startup] data_dir={data_dir}, exists={exists}, cwd={os.getcwd()}")
+    _build_index()
+
+
 def _load_paper_by_id(paper_id: str):
-    """从 data 目录加载试卷，尝试主路径 + cwd/data 备用（兼容 Render 等部署）。"""
+    """优先从内存缓存读取试卷，缓存未命中时回退到磁盘读取。"""
+    if paper_id in _papers_cache:
+        return _papers_cache[paper_id]
     data_dir = get_data_dir()
     for base in [data_dir, os.path.abspath("data")]:
         file_path = os.path.join(base, f"{paper_id}.json")
@@ -55,46 +105,10 @@ def _load_paper_by_id(paper_id: str):
 # ---------------------------------------------------------
 @app.get("/api/list")
 def list_papers():
-    data_dir = get_data_dir()
-    
-    # 如果文件夹不存在，建一个空的，防止报错
-    if not os.path.exists(data_dir):
-        os.makedirs(data_dir)
-        return []
-
-    papers = []
-    
-    # 遍历文件夹里的所有文件
-    for filename in os.listdir(data_dir):
-        if filename.endswith(".json"):
-            try:
-                file_path = os.path.join(data_dir, filename)
-                with open(file_path, "r", encoding="utf-8") as f:
-                    content = json.load(f)
-                    
-                    # 提取前端首页卡片需要的所有信息
-                    papers.append({
-                        # 优先用文件里的 id，如果没有，就用文件名(去掉.json)
-                        "id": content.get("id", filename[:-5]),
-                        "name": content.get("name", "未命名试卷"),
-                        "year": content.get("year", 2024),          # 默认 2024
-                        "region": content.get("region", "全国"),    # 默认 全国
-                        "examType": content.get("examType", "公务员") # 默认 公务员
-                    })
-            except Exception as e:
-                print(f"读取文件 {filename} 出错: {e}")
-                continue
-
-    # 按地区、再按年份降序排序：同一地区内新年份在前
-    def sort_key(p):
-        region = p.get("region", "全国")
-        year = p.get("year", 0)
-        # 全国放最前，其余按中文拼音
-        region_order = (0 if region == "全国" else 1, region)
-        return (region_order, -year)
-
-    papers.sort(key=sort_key)
-    return papers
+    return JSONResponse(
+        content=_papers_index,
+        headers={"Cache-Control": "public, max-age=300"},
+    )
 
 
 # ---------------------------------------------------------
@@ -103,25 +117,28 @@ def list_papers():
 # ---------------------------------------------------------
 @app.get("/api/paper")
 def get_paper(id: str):
+    paper_id = id.replace(".json", "") if id.endswith(".json") else id
+
+    if paper_id in _papers_cache:
+        return JSONResponse(
+            content=_papers_cache[paper_id],
+            headers={"Cache-Control": "public, max-age=31536000, immutable"},
+        )
+
     data_dir = get_data_dir()
-    
-    # 尝试找到对应的 json 文件
-    file_path = os.path.join(data_dir, f"{id}.json")
-    
-    # 打印日志方便调试
-    print(f"前端请求读取试卷: {file_path}")
-    
+    file_path = os.path.join(data_dir, f"{paper_id}.json")
+    print(f"前端请求读取试卷(缓存未命中): {file_path}")
+
     if not os.path.exists(file_path):
-        # 如果找不到，尝试一下是不是 id 里已经带了 .json (有时候前端会传错)
-        if os.path.exists(file_path.replace(".json.json", ".json")):
-             file_path = file_path.replace(".json.json", ".json")
-        else:
-             raise HTTPException(status_code=404, detail=f"试卷文件不存在: {id}")
-    
+        raise HTTPException(status_code=404, detail=f"试卷文件不存在: {id}")
+
     try:
         with open(file_path, "r", encoding="utf-8") as f:
             data = json.load(f)
-        return data
+        return JSONResponse(
+            content=data,
+            headers={"Cache-Control": "public, max-age=31536000, immutable"},
+        )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"试卷解析失败: {str(e)}")
 
