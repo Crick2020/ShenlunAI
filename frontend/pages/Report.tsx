@@ -48,8 +48,8 @@ const Report: React.FC<ReportProps> = ({ record, onBack }) => {
       </div>
 
       <div className="space-y-6 md:space-y-8">
-        <div className="bg-white rounded-[32px] md:rounded-[48px] apple-card-shadow border border-black/[0.03] overflow-hidden">
-          <div className="bg-[#f5f5f7] px-6 py-6 md:px-12 md:py-10">
+        <div className="bg-white rounded-[32px] md:rounded-[48px] apple-card-shadow border border-black/[0.03] overflow-visible">
+          <div className="bg-[#f5f5f7] px-6 py-6 md:px-12 md:py-10 rounded-t-[32px] md:rounded-t-[48px]">
             <div className="inline-block bg-[#0071e3] text-white text-[9px] md:text-[11px] font-bold px-3 py-1 rounded-full uppercase tracking-[0.1em] mb-3">
               智能深度评阅
             </div>
@@ -59,8 +59,8 @@ const Report: React.FC<ReportProps> = ({ record, onBack }) => {
             <p className="text-[#86868b] font-medium text-base md:text-lg mt-2">{paperName}</p>
           </div>
 
-          <div className="p-6 md:p-12">
-            <div className="prose prose-slate max-w-none prose-headings:text-[#1d1d1f] prose-p:text-[#1d1d1f] prose-li:text-[#1d1d1f] prose-strong:text-[#1d1d1f] prose-p:my-3 prose-ul:my-3 prose-ol:my-3 prose-li:my-1 prose-headings:mt-6 prose-headings:mb-3 first:prose-headings:mt-0">
+          <div className="p-6 md:p-12 pb-16 md:pb-20">
+            <div className="prose prose-slate max-w-none prose-headings:text-[#1d1d1f] prose-p:text-[#1d1d1f] prose-li:text-[#1d1d1f] prose-strong:text-[#1d1d1f] prose-p:my-3 prose-ul:my-3 prose-ol:my-3 prose-li:my-1 prose-headings:mt-6 prose-headings:mb-3 first:prose-headings:mt-0 prose-headings:break-words prose-p:break-words">
               {content ? (
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
               ) : (
