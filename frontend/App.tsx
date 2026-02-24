@@ -211,15 +211,26 @@ const App: React.FC = () => {
       {/* 批改中的 Loading 动画 */}
       {isGrading && (
         <div className="fixed inset-0 bg-white/90 backdrop-blur-sm z-[200] flex flex-col items-center justify-center">
-          <div className="relative w-24 h-24 mb-6">
-            <div className="absolute inset-0 border-4 border-blue-200 rounded-full"></div>
-            <div className="absolute inset-0 border-4 border-blue-600 rounded-full border-t-transparent animate-spin"></div>
-            <div className="absolute inset-0 flex items-center justify-center">
-              <i className="fas fa-brain text-blue-600 text-3xl animate-pulse"></i>
+          <div className="book-container mb-8">
+            <div className="book">
+              <div className="book-spine"></div>
+              <div className="book-page book-page-3"></div>
+              <div className="book-page book-page-2"></div>
+              <div className="book-page book-page-1">
+                <div className="book-lines">
+                  <div className="book-line"></div>
+                  <div className="book-line"></div>
+                  <div className="book-line"></div>
+                  <div className="book-line"></div>
+                  <div className="book-line"></div>
+                  <div className="book-line"></div>
+                  <div className="book-line"></div>
+                </div>
+              </div>
             </div>
           </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">AI正在深度阅卷中</h2>
-          <p className="text-gray-500 animate-pulse text-center px-6">正在连接后端进行批改，请稍候...</p>
+          <h2 className="text-2xl font-bold text-[#1d1d1f] mb-2">正在深度阅卷中</h2>
+          <p className="text-[#86868b] text-sm animate-pulse text-center px-6">AI阅卷老师正在逐段精批您的答卷，请稍候...</p>
         </div>
       )}
 
