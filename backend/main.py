@@ -531,7 +531,7 @@ def call_gemini_system_with_images(prompt: str, image_data_list: List[str]) -> O
 
     payload = {
         "contents": [{"role": "user", "parts": parts}],
-        "generationConfig": {"temperature": 0.3, "maxOutputTokens": 4096},
+        "generationConfig": {"temperature": 0.3, "maxOutputTokens": 65536},
     }
     data = json.dumps(payload, ensure_ascii=False).encode("utf-8")
     req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"})
@@ -589,7 +589,7 @@ def call_gemini_system(prompt: str) -> Optional[str]:
         ],
         "generationConfig": {
             "temperature": 0.3,
-            "maxOutputTokens": 4096,
+            "maxOutputTokens": 65536,
         },
     }
 
