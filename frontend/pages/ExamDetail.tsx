@@ -51,6 +51,30 @@ const ExamDetail: React.FC<ExamDetailProps> = ({ paper, onGrade, onBack }) => {
     });
   };
 
+  const handlePaste = (e: React.ClipboardEvent) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    let hasImage = false;
+    Array.from(items).forEach(item => {
+      if (item.type.startsWith('image/')) {
+        hasImage = true;
+        const file = item.getAsFile();
+        if (file) {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            const result = reader.result as string;
+            setImages(prev => {
+              const currentImages = prev[currentQuestion.id] || [];
+              return { ...prev, [currentQuestion.id]: [...currentImages, result] };
+            });
+          };
+          reader.readAsDataURL(file);
+        }
+      }
+    });
+    if (hasImage) e.preventDefault();
+  };
+
   const toChineseNum = (n: number) => {
     const nums = ['一', '二', '三', '四', '五', '六', '七', '八', '九', '十'];
     return nums[n] || (n + 1).toString();
@@ -148,7 +172,10 @@ const ExamDetail: React.FC<ExamDetailProps> = ({ paper, onGrade, onBack }) => {
 
               {/* Input Area */}
               <div className="space-y-4">
-                <div className="bg-[#fbfbfd] rounded-[28px] md:rounded-[40px] border border-black/[0.05] p-1 shadow-sm transition-all focus-within:ring-2 focus-within:ring-[#0071e3]/20 relative">
+                <div 
+                  className="bg-[#fbfbfd] rounded-[28px] md:rounded-[40px] border border-black/[0.05] p-1 shadow-sm transition-all focus-within:ring-2 focus-within:ring-[#0071e3]/20 relative"
+                  onPaste={handlePaste}
+                >
                   <textarea
                     value={currentAnswer}
                     onChange={handleAnswerChange}
@@ -179,7 +206,7 @@ const ExamDetail: React.FC<ExamDetailProps> = ({ paper, onGrade, onBack }) => {
                     <div className="text-[12px] font-medium text-[#86868b] flex justify-between md:block">
                       <span>字数统计: <span className={wordCount > currentQuestion.wordLimit ? 'text-red-500 font-bold' : 'text-[#1d1d1f]'}>{wordCount}</span> / {currentQuestion.wordLimit}</span>
                     </div>
-                    <div className="hidden md:flex space-x-2 md:space-x-4">
+                    <div className="hidden md:flex md:items-center space-x-2 md:space-x-4">
                       <button 
                         onClick={() => fileInputRef.current?.click()}
                         className="bg-white border border-black/[0.1] px-4 py-2.5 rounded-xl text-xs font-bold hover:bg-[#f5f5f7] transition-all flex items-center justify-center space-x-2"
@@ -187,6 +214,7 @@ const ExamDetail: React.FC<ExamDetailProps> = ({ paper, onGrade, onBack }) => {
                         <i className="fas fa-camera text-[#0071e3]"></i>
                         <span>拍照上传</span>
                       </button>
+                      <span className="text-[11px] text-[#86868b]">支持粘贴图片</span>
                       <button 
                         onClick={() => onGrade(currentQuestion, currentAnswer, currentQuestionImages)}
                         className="bg-[#0071e3] text-white px-6 md:px-10 py-2.5 rounded-full text-xs md:text-sm font-bold shadow-lg shadow-blue-500/20 active:scale-95 transition-all"
