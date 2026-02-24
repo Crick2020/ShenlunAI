@@ -173,14 +173,18 @@ const Home: React.FC<HomeProps> = ({ onSelectPaper, filters, setFilters, papers,
                     </button>
                   ))}
                 </div>
-                {/* 手机端展开/收起：小屏默认两行，可展开查看全部 */}
                 <button
                   type="button"
                   onClick={() => setRegionExpanded(prev => !prev)}
-                  className="mt-2 md:hidden text-[12px] font-semibold text-[#0071e3] hover:underline flex items-center gap-1"
+                  className="mt-2.5 md:hidden inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#f5f5f7] text-[12px] font-semibold text-[#86868b] active:scale-95 transition-all duration-200"
                 >
-                  {regionExpanded ? '收起' : '展开'}
-                  <i className={`fas fa-chevron-${regionExpanded ? 'up' : 'down'} text-[10px]`} />
+                  {regionExpanded ? '收起' : '更多省市'}
+                  <svg
+                    className={`w-3 h-3 transition-transform duration-200 ${regionExpanded ? 'rotate-180' : ''}`}
+                    fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                  </svg>
                 </button>
               </div>
             </div>
