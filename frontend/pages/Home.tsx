@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { EXAM_TYPES, REGIONS } from '../constants';
 import { Paper } from '../types';
 import { track } from '../services/analytics';
@@ -12,6 +12,8 @@ interface HomeProps {
 }
 
 const Home: React.FC<HomeProps> = ({ onSelectPaper, filters, setFilters, papers, isLoading }) => {
+  // 手机端地区筛选：默认折叠为两行，支持展开/收起
+  const [regionExpanded, setRegionExpanded] = useState(false);
 
   useEffect(() => {
     if (filters.type === '事业单位' && filters.region === '国考') {
@@ -149,7 +151,11 @@ const Home: React.FC<HomeProps> = ({ onSelectPaper, filters, setFilters, papers,
                 <span className="text-[11px] font-bold text-[#86868b] uppercase tracking-[0.1em] opacity-70">所属地区</span>
               </div>
               <div className="flex-1">
-                <div className="flex flex-wrap gap-1.5 md:gap-2">
+                <div
+                  className={`flex flex-wrap gap-1.5 md:gap-2 transition-[max-height] duration-300 ease-out md:!max-h-none md:overflow-visible ${
+                    regionExpanded ? 'max-h-[500px] overflow-visible' : 'max-h-[4.5rem] overflow-hidden md:max-h-none'
+                  }`}
+                >
                   {displayedRegions.map(r => (
                     <button 
                       key={r}
@@ -167,6 +173,15 @@ const Home: React.FC<HomeProps> = ({ onSelectPaper, filters, setFilters, papers,
                     </button>
                   ))}
                 </div>
+                {/* 手机端展开/收起：小屏默认两行，可展开查看全部 */}
+                <button
+                  type="button"
+                  onClick={() => setRegionExpanded(prev => !prev)}
+                  className="mt-2 md:hidden text-[12px] font-semibold text-[#0071e3] hover:underline flex items-center gap-1"
+                >
+                  {regionExpanded ? '收起' : '展开'}
+                  <i className={`fas fa-chevron-${regionExpanded ? 'up' : 'down'} text-[10px]`} />
+                </button>
               </div>
             </div>
             
