@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { EXAM_TYPES, REGIONS, API_BASE } from '../constants';
+import React, { useEffect } from 'react';
+import { EXAM_TYPES, REGIONS } from '../constants';
 import { Paper } from '../types';
 import { track } from '../services/analytics';
 
@@ -7,32 +7,11 @@ interface HomeProps {
   onSelectPaper: (paper: Paper) => void;
   filters: { type: string; region: string };
   setFilters: React.Dispatch<React.SetStateAction<{ type: string; region: string }>>;
+  papers: Paper[];
+  isLoading: boolean;
 }
 
-const Home: React.FC<HomeProps> = ({ onSelectPaper, filters, setFilters }) => {
-  const [papers, setPapers] = useState<Paper[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
- 
-
-  // 3. 新增：去后端抓取数据的逻辑
-  useEffect(() => {
-    fetch(`${API_BASE}/api/list`)
-      .then(res => res.json())
-      .then(data => {
-        console.log("后端试卷列表:", data);
-        // 把后端返回的 "国家" 映射为 "国考"
-        const mappedData = data.map((p: any) => ({
-          ...p,
-          region: p.region === '国家' ? '国考' : p.region
-        }));
-        setPapers(mappedData);
-        setIsLoading(false);
-      })
-      .catch(err => {
-        console.error("加载试卷失败:", err);
-        setIsLoading(false);
-      });
-  }, []);
+const Home: React.FC<HomeProps> = ({ onSelectPaper, filters, setFilters, papers, isLoading }) => {
 
   useEffect(() => {
     if (filters.type === '事业单位' && filters.region === '国考') {

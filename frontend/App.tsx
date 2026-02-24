@@ -28,6 +28,10 @@ const App: React.FC = () => {
   
   const [history, setHistory] = useState<HistoryRecord[]>([]);
 
+  // 试卷列表缓存：提升到 App 层，避免每次回到首页都重新请求
+  const [papers, setPapers] = useState<Paper[]>([]);
+  const [isPapersLoading, setIsPapersLoading] = useState(true);
+
   // Current grading context
   const [pendingGrading, setPendingGrading] = useState<{
     question: Question;
@@ -38,6 +42,24 @@ const App: React.FC = () => {
   useEffect(() => {
     const savedHistory = localStorage.getItem('history');
     if (savedHistory) setHistory(JSON.parse(savedHistory));
+  }, []);
+
+  // 应用启动时加载一次试卷列表，后续页面切换不再重复请求
+  useEffect(() => {
+    fetch(`${API_BASE}/api/list`)
+      .then(res => res.json())
+      .then(data => {
+        const mappedData = data.map((p: any) => ({
+          ...p,
+          region: p.region === '国家' ? '国考' : p.region
+        }));
+        setPapers(mappedData);
+        setIsPapersLoading(false);
+      })
+      .catch(err => {
+        console.error("加载试卷失败:", err);
+        setIsPapersLoading(false);
+      });
   }, []);
 
   // 页面浏览埋点
@@ -182,8 +204,7 @@ const App: React.FC = () => {
 
       <main>
         {currentPage === 'home' && (
-          // 这里传入新的 handleSelectPaper 函数
-          <Home onSelectPaper={handleSelectPaper} filters={filters} setFilters={setFilters} />
+          <Home onSelectPaper={handleSelectPaper} filters={filters} setFilters={setFilters} papers={papers} isLoading={isPapersLoading} />
         )}
         
         {currentPage === 'exam' && selectedPaper && (

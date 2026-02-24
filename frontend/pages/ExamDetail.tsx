@@ -221,7 +221,6 @@ const ExamDetail: React.FC<ExamDetailProps> = ({ paper, onGrade, onBack }) => {
                         <i className="fas fa-camera text-[#0071e3]"></i>
                         <span>拍照上传</span>
                       </button>
-                      <span className="text-[11px] text-[#86868b]">支持粘贴图片</span>
                       <button 
                         onClick={() => {
                           track.paperSubmitClick(paper, currentQuestion);
