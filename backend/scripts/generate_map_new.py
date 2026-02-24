@@ -16,54 +16,43 @@ def generate_map(region_name, folder_name):
     print('        {')
     
     for f in files:
-        # Generate ID
-        # Example: 2018年公务员多省联考《申论》题（湖南乡镇卷）.pdf -> gwy_hunan_2018_XiangZhen
-        # Example: 2021年江苏省公考《申论》题（A、普通选调卷）.pdf -> gwy_jiangsu_2021_A
-        
         year = f[:4]
-        
-        # Determine suffix
-        suffix = ""
-        if "乡镇" in f or "县乡" in f:
-            suffix = "XiangZhen" # Standardize
-        elif "行政执法" in f:
-            suffix = "XingZhengZhiFa"
-        elif "省市" in f or "市级" in f:
-            suffix = "ShengShi"
-        elif "通用" in f:
-            suffix = "TongYong"
-        elif "A" in f or "甲" in f:
-            suffix = "A"
-        elif "B" in f or "乙" in f:
-            suffix = "B"
-        elif "C" in f or "丙" in f:
-            suffix = "C"
-        else:
-            suffix = "General"
-            
-        # Refine suffix based on specific keywords to match existing style if possible, 
-        # but standardized is better.
-        
-        # Jiangsu specific
-        if region_name == "江苏":
+        suffix = "General"
+
+        if region_name == "上海":
             if "A" in f: suffix = "A"
             elif "B" in f: suffix = "B"
-            elif "C" in f: suffix = "C"
+            elif "行政执法" in f: suffix = "XingZhengZhiFa"
             
-        # Jilin specific
-        if region_name == "吉林":
-            if "甲" in f: suffix = "A"
-            elif "乙" in f: suffix = "B"
-            elif "丙" in f: suffix = "C"
+        elif region_name == "四川":
+            parts = []
+            if "上半年" in f: parts.append("ShangBanNian")
+            elif "下半年" in f: parts.append("XiaBanNian")
+            
+            if "乡镇" in f: parts.append("XiangZhen")
+            elif "县乡" in f: parts.append("XianXiang")
+            elif "省市县" in f: parts.append("ShengShiXian")
+            elif "省市" in f: parts.append("ShengShi")
+            elif "行政执法" in f: parts.append("XingZhengZhiFa")
+            elif "B" in f: parts.append("B")
+            elif "C" in f: parts.append("C")
+            elif "A" in f: parts.append("A")
+            
+            if parts:
+                suffix = "_".join(parts)
+            else:
+                suffix = "General"
 
-        # Hunan specific
-        if region_name == "湖南":
+        else:
+            # Default logic for other regions
             if "乡镇" in f or "县乡" in f: suffix = "XiangZhen"
             elif "行政执法" in f: suffix = "XingZhengZhiFa"
-            elif "省市" in f: suffix = "ShengShi"
+            elif "省市" in f or "市级" in f: suffix = "ShengShi"
             elif "通用" in f: suffix = "TongYong"
+            elif "A" in f or "甲" in f: suffix = "A"
+            elif "B" in f or "乙" in f: suffix = "B"
+            elif "C" in f or "丙" in f: suffix = "C"
 
-        
         # Pinyin for region
         region_pinyin = {
             "湖南": "hunan",
@@ -76,7 +65,9 @@ def generate_map(region_name, folder_name):
             "青海": "qinghai",
             "山东": "shandong",
             "山西": "shanxi",
-            "陕西": "shaanxi"
+            "陕西": "shaanxi",
+            "上海": "shanghai",
+            "四川": "sichuan"
         }.get(region_name, "unknown")
         
         paper_id = f"gwy_{region_pinyin}_{year}_{suffix}"
@@ -86,6 +77,5 @@ def generate_map(region_name, folder_name):
     print('    ),')
 
 print("# Generated Maps")
-generate_map("山东", "山东")
-generate_map("山西", "山西")
-generate_map("陕西", "陕西")
+generate_map("上海", "上海")
+generate_map("四川", "四川")
