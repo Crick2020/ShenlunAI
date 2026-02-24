@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { EXAM_TYPES, REGIONS, API_BASE } from '../constants';
 import { Paper } from '../types';
+import { track } from '../services/analytics';
 
 interface HomeProps {
   onSelectPaper: (paper: Paper) => void;
@@ -142,7 +143,10 @@ const Home: React.FC<HomeProps> = ({ onSelectPaper, filters, setFilters }) => {
                   {availableExamTypes.map(t => (
                     <button 
                       key={t}
-                      onClick={() => setFilters(f => ({ ...f, type: t }))}
+                      onClick={() => {
+                        track.filterChange('type', t);
+                        setFilters(f => ({ ...f, type: t }));
+                      }}
                       className={`flex-1 md:flex-none px-4 md:px-6 py-1.5 md:py-2 rounded-lg text-[13px] md:text-[14px] font-semibold transition-all duration-300 whitespace-nowrap ${
                         filters.type === t 
                         ? 'bg-white text-[#1d1d1f] shadow-sm scale-[1.01]' 
@@ -170,7 +174,10 @@ const Home: React.FC<HomeProps> = ({ onSelectPaper, filters, setFilters }) => {
                   {displayedRegions.map(r => (
                     <button 
                       key={r}
-                      onClick={() => setFilters(f => ({ ...f, region: r }))}
+                      onClick={() => {
+                        track.filterChange('region', r);
+                        setFilters(f => ({ ...f, region: r }));
+                      }}
                       className={`px-3 md:px-4 py-1.5 rounded-xl text-[12px] md:text-[14px] font-semibold transition-all duration-300 border ${
                         filters.region === r 
                         ? 'bg-[#0071e3] text-white border-[#0071e3] shadow-sm' 
@@ -198,7 +205,10 @@ const Home: React.FC<HomeProps> = ({ onSelectPaper, filters, setFilters }) => {
               <div 
                 key={paper.id} 
                 className="bg-white rounded-2xl md:rounded-[32px] border border-black/[0.02] apple-card-shadow apple-card-hover overflow-hidden cursor-pointer flex flex-col group p-1"
-                onClick={() => onSelectPaper(paper)}
+                onClick={() => {
+                  track.paperClick(paper);
+                  onSelectPaper(paper);
+                }}
               >
                 <div className="p-5 md:p-8 pb-3 flex-1">
                   <div className="flex justify-between items-center mb-3 md:mb-5">

@@ -1,6 +1,7 @@
 
 import React, { useState, useRef } from 'react';
 import { Paper, Question, Material, QuestionType } from '../types';
+import { track } from '../services/analytics';
 
 interface ExamDetailProps {
   paper: Paper;
@@ -88,7 +89,10 @@ const ExamDetail: React.FC<ExamDetailProps> = ({ paper, onGrade, onBack }) => {
       {/* Top Header Bar — sticky */}
       <div className="shrink-0 sticky top-0 z-50 border-b border-black/[0.06] bg-white relative flex items-center justify-center h-12 md:h-14 px-4">
         <button
-          onClick={onBack}
+          onClick={() => {
+            track.examBack(paper.id);
+            onBack();
+          }}
           className="absolute left-4 top-1/2 -translate-y-1/2 text-[#1d1d1f] hover:text-[#0071e3] transition-colors p-1"
           aria-label="返回"
         >
@@ -208,7 +212,10 @@ const ExamDetail: React.FC<ExamDetailProps> = ({ paper, onGrade, onBack }) => {
                     </div>
                     <div className="hidden md:flex md:items-center space-x-2 md:space-x-4">
                       <button 
-                        onClick={() => fileInputRef.current?.click()}
+                        onClick={() => {
+                          track.photoUploadClick(paper.id, currentQuestion.id);
+                          fileInputRef.current?.click();
+                        }}
                         className="bg-white border border-black/[0.1] px-4 py-2.5 rounded-xl text-xs font-bold hover:bg-[#f5f5f7] transition-all flex items-center justify-center space-x-2"
                       >
                         <i className="fas fa-camera text-[#0071e3]"></i>
@@ -216,7 +223,10 @@ const ExamDetail: React.FC<ExamDetailProps> = ({ paper, onGrade, onBack }) => {
                       </button>
                       <span className="text-[11px] text-[#86868b]">支持粘贴图片</span>
                       <button 
-                        onClick={() => onGrade(currentQuestion, currentAnswer, currentQuestionImages)}
+                        onClick={() => {
+                          track.paperSubmitClick(paper, currentQuestion);
+                          onGrade(currentQuestion, currentAnswer, currentQuestionImages);
+                        }}
                         className="bg-[#0071e3] text-white px-6 md:px-10 py-2.5 rounded-full text-xs md:text-sm font-bold shadow-lg shadow-blue-500/20 active:scale-95 transition-all"
                       >
                         提交并批改
@@ -229,13 +239,19 @@ const ExamDetail: React.FC<ExamDetailProps> = ({ paper, onGrade, onBack }) => {
                 <div className={`md:hidden flex flex-col items-end space-y-4 pt-4 px-2 ${mobileView === 'question' ? 'block' : 'hidden'}`}>
                   <div className="flex items-center space-x-3">
                     <button 
-                      onClick={() => fileInputRef.current?.click()}
+                      onClick={() => {
+                        track.photoUploadClick(paper.id, currentQuestion.id);
+                        fileInputRef.current?.click();
+                      }}
                       className="w-14 h-14 rounded-full bg-white border border-black/[0.08] shadow-xl flex items-center justify-center text-[#86868b] active:scale-90 transition-transform"
                     >
                       <i className="fas fa-camera text-xl"></i>
                     </button>
                     <button 
-                      onClick={() => onGrade(currentQuestion, currentAnswer, currentQuestionImages)}
+                      onClick={() => {
+                        track.paperSubmitClick(paper, currentQuestion);
+                        onGrade(currentQuestion, currentAnswer, currentQuestionImages);
+                      }}
                       className="w-14 h-14 rounded-full bg-[#0071e3] text-white shadow-xl shadow-blue-500/30 flex items-center justify-center active:scale-90 transition-transform"
                     >
                       <i className="fas fa-check text-xl"></i>
@@ -259,13 +275,19 @@ const ExamDetail: React.FC<ExamDetailProps> = ({ paper, onGrade, onBack }) => {
               className={`absolute top-1 bottom-1 w-[calc(50%-4px)] bg-white rounded-full shadow-sm transition-all duration-300 ${mobileView === 'materials' ? 'left-1' : 'left-[calc(50%+2px)]'}`}
             ></div>
             <button 
-              onClick={() => setMobileView('materials')}
+              onClick={() => {
+                track.examTabSwitch('material');
+                setMobileView('materials');
+              }}
               className={`relative z-10 px-4 py-1.5 text-xs font-bold transition-colors w-16 text-center ${mobileView === 'materials' ? 'text-[#1d1d1f]' : 'text-[#86868b]'}`}
             >
               材料
             </button>
             <button 
-              onClick={() => setMobileView('question')}
+              onClick={() => {
+                track.examTabSwitch('question');
+                setMobileView('question');
+              }}
               className={`relative z-10 px-4 py-1.5 text-xs font-bold transition-colors w-16 text-center ${mobileView === 'question' ? 'text-[#1d1d1f]' : 'text-[#86868b]'}`}
             >
               问题
@@ -274,7 +296,10 @@ const ExamDetail: React.FC<ExamDetailProps> = ({ paper, onGrade, onBack }) => {
 
           {/* Quick Status Text */}
           <div 
-            onClick={() => setMobileView('question')}
+            onClick={() => {
+              track.examTabSwitch('question');
+              setMobileView('question');
+            }}
             className="flex-1 px-4 text-[#86868b] text-[13px] font-medium truncate text-center"
           >
             {wordCount > 0 ? `已作答 ${wordCount} 字` : '输入答案...'}

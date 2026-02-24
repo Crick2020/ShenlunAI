@@ -2,6 +2,7 @@ import React from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { HistoryRecord } from '../types';
+import { track } from '../services/analytics';
 
 interface ReportProps {
   record: HistoryRecord;
@@ -15,6 +16,7 @@ const Report: React.FC<ReportProps> = ({ record, onBack }) => {
     (record.rawGradingResponse && (record.rawGradingResponse.content ?? record.rawGradingResponse.modelRawOutput));
 
   const handleCopyAll = () => {
+    track.reportCopy();
     const text = [
       `# 申论批改报告`,
       `**试卷**：${paperName}`,
@@ -29,7 +31,7 @@ const Report: React.FC<ReportProps> = ({ record, onBack }) => {
     <div className="max-w-5xl mx-auto px-4 md:px-6 py-6 md:py-12 pb-24">
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 md:mb-12 gap-4 md:gap-6">
         <button
-          onClick={onBack}
+          onClick={() => { track.reportBack(); onBack(); }}
           className="group flex items-center text-[#86868b] hover:text-[#1d1d1f] transition-colors self-start"
         >
           <div className="w-8 h-8 rounded-full flex items-center justify-center bg-white shadow-sm border border-black/[0.05] mr-3 group-hover:-translate-x-1 transition-transform">

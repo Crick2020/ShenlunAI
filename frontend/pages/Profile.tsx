@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { HistoryRecord } from '../types';
+import { track } from '../services/analytics';
 
 interface ProfileProps {
   history: HistoryRecord[];
@@ -27,7 +28,10 @@ const Profile: React.FC<ProfileProps> = ({ history, onViewRecord }) => {
             <div 
               key={record.id} 
               className="bg-white rounded-2xl md:rounded-[32px] border border-black/[0.05] p-5 md:p-8 flex flex-col md:flex-row justify-between items-stretch md:items-center hover:shadow-lg transition-all cursor-pointer group apple-card-shadow"
-              onClick={() => onViewRecord(record)}
+              onClick={() => {
+                track.historyRecordClick(record);
+                onViewRecord(record);
+              }}
             >
               <div className="flex-1 space-y-1 md:space-y-2">
                 <div className="flex items-center space-x-2">

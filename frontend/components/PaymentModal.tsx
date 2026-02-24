@@ -1,15 +1,17 @@
 
 import React, { useState } from 'react';
 import { QuestionType } from '../types';
+import { track } from '../services/analytics';
 
 interface PaymentModalProps {
   isOpen: boolean;
   type: QuestionType;
+  paperId?: string;
   onClose: () => void;
   onPay: () => void;
 }
 
-const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, type, onClose, onPay }) => {
+const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, type, paperId, onClose, onPay }) => {
   const [showExampleMobile, setShowExampleMobile] = useState(false);
   
   if (!isOpen) return null;
@@ -17,7 +19,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, type, onClose, onPa
 
   return (
     <div className="fixed inset-0 z-[110] flex items-center justify-center p-0 md:p-6 lg:p-8 animate-in fade-in duration-300">
-      <div className="absolute inset-0 bg-black/60 md:backdrop-blur-md" onClick={onClose}></div>
+      <div className="absolute inset-0 bg-black/60 md:backdrop-blur-md" onClick={() => { track.paymentModalClose(paperId); onClose(); }}></div>
       
       <div className={`bg-white md:rounded-[48px] shadow-2xl w-full h-full md:max-w-7xl md:max-h-[92vh] overflow-hidden relative z-10 flex flex-col md:flex-row animate-in zoom-in-95 slide-in-from-bottom-10 duration-500`}>
         
@@ -27,6 +29,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, type, onClose, onPa
             if (showExampleMobile) {
               setShowExampleMobile(false);
             } else {
+              track.paymentModalClose(paperId);
               onClose();
             }
           }} 
@@ -75,7 +78,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, type, onClose, onPa
           <div className="mt-6 space-y-3">
             {/* Primary Action Button (WeChat Pay Style on Mobile) */}
             <button 
-              onClick={onPay}
+              onClick={() => { track.paymentModalConfirm(paperId); onPay(); }}
               className="md:hidden w-full bg-[#07c160] text-white py-4 rounded-[20px] font-bold text-base shadow-xl shadow-green-500/20 active:scale-[0.98] transition-all flex items-center justify-center space-x-3"
             >
               <i className="fab fa-weixin text-xl"></i>
@@ -97,7 +100,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, type, onClose, onPa
             {/* Mock pay button for desktop/testing */}
             <div className="hidden md:block mt-4">
               <button
-                onClick={onPay}
+                onClick={() => { track.paymentModalConfirm(paperId); onPay(); }}
                 className="w-full bg-[#0071e3] text-white py-3 rounded-[12px] font-bold text-sm shadow-md hover:opacity-95 active:scale-[0.99] transition-all"
               >
                 确定
