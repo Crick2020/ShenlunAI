@@ -43,8 +43,29 @@ def generate_map(region_name, folder_name):
             else:
                 suffix = "General"
 
+        elif region_name == "重庆":
+            parts = []
+            if "上半年" in f: parts.append("ShangBanNian")
+            elif "下半年" in f: parts.append("XiaBanNian")
+            
+            if "乡镇" in f: parts.append("XiangZhen")
+            elif "行政执法" in f: parts.append("XingZhengZhiFa")
+            elif "通用" in f: parts.append("TongYong")
+            
+            if parts:
+                suffix = "_".join(parts)
+            else:
+                suffix = "General"
+                
+        elif region_name == "深圳":
+            if "I类" in f: suffix = "I"
+            elif "II类" in f: suffix = "II"
+            elif "III类" in f: suffix = "III"
+            elif "A" in f: suffix = "A"
+            elif "B" in f: suffix = "B"
+
         else:
-            # Default logic for other regions
+            # Default logic for other regions (Tianjin, Yunnan, Zhejiang, etc.)
             if "乡镇" in f or "县乡" in f: suffix = "XiangZhen"
             elif "行政执法" in f: suffix = "XingZhengZhiFa"
             elif "省市" in f or "市级" in f: suffix = "ShengShi"
@@ -52,6 +73,8 @@ def generate_map(region_name, folder_name):
             elif "A" in f or "甲" in f: suffix = "A"
             elif "B" in f or "乙" in f: suffix = "B"
             elif "C" in f or "丙" in f: suffix = "C"
+            elif "I类" in f: suffix = "I"
+            elif "II类" in f: suffix = "II"
 
         # Pinyin for region
         region_pinyin = {
@@ -67,7 +90,12 @@ def generate_map(region_name, folder_name):
             "山西": "shanxi",
             "陕西": "shaanxi",
             "上海": "shanghai",
-            "四川": "sichuan"
+            "四川": "sichuan",
+            "重庆": "chongqing",
+            "天津": "tianjin",
+            "云南": "yunnan",
+            "浙江": "zhejiang",
+            "深圳": "shenzhen"
         }.get(region_name, "unknown")
         
         paper_id = f"gwy_{region_pinyin}_{year}_{suffix}"
@@ -77,5 +105,8 @@ def generate_map(region_name, folder_name):
     print('    ),')
 
 print("# Generated Maps")
-generate_map("上海", "上海")
-generate_map("四川", "四川")
+generate_map("重庆", "重庆")
+generate_map("天津", "天津")
+generate_map("云南", "云南")
+generate_map("浙江", "浙江")
+generate_map("深圳", "深圳")

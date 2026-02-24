@@ -13,7 +13,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, type, onClose, onPa
   const [showExampleMobile, setShowExampleMobile] = useState(false);
   
   if (!isOpen) return null;
-  const originalPrice = type === QuestionType.SMALL ? 2 : 3;
+  const originalPrice = type === QuestionType.SMALL ? 0.5 : 1;
 
   return (
     <div className="fixed inset-0 z-[110] flex items-center justify-center p-0 md:p-6 lg:p-8 animate-in fade-in duration-300">
@@ -50,7 +50,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, type, onClose, onPa
               <div className="flex flex-col items-center justify-center gap-2">
                 <div className="flex items-center justify-center text-[#86868b]">
                   <span className="text-lg md:text-xl font-bold mr-1 line-through">¥</span>
-                  <span className="text-2xl md:text-3xl font-bold tracking-tighter line-through">{originalPrice}.00</span>
+                  <span className="text-2xl md:text-3xl font-bold tracking-tighter line-through">{originalPrice.toFixed(2)}</span>
                 </div>
                 <div className="text-[#34c759] font-black text-2xl md:text-3xl tracking-tight">限时免费</div>
               </div>
@@ -100,7 +100,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, type, onClose, onPa
                 onClick={onPay}
                 className="w-full bg-[#0071e3] text-white py-3 rounded-[12px] font-bold text-sm shadow-md hover:opacity-95 active:scale-[0.99] transition-all"
               >
-                模拟支付（测试）
+                确定
               </button>
             </div>
           </div>
