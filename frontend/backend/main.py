@@ -380,7 +380,7 @@ def call_gemini_system(prompt: str) -> Optional[str]:
             }
         ],
         "generationConfig": {
-            "temperature": 0.0,
+            "temperature": 0.3,
             "maxOutputTokens": 4096,
         },
     }
