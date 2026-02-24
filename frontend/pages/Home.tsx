@@ -5,14 +5,14 @@ import { track } from '../services/analytics';
 
 interface HomeProps {
   onSelectPaper: (paper: Paper) => void;
+  onPrefetchPaper?: (paperId: string) => void;
   filters: { type: string; region: string };
   setFilters: React.Dispatch<React.SetStateAction<{ type: string; region: string }>>;
   papers: Paper[];
   isLoading: boolean;
 }
 
-const Home: React.FC<HomeProps> = ({ onSelectPaper, filters, setFilters, papers, isLoading }) => {
-  // 手机端地区筛选：默认折叠为两行，支持展开/收起
+const Home: React.FC<HomeProps> = ({ onSelectPaper, onPrefetchPaper, filters, setFilters, papers, isLoading }) => {
   const [regionExpanded, setRegionExpanded] = useState(false);
 
   useEffect(() => {
@@ -85,7 +85,6 @@ const Home: React.FC<HomeProps> = ({ onSelectPaper, filters, setFilters, papers,
     return orderMap[key] ?? 999;
   };
 
-  // 4. 修改：同一地区、同一年份内，按 variant 规则排序；年份降序（新年份在前）
   const filteredPapers = papers
     .filter(p => {
       const matchType = p.examType ? p.examType === filters.type : true;
@@ -96,6 +95,13 @@ const Home: React.FC<HomeProps> = ({ onSelectPaper, filters, setFilters, papers,
       if (b.year !== a.year) return b.year - a.year;
       return getVariantOrder(a) - getVariantOrder(b);
     });
+
+  useEffect(() => {
+    if (!onPrefetchPaper || filteredPapers.length === 0) return;
+    const ids = filteredPapers.slice(0, 3).map(p => p.id);
+    const timer = setTimeout(() => ids.forEach(id => onPrefetchPaper(id)), 150);
+    return () => clearTimeout(timer);
+  }, [filters.type, filters.region, papers.length]);
 
   return (
     <div className="max-w-7xl mx-auto px-4 md:px-6 py-6 md:py-12">
@@ -203,6 +209,8 @@ const Home: React.FC<HomeProps> = ({ onSelectPaper, filters, setFilters, papers,
               <div 
                 key={paper.id} 
                 className="bg-white rounded-2xl md:rounded-[32px] border border-black/[0.02] apple-card-shadow apple-card-hover overflow-hidden cursor-pointer flex flex-col group p-1"
+                onMouseEnter={() => onPrefetchPaper?.(paper.id)}
+                onTouchStart={() => onPrefetchPaper?.(paper.id)}
                 onClick={() => {
                   track.paperClick(paper);
                   onSelectPaper(paper);

@@ -15,7 +15,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, type, paperId, onCl
   const [showExampleMobile, setShowExampleMobile] = useState(false);
   
   if (!isOpen) return null;
-  const originalPrice = type === QuestionType.SMALL ? 0.5 : 1;
+  const originalPrice = type === QuestionType.SMALL ? 0.49 : 0.99;
 
   return (
     <div className="fixed inset-0 z-[110] flex items-center justify-center p-0 md:p-6 lg:p-8 animate-in fade-in duration-300">

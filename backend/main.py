@@ -15,6 +15,7 @@ app.add_middleware(GZipMiddleware, minimum_size=500)
 
 _papers_index: list = []
 _papers_cache: Dict[str, dict] = {}
+_papers_json_cache: Dict[str, bytes] = {}
 _papers_index_json: bytes = b"[]"
 _papers_index_etag: str = '"empty"'
 
@@ -44,18 +45,20 @@ def _sort_key(p):
 
 def _build_index():
     """遍历 data 目录，将所有试卷加载到内存，构建排好序的索引列表。"""
-    global _papers_index, _papers_cache, _papers_index_json, _papers_index_etag
+    global _papers_index, _papers_cache, _papers_json_cache, _papers_index_json, _papers_index_etag
     data_dir = get_data_dir()
     if not os.path.isdir(data_dir):
         os.makedirs(data_dir, exist_ok=True)
         _papers_index = []
         _papers_cache = {}
+        _papers_json_cache = {}
         _papers_index_json = b"[]"
         _papers_index_etag = '"empty"'
         return
 
     papers = []
     cache: Dict[str, dict] = {}
+    json_cache: Dict[str, bytes] = {}
     for filename in os.listdir(data_dir):
         if not filename.endswith(".json"):
             continue
@@ -65,6 +68,7 @@ def _build_index():
                 content = json.load(f)
             pid = content.get("id", filename[:-5])
             cache[pid] = content
+            json_cache[pid] = json.dumps(content, ensure_ascii=False).encode("utf-8")
             papers.append({
                 "id": pid,
                 "name": content.get("name", "未命名试卷"),
@@ -78,6 +82,7 @@ def _build_index():
     papers.sort(key=_sort_key)
     _papers_index = papers
     _papers_cache = cache
+    _papers_json_cache = json_cache
     _papers_index_json = json.dumps(papers, ensure_ascii=False).encode("utf-8")
     _papers_index_etag = f'"{hashlib.md5(_papers_index_json).hexdigest()}"'
     print(f"[Startup] 已加载 {len(papers)} 份试卷到内存缓存, index_size={len(_papers_index_json)} bytes, etag={_papers_index_etag}")
@@ -140,11 +145,13 @@ def list_papers(request: Request):
 @app.get("/api/paper")
 def get_paper(id: str):
     paper_id = id.replace(".json", "") if id.endswith(".json") else id
+    _cache_headers = {"Cache-Control": "public, max-age=31536000, immutable"}
 
-    if paper_id in _papers_cache:
-        return JSONResponse(
-            content=_papers_cache[paper_id],
-            headers={"Cache-Control": "public, max-age=31536000, immutable"},
+    if paper_id in _papers_json_cache:
+        return Response(
+            content=_papers_json_cache[paper_id],
+            media_type="application/json",
+            headers=_cache_headers,
         )
 
     data_dir = get_data_dir()
@@ -157,10 +164,7 @@ def get_paper(id: str):
     try:
         with open(file_path, "r", encoding="utf-8") as f:
             data = json.load(f)
-        return JSONResponse(
-            content=data,
-            headers={"Cache-Control": "public, max-age=31536000, immutable"},
-        )
+        return JSONResponse(content=data, headers=_cache_headers)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"试卷解析失败: {str(e)}")
 

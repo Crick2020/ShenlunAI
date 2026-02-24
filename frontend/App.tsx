@@ -120,6 +120,29 @@ const App: React.FC = () => {
     setCurrentPage('home');
   };
 
+  const inflightPrefetches = useRef<Set<string>>(new Set());
+
+  const prefetchPaper = (paperId: string) => {
+    if (paperDetailMemCache.current.has(paperId)) return;
+    if (inflightPrefetches.current.has(paperId)) return;
+    const lsHit = readCachedDetail(paperId);
+    if (lsHit) {
+      paperDetailMemCache.current.set(paperId, lsHit);
+      return;
+    }
+    inflightPrefetches.current.add(paperId);
+    fetch(`${API_BASE}/api/paper?id=${paperId}`)
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (data) {
+          paperDetailMemCache.current.set(paperId, data);
+          writeCachedDetail(paperId, data);
+        }
+      })
+      .catch(() => {})
+      .finally(() => inflightPrefetches.current.delete(paperId));
+  };
+
   const handleSelectPaper = async (summaryPaper: Paper) => {
     const memHit = paperDetailMemCache.current.get(summaryPaper.id);
     if (memHit) {
@@ -253,7 +276,7 @@ const App: React.FC = () => {
 
       <main>
         {currentPage === 'home' && (
-          <Home onSelectPaper={handleSelectPaper} filters={filters} setFilters={setFilters} papers={papers} isLoading={isPapersLoading} />
+          <Home onSelectPaper={handleSelectPaper} onPrefetchPaper={prefetchPaper} filters={filters} setFilters={setFilters} papers={papers} isLoading={isPapersLoading} />
         )}
         
         {currentPage === 'exam' && selectedPaper && (
