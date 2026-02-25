@@ -11,6 +11,9 @@ import threading
 import urllib.request
 import urllib.error
 from typing import Optional, List, Dict, Any
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from stats_db import record_submit, get_stats
 
 
