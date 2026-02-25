@@ -79,9 +79,8 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, type, paperId, onCl
             {/* Primary Action Button (WeChat Pay Style on Mobile) */}
             <button 
               onClick={() => { track.paymentModalConfirm(paperId); onPay(); }}
-              className="md:hidden w-full bg-[#07c160] text-white py-4 rounded-[20px] font-bold text-base shadow-xl shadow-green-500/20 active:scale-[0.98] transition-all flex items-center justify-center space-x-3"
+              className="md:hidden w-full bg-[#07c160] text-white py-4 rounded-[20px] font-bold text-base shadow-xl shadow-green-500/20 active:scale-[0.98] transition-all flex items-center justify-center"
             >
-              <i className="fab fa-weixin text-xl"></i>
               <span>立即批改</span>
             </button>
             

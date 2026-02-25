@@ -1,3 +1,4 @@
+from datetime import date
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
@@ -6,9 +7,29 @@ import hashlib
 import json
 import os
 import re
+import threading
 import urllib.request
 import urllib.error
 from typing import Optional, List, Dict, Any
+from stats_db import record_submit, get_stats
+
+
+
+
+
+def _get_client_ip(request: Request) -> Optional[str]:
+    """从请求中取客户端 IP（兼容代理 X-Forwarded-For）。"""
+    xff = request.headers.get("x-forwarded-for")
+    if xff:
+        return xff.split(",")[0].strip() or None
+    if request.client:
+        return getattr(request.client, "host", None)
+    return None
+
+
+def _record_submit_stat(is_essay: bool, client_ip: Optional[str] = None) -> None:
+    """记录一次提交：小题或大作文，按天统计并记录当日用户 IP（用于每日用户量）。"""
+    record_submit(is_essay, client_ip)
 
 app = FastAPI()
 app.add_middleware(GZipMiddleware, minimum_size=500)
@@ -206,10 +227,19 @@ def _fallback_grading_result(model_input: dict, message: str, raw: str) -> dict:
 
 
 # ---------------------------------------------------------
+# 3.1 提交统计（按天：用户量、小题/大作文提交量）
+# ---------------------------------------------------------
+@app.get("/api/stats/submit")
+def get_submit_stats():
+    """返回按天统计：每日用户量（按 IP 去重）、小题提交量、大作文提交量；以及累计总量。"""
+    return get_stats()
+
+
+# ---------------------------------------------------------
 # 4. 接口：提交 AI 批改 (预留位置)
 # ---------------------------------------------------------
 @app.post("/api/grade")
-def grade_essay(payload: dict):
+def grade_essay(request: Request, payload: dict):
     print("收到前端提交的答案:", payload)
 
     # 支持传入 paperId 来从 data 中读取试卷（优先从文件加载，兼容 Render 部署）
@@ -331,6 +361,12 @@ def grade_essay(payload: dict):
             materials_to_send = [m for m in materials if m.get("id") in mid_set]
         else:
             materials_to_send = list(materials)
+
+    # 后端自统计：按天记录小题/大作文提交量及当日用户 IP（用于每日用户量）
+    try:
+        _record_submit_stat(has_essay, _get_client_ip(request))
+    except Exception as e:
+        print(f"[统计] 写入提交次数失败: {e}")
 
     # 构造发给模型的简洁上下文（只包含需要的部分）
     model_input = {
