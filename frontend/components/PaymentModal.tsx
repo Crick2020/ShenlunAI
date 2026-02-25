@@ -1,7 +1,145 @@
 
 import React, { useState } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { QuestionType } from '../types';
 import { track } from '../services/analytics';
+
+const REPORT_EXAMPLE_MARKDOWN = `# 申论批改报告
+**试卷**：2023年公务员多省联考《申论》题（安徽A、普通选调卷）
+**题目**："给定资料4"中提到"现代让传统更亲切鲜活,传统让现代更丰富厚重",请结合你对这句话的理解,参考给定资料,联系实际,自选角度,自拟题目,写一篇议论文。(40分)
+
+# 申论大作文深度批改与升格报告
+
+**测评题目：** "现代让传统更亲切鲜活，传统让现代更丰富厚重"
+**考试地区：** 安徽省考
+**满分：** 40分
+**阅卷组长：** [您的名字/资深阅卷组长]
+
+---
+
+### 模块一：【名师审题与材料透视】
+
+#### 1. 破题与立意界定
+*   **核心主题词：** **"传统"与"现代"的辩证统一**。
+*   **核心矛盾：** 传统文化在现代社会面临的"束之高阁"与"断层"危机，以及现代科技/生活缺乏文化根基的"漂浮"感。
+*   **探讨方向：** 本题探讨的是**双向赋能**。不仅要写"现代手段如何拯救传统"，更要写"传统文化如何滋养现代"。
+*   **文体建议：** **政论文**。需从文化自信、文化强国的高度切入，论证二者融合的必然性与路径。
+
+#### 2. 材料素材图谱
+*   **总论点依据：** 材料4结尾段"现代让传统更亲切鲜活，传统让现代更丰富厚重……实现传统与现代的跨时空对话"。这是全文的灵魂，定下了"融合共生"的总基调。
+*   **分论点1（现代赋能传统）：** 依据材料4中D市博物馆的文创开发、3D/元宇宙技术应用、短视频传播。逻辑：**现代技术与机制创新是传统文化"活"起来的助推器。**
+*   **分论点2（传统滋养现代）：** 依据材料4中"传统让现代更丰富厚重"、"汲取民族智慧"、"树立文化自信"。逻辑：**传统文化是现代社会的精神内核，为现代生活提供审美与价值支撑。**
+*   **分论点3（融合的路径/保障）：** 依据材料4中"博物馆+高校+企业"机制、文化创意产业联盟、全年龄段覆盖。逻辑：**通过机制创新与受众拓展，构建传统与现代融合的长效生态。**
+
+---
+
+### 模块二：【用户立意与骨架诊断】
+
+#### 1. 用户文章骨架提取
+*   **用户拟定标题：** 《现代科技与传统文化的交融共兴》
+*   **用户总论点：** 现代科技与传统文化碰撞交融，现代让传统鲜活，传统为现代注入基因。
+*   **用户分论点：**
+    1. 现代科技可以让传统文化更加鲜活（侧重传播载体与经济价值）。
+    2. 传统文化可以让现代科技更加厚重（侧重沉浸式体验与消费场景）。
+    3. 融合共兴需要依赖持续的创新（侧重产品与市场创新）。
+
+#### 2. ⚠️ 立意判定结论：**基本切题**
+*   **优点：** 准确抓取了材料4的核心金句作为立意，逻辑框架清晰，属于稳健型写法。
+*   **致命伤：** 
+    1. **格局偏窄：** 过度局限于"科技"与"消费"层面，将"现代"等同于"科技"，将"厚重"等同于"消费蓝海"，缺乏政治高度（如文化自信、民族复兴、文化强国）。
+    2. **深度不足：** 对"传统让现代更丰富厚重"的理解流于表面，未能触及精神慰藉、价值观传承等深层内涵。
+    3. **篇幅问题：** 虽不计字数扣分，但内容密度极低，论证单薄，难以支撑40分的大作文体量。
+
+---
+
+### 模块三：【多维度评分】
+
+| 维度 | 得分 | 扣分点与评价 |
+| :--- | :--- | :--- |
+| **立意与思想** | 12/15 | 立意准确但流于表面，未能体现"文化自信"的政治高度。 |
+| **结构与逻辑** | 7/10 | 结构完整，但分论点2与分论点1的界限略有模糊，存在逻辑交叉。 |
+| **内容与论证** | 6/10 | **严重扣分项**。例证单一（黑神话悟空、博物馆），缺乏理证，大段复述材料意图明显，缺乏自主思考。 |
+| **语言与规范** | 3/5 | 标题平铺直叙，缺乏感染力；语言口语化，缺乏"体制内"书面表达的庄重感。 |
+| **总分** | **28/40** | **等级：二类下。** 属于"保底卷"，缺乏亮点，难以进入高分档。 |
+
+---
+
+### 模块四：【逐段精批与升格示范】
+
+#### 1. 标题批改
+*   **原标题：** 《现代科技与传统文化的交融共兴》
+*   **阅卷组长点评：** 典型的"说明文"标题，平淡如水，缺乏议论文的观点倾向和文学美感。
+*   **🚀 升格神仙标题：**
+    1. 《守正创新 互鉴共荣：绘就传统与现代交响的新画卷》
+    2. 《以现代之"活"唤醒传统之"魂"》
+    3. 《跨越时空的对话：让传统文化在现代土壤中向阳而生》
+
+#### 2. 第一段（开头）
+*   **🔍 痛点诊断：** 引题生硬，直接罗列案例，缺乏时代背景的铺垫，总论点亮出得不够惊艳。
+*   **🔄 升格示范：**
+    "求木之长者，必固其根本；欲流之远者，必浚其泉源。"当数字敦煌让莫高窟跨越千年实现"永生"，当博物馆文创凭借"反差萌"火爆出圈，我们看到的不仅是科技的伟力，更是传统与现代的深情相拥。**"现代让传统更亲切鲜活，传统让现代更丰富厚重"，这不仅是文化发展的时代命题，更是坚定文化自信、建设文化强国的必由之路。**
+
+#### 3. 中间段落（本论）
+
+*   📍 **【主体段落 1（第2段）】**：
+    *   🎯 **段旨判定：** 基本合格，但"现代科技"范围窄了，应升格为"现代手段"。
+    *   🔍 **论证逻辑诊断：** 缺失了"逻辑分析"环节，直接跳到了"经济价值"，显得功利。
+    *   ✍️ **弱句精修：** 
+        *   原句："传统文化通过现代科技这一载体，可以传播的更远、更广，走得更稳。"
+        *   修改："**现代科技如同一把'金钥匙'，打破了物理空间的桎梏，让沉睡在博物馆里的文物、书写在古籍里的文字跃然屏上，实现了文化传播的破圈与重塑。**"
+    *   🔄 **本段高分重塑：**
+        **以现代之"变"活化传统之"形"，让文化记忆更亲切鲜活。** 文化的生命力在于传播，而传播的效力取决于载体。从D市博物馆的"手说文物"到元宇宙里的农业文明，现代科技不仅是冰冷的工具，更是连接古今的纽带。通过3D建模、虚拟现实等手段，传统文化褪去了"严肃刻板"的外衣，代之以系统化、趣味化的呈现方式。这不仅降低了大众感知文化的门槛，更在"润物细无声"中让年轻人爱上传统，实现了从"被动接受"到"主动追寻"的华丽转身。
+
+*   📍 **【主体段落 2（第3段）】**：
+    *   🎯 **段旨判定：** 逻辑混乱。本段应写"传统对现代的贡献"，用户却写成了"科技如何创造消费"。
+    *   🔍 **论证逻辑诊断：** 严重跑偏。把"厚重"理解成了"消费蓝海"，这是典型的商业思维而非申论思维。
+    *   ✍️ **弱句精修：** 
+        *   原句："两者融和不仅仅是传播途径的变化，更意味着一片新的消费蓝海。"
+        *   修改："**这种融合不仅是产业形态的重构，更是文化根脉对现代文明的深层滋养，赋予了快节奏生活以审美的留白与灵魂的归宿。**"
+    *   🔄 **本段高分重塑：**
+        **以传统之"根"重塑现代之"魂"，让时代发展更丰富厚重。** 现代文明虽有科技之利，若无文化之根，则易流于浮躁与空虚。传统文化所蕴含的民族智慧、审美风尚与哲学思考，恰是现代社会最宝贵的"营养剂"。正如材料中椅子演变所折射的生活方式，传统文化为现代设计提供了取之不尽的灵感源泉。当现代建筑融入汉韵元素，当流行游戏植入古建基因，现代产品便拥有了穿越时空的文化张力。这种"厚重"，不仅体现在经济效益的增长，更体现在它为现代人构建了一个精神家园，让文化自信成为最深沉、最持久的力量。
+
+*   📍 **【主体段落 3（第4段）】**：
+    *   🎯 **段旨判定：** 谈创新路径，切题。
+    *   🔍 **论证逻辑诊断：** 论证空洞，缺乏对材料中"机制创新"的深度挖掘。
+    *   ✍️ **弱句精修：** 
+        *   原句："把传统技艺转化为现代设计，把历史符号融入日常用品……才能让传统文化有新的市场。"
+        *   修改："**推动'博物馆+高校+企业'的多方联动，构建文化创意产业联盟，方能打破'信息孤岛'，实现文化资源与市场要素的精准对接。**"
+    *   🔄 **本段高分重塑：**
+        **以创新之"进"架起融合之"桥"，构建共生共荣的文化生态。** 传统与现代的融合并非简单的"物理相加"，而是深刻的"化学反应"。这需要我们跳出单一开发的窠臼，探索机制创新的新路径。应借鉴D市"产业联盟"的经验，整合文博单位、科研院所与市场主体的力量，形成研发、生产、销售的全链条闭环。同时，创新应坚持"守正"底色，不忘传承文化的初心，避免过度商业化导致的"水上浮萍"现象。唯有如此，创新才能既有"流量"又有"质量"，让传统文化在现代社会的土壤中扎得更深、长得更茂。
+
+#### 4. 结尾段（结论）
+*   🔍 **痛点诊断：** 结尾收束太快，力度不足，缺乏升华。
+*   🔄 **升格示范：**
+    "万物有所生，而独知守其根。"传统与现代并非此消彼长的对手，而是相生相成的伙伴。在全面建设社会主义现代化国家的新征程上，我们要以变应变，以新求新，让现代科技为传统文化"插翅赋能"，让传统文化为现代生活"铸魂塑形"。唯有如此，我们才能在跨时空的对话中，续写中华文明的新辉煌，让民族自信之花在时代沃土上绚丽绽放！
+
+---
+
+### 模块五：【标杆范文与金句积累】
+
+#### 标杆范文：《守正创新 互鉴共荣：绘就传统与现代交响的新画卷》
+
+"现代让传统更亲切鲜活，传统让现代更丰富厚重。"这不仅是D市博物馆文创出圈的生动注脚，更是当代中国文化发展的深刻启示。在日新月异的数字化时代，传统文化不应是尘封的记忆，现代文明也不应是无根的浮萍。唯有推动二者深度融合，在"变"与"不变"中寻找平衡，方能实现传统与现代的跨时空对话，筑牢文化自信之基。
+
+**以现代之"变"活化传统之"形"，让文化记忆更亲切鲜活。** 传统文化若要走进现代生活，必须找到与当代语境相契合的表达方式。材料中，D市博物馆利用3D、元宇宙技术让石刻"活"起来，让农业文明"走"出来，正是运用现代科技赋能传统的典范。现代手段如同一面棱镜，折射出传统文化的多彩光芒。它打破了时空壁垒，让聋哑人通过手语感知文物，让老年人在App中共享数字红利。这种"鲜活"，源于对传播规律的精准把握，源于对全年龄段群体的温情关照。当传统文化不再是高耸的围墙，而是触手可及的文创、沉浸式的短视频，它便拥有了持久的生命力。
+
+**以传统之"根"重塑现代之"魂"，让时代发展更丰富厚重。** 现代文明的飞速发展，离不开传统文化的深厚滋养。传统文化不仅是历史的记录，更是民族智慧的结晶。材料指出，文物记录着审美风气的嬗替与人体科学的进步，这些"不变"的形式蕴含着演变的规律。当现代设计汲取了历代名窑的雅致，当现代科技融入了神农文化的厚重，产品便不再仅仅是消费品，而是承载民族情感的文化符号。传统文化的注入，纠正了现代社会过度追求速度而忽视深度的偏差，为现代科技赋予了人文温度，为现代生活提供了精神坐标。
+
+**以创新之"进"架起融合之"桥"，构建共生共荣的文化生态。** 传统与现代的融合，关键在于机制与产品的持续创新。D市摸索出"博物馆+高校+企业"的路子，成立文化创意产业联盟，实现了社会效益与经济效益的双丰收。这种创新，不是随波逐流的盲目跟风，而是立足使命的守正出新。我们要以变应变，积极运用新技术、新业态，推动文化资源数字化转化；更要以不变应万变，坚守传承文化的初心，让创新不至于迷失方向。只有建立起政府引导、市场运作、社会参与的长效机制，才能让传统与现代的融合从"盆景"变为"风景"。
+
+"现代让传统更亲切鲜活，传统让现代更丰富厚重。"这是一种跨越时空的双向奔赴。在全面推进中华民族伟大复兴的征程中，我们要坚持守正创新，让传统文化在现代技术的加持下焕发新生，让现代生活在传统文化的浸润下更具底蕴。让我们携手共进，在传统与现代的交响中，绘就文化强国的壮美画卷！
+
+#### 范文解析：
+1.  **化用技巧：** 范文巧妙化用了材料4中的"博物馆+高校+企业"、"产业联盟"、"手语视频"、"石刻短视频"等具体案例，但不是生搬硬套，而是将其作为论据支撑分论点。
+2.  **逻辑提升：** 将材料中的"变"与"不变"上升到哲学高度，论证了"守正"与"创新"的关系。
+3.  **政治高度：** 引入了"文化自信"、"文化强国"、"民族复兴"等宏大叙事，符合安徽省考对大作文高度的要求。
+
+#### 金句积累：
+1.  **"求木之长者，必固其根本；欲流之远者，必浚其泉源。"**（适用于论证传统文化的重要性）
+2.  **"不忘本来才能开辟未来，善于继承才能更好创新。"**（适用于论证守正创新的关系）
+3.  **"让收藏在博物馆里的文物、陈列在广阔大地上的遗产、书写在古籍里的文字都活起来。"**（官方权威论述，直接对标本题主题）
+`;
 
 interface PaymentModalProps {
   isOpen: boolean;
@@ -110,151 +248,24 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, type, paperId, onCl
 
         {/* Right: Detailed Example Side - Always Full in Desktop */}
         <div className={`flex-1 bg-[#fbfbfd] overflow-y-auto custom-scrollbar p-8 md:p-14 lg:p-16 ${showExampleMobile ? 'flex flex-col' : 'hidden md:flex flex-col'}`}>
-          <div className="max-w-3xl mx-auto space-y-12 md:space-y-16 pb-20">
-            
-            {/* Header */}
+          <div className="max-w-3xl mx-auto space-y-8 pb-20">
             <div>
               <div className="inline-flex items-center space-x-3 bg-blue-50 text-[#0071e3] px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest mb-6">
                 <i className="fas fa-sparkles"></i>
                 <span>批改报告深度预览</span>
               </div>
               <h4 className="text-2xl md:text-3xl lg:text-4xl font-black text-[#1d1d1f] tracking-tight mb-4 leading-tight">
-                2022年江苏事业单位招聘考试《综合知识和能力素质》大作文批改示例
+                2023年公务员多省联考《申论》题（安徽A、普通选调卷）大作文批改示例
               </h4>
               <p className="text-[#86868b] text-sm md:text-base leading-relaxed font-medium border-l-4 border-[#0071e3] pl-5 md:pl-6 py-1.5">
-                本题要求结合材料关于工匠精神的名言，围绕总书记对青年的要求进行写作。
+                “给定资料4”：现代让传统更亲切鲜活，传统让现代更丰富厚重——自选角度、自拟题目写议论文（40分）。
               </p>
             </div>
-
-            {/* Part 1: Viewpoints */}
-            <section className="space-y-6 md:space-y-8">
-              <div className="flex items-center space-x-4 text-[#1d1d1f]">
-                <div className="w-1.5 h-6 md:h-8 bg-[#0071e3] rounded-full"></div>
-                <h5 className="text-xl md:text-2xl font-bold tracking-tight">核心立意与分论点解析</h5>
+            <div className="bg-white rounded-[32px] md:rounded-[48px] p-6 md:p-10 border border-black/[0.04] shadow-sm">
+              <div className="prose prose-slate max-w-none prose-headings:text-[#1d1d1f] prose-p:text-[#1d1d1f] prose-li:text-[#1d1d1f] prose-strong:text-[#1d1d1f] prose-p:my-3 prose-ul:my-3 prose-ol:my-3 prose-li:my-1 prose-headings:mt-6 prose-headings:mb-3 first:prose-headings:mt-0 prose-headings:break-words prose-p:break-words prose-table:text-sm">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{REPORT_EXAMPLE_MARKDOWN}</ReactMarkdown>
               </div>
-              
-              <div className="bg-white rounded-[32px] md:rounded-[48px] p-6 md:p-10 border border-black/[0.04] space-y-8 md:space-y-10 shadow-sm relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-48 h-48 bg-blue-50/30 blur-[80px] -mr-24 -mt-24"></div>
-                
-                <div className="p-5 md:p-7 bg-blue-50/50 rounded-2xl md:rounded-[32px] border border-blue-100/50 relative z-10">
-                  <p className="text-[10px] md:text-[11px] font-bold text-[#0071e3] mb-2 tracking-widest uppercase">总论点建议</p>
-                  <p className="text-[#1d1d1f] text-lg md:text-xl font-bold leading-relaxed">
-                    新时代青年当以此心致一艺，以实干担重任，在民族复兴的赛道上奋勇争先。
-                  </p>
-                </div>
-
-                <div className="space-y-10 md:space-y-12 relative z-10">
-                  {[
-                    {
-                      title: '分论点一：青年当涵养“心心在一艺”的专注，筑牢理想信念，作为奋斗基石。',
-                      source: '材料5：引用纪昀名言“心心在一艺”。材料6：强调青年追求进步的特质。',
-                      strategy: '强调专注与热爱。青年人要沉下心来，摒弃浮躁，将个人理想融入国家发展。'
-                    },
-                    {
-                      title: '分论点二：青年当练就“其艺必工”的本领，追求精益求精，作为成事关键。',
-                      source: '材料5：沈燮元具备“扎实的编目能力”。材料6：指出施展才干的舞台无比广阔。',
-                      strategy: '强调能力建设。青年不仅要有热情，更要有真才实学，在岗位上苦练内功。'
-                    },
-                    {
-                      title: '分论点三：青年当践行“其职必举”的担当，勇于砥砺奋斗，回应时代召唤。',
-                      source: '材料5：沈老觉得“工作需要”就是幸福。材料6：强调民族复兴接力赛。',
-                      strategy: '强调责任担当。青年要将个人奋斗与国家命运紧密相连，在担当中历练。'
-                    }
-                  ].map((item, i) => (
-                    <div key={i} className="relative pl-10 md:pl-14">
-                      <div className="absolute left-0 top-0 w-8 h-8 md:w-10 md:h-10 rounded-full bg-[#f5f5f7] flex items-center justify-center text-xs md:text-sm font-bold text-[#1d1d1f] shadow-sm">
-                        {i + 1}
-                      </div>
-                      <h6 className="text-base md:text-lg font-bold text-[#1d1d1f] mb-3 md:mb-5 leading-relaxed">{item.title}</h6>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-                        <div className="bg-[#fbfbfd] p-4 md:p-5 rounded-2xl border border-black/[0.03]">
-                          <p className="text-[9px] md:text-[10px] font-bold text-[#86868b] uppercase mb-1.5 tracking-wider">分论点来源</p>
-                          <p className="text-xs md:text-[14px] text-[#1d1d1f] leading-relaxed whitespace-pre-wrap font-medium opacity-90">{item.source}</p>
-                        </div>
-                        <div className="bg-[#fbfbfd] p-4 md:p-5 rounded-2xl border border-black/[0.03]">
-                          <p className="text-[9px] md:text-[10px] font-bold text-[#86868b] uppercase mb-1.5 tracking-wider">写作思路</p>
-                          <p className="text-xs md:text-[14px] text-[#1d1d1f] leading-relaxed opacity-70 italic">{item.strategy}</p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </section>
-
-            {/* Part 3: 智能诊断 */}
-            <section className="space-y-6 md:space-y-8">
-              <div className="flex items-center space-x-4 text-[#1d1d1f]">
-                <div className="w-1.5 h-6 md:h-8 bg-[#34c759] rounded-full"></div>
-                <h5 className="text-xl md:text-2xl font-bold tracking-tight">智能批改：深度报告演示</h5>
-              </div>
-              
-              <div className="space-y-6 md:space-y-8">
-                <div className="bg-white rounded-[32px] md:rounded-[48px] p-6 md:p-10 border border-black/[0.04] shadow-sm space-y-8">
-                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-                    <h6 className="text-xl font-bold text-[#1d1d1f]">综合评价诊断</h6>
-                    <div className="px-5 py-2 bg-[#34c759]/10 text-[#34c759] rounded-full text-xs font-bold w-fit border border-[#34c759]/10">预估得分：26-29分 (二类文)</div>
-                  </div>
-                  
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-10">
-                    <div className="space-y-4">
-                      <p className="text-[10px] font-bold text-[#34c759] uppercase tracking-widest border-b border-black/[0.05] pb-2">优点扫描</p>
-                      <ul className="space-y-4 text-[14px] text-[#1d1d1f]/90 leading-relaxed font-medium">
-                        <li className="flex items-start"><i className="fas fa-check-circle text-[#34c759] mt-1 mr-3 text-xs"></i><span>卷面极其整洁：字迹端正，无涂改，这是第一印象的高分项。</span></li>
-                        <li className="flex items-start"><i className="fas fa-check-circle text-[#34c759] mt-1 mr-3 text-xs"></i><span>结构布局完整：采用了稳健的五段论证法，分论点排布清晰。</span></li>
-                      </ul>
-                    </div>
-                    <div className="space-y-4">
-                      <p className="text-[10px] font-bold text-[#ff3b30] uppercase tracking-widest border-b border-black/[0.05] pb-2">失分原因/不足</p>
-                      <ul className="space-y-4 text-[14px] text-[#1d1d1f]/90 leading-relaxed font-medium">
-                        <li className="flex items-start"><i className="fas fa-exclamation-circle text-[#ff3b30] mt-1 mr-3 text-xs"></i><span>立意挖掘偏浅：对“心心在一艺”的内涵停留在表面概括。</span></li>
-                        <li className="flex items-start"><i className="fas fa-exclamation-circle text-[#ff3b30] mt-1 mr-3 text-xs"></i><span>论据偏离：分论点3谈论科技工具，与匠心主题脱节。</span></li>
-                      </ul>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-[#f5f5f7] rounded-[32px] md:rounded-[48px] p-6 md:p-10 space-y-8">
-                  <div className="space-y-5">
-                    <h6 className="text-lg font-bold text-[#1d1d1f]">分论点精准度诊断 (核心改进)</h6>
-                    <div className="bg-white p-6 md:p-8 rounded-3xl border border-black/[0.04] space-y-5 shadow-sm">
-                      <div className="space-y-2">
-                         <p className="text-sm md:text-base font-bold text-[#ff3b30] flex items-center"><i className="fas fa-microscope mr-2"></i>诊断：分论点3偏离主旨</p>
-                         <p className="text-[14px] text-[#1d1d1f] leading-relaxed opacity-80">
-                          您的分论点3“善于利用并转化最新科技成果”虽然符合时代背景，但偏离了题干中“心心在一艺”强调的精神品质、专注度与执着心。这属于工具论而非价值观。
-                         </p>
-                      </div>
-                      <div className="pt-5 border-t border-black/[0.05]">
-                        <p className="text-sm md:text-base font-bold text-[#0071e3] flex items-center mb-1.5"><i className="fas fa-magic mr-2"></i>优化方案：</p>
-                        <p className="text-[14px] text-[#1d1d1f] font-serif-sc italic leading-relaxed">
-                          建议修改为：做进步青年，当践行“其职必举”的担当，在坚守初心中砥砺奋斗。从“利用工具”转向“精神品质”的回扣。
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </section>
-
-            {/* Part 4: Model Answer */}
-            <section className="space-y-6 md:space-y-8">
-              <div className="flex items-center space-x-4 text-[#1d1d1f]">
-                <div className="w-1.5 h-6 md:h-8 bg-[#af52de] rounded-full"></div>
-                <h5 className="text-xl md:text-2xl font-bold tracking-tight">高分范文参考</h5>
-              </div>
-              <div className="bg-[#1d1d1f] rounded-[48px] md:rounded-[64px] p-8 md:p-16 shadow-2xl relative overflow-hidden group">
-                <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-blue-500/10 blur-[100px] -mr-32 -mt-32"></div>
-                <h6 className="text-xl md:text-2xl font-black text-white text-center mb-8 tracking-tight leading-tight">以匠心致初心 在青春赛道奋勇争先</h6>
-                <div className="font-serif-sc text-base md:text-[19px] leading-[2.2] md:leading-[2.4] text-white/90 space-y-8 text-justify select-text selection:bg-blue-500/40">
-                  <p>清代大儒纪昀有言：“心心在一艺，其艺必工；心心在一职，其职必举。”这道出了成就事业的底层逻辑——唯有专注热爱，方能技艺精湛；唯有尽职担当，方能有所建树。作为新时代的中国青年，更应传承“心在一艺”的匠心，跑好民族复兴的接力赛。</p>
-                  <p>做进步青年，当涵养“心心在一艺”的专注，筑牢理想信念的压舱石。专注源于热爱，成于坚守。99岁的南京图书馆馆员沈燮元，一生只做两件事：编目和买书。正是这种心无旁骛的专注，让他活出了“职业最美的样子”...</p>
-                  <div className="pt-6 flex justify-center">
-                    <div className="h-px w-16 bg-white/20"></div>
-                  </div>
-                </div>
-              </div>
-            </section>
-
+            </div>
           </div>
         </div>
       </div>
