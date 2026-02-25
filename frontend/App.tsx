@@ -210,7 +210,7 @@ const App: React.FC = () => {
       // 无 Gemini 返回内容（如后端未配置或报错占位）时不进入批改页，避免展示模拟/空白
       if (!mainContent) {
         track.gradingResult(selectedPaper, pendingGrading.question, 'fail', 'no content');
-        alert('批改服务暂未返回有效内容，请确认已配置 GEMINI_API_KEY 且后端正常运行。');
+        alert('服务器忙，请稍后再试');
         return;
       }
       const normalizedResult: GradingResult = {
@@ -249,7 +249,7 @@ const App: React.FC = () => {
     } catch (error: any) {
       const msg = error?.message || String(error);
       track.gradingResult(selectedPaper, pendingGrading.question, 'fail', msg);
-      alert('批改请求失败：' + (msg.includes('状态码') || msg.includes('Failed') ? msg : '请检查网络或后端是否运行（' + msg + '）'));
+      alert('服务器忙，请稍后再试');
       console.error(error);
     } finally {
       setIsGrading(false);

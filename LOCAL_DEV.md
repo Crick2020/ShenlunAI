@@ -4,13 +4,15 @@
 
 ## 1. 启动本地后端
 
-在项目根目录下：
+在**后端所在目录** `backend` 下执行（不要在 `backend/data` 下）：
 
 ```bash
-cd backend
+cd /path/to/ShenlunAI/backend    # 或从项目根目录：cd backend
 pip install -r requirements.txt
 uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
+
+若当前在 `backend/data`，先执行 `cd ..` 回到 `backend` 再运行上述命令。
 
 - `--reload`：改完 `main.py` 或 `data/*.json` 后会自动重启，无需手动停掉再开。
 - 后端地址：<http://localhost:8000>
@@ -55,3 +57,20 @@ npm run dev
 
 - **只在本机开发时** 使用 `.env.development` 和本地后端；**构建线上前端**（如 `npm run build`）时不要带 `VITE_API_BASE`，或保证线上构建用的是默认的 Render 地址，这样线上才会继续用 Render 后端。
 - 若暂时不想用本地后端，删掉或重命名 `frontend/.env.development`，前端会恢复为请求 `https://shenlun-backend.onrender.com`。
+
+## 6. Render 后端：环境变量与重新部署
+
+在 Render 的 **Environment** 里已配置的变量会随部署注入到后端，例如：
+
+- **GEMINI_API_KEY**：主 Key（新账号，优先使用）
+- **GEMINI_API_KEY_FALLBACK**：备用 Key（老账号，主 Key 达日限后自动使用）
+- **GEMINI_ENDPOINT**（可选）：默认 `https://generativelanguage.googleapis.com`
+
+**重要：修改或新增环境变量后，必须重新部署一次才会生效。**
+
+操作步骤：
+
+1. 打开 [Render Dashboard](https://dashboard.render.com)，进入你的 **Web Service**（后端服务）。
+2. 左侧点 **Environment**，确认 KEY / VALUE 已保存。
+3. 顶部或右侧找到 **Manual Deploy**，点击 **Deploy latest commit**（或 **Clear build cache & deploy** 若想彻底重建）。
+4. 等待部署状态变为 **Live**，再访问前端做一次批改即可验证双 Key 是否生效。

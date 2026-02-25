@@ -511,6 +511,29 @@ Output Constraints:
     }
 
 
+def _get_gemini_api_keys() -> List[str]:
+    """返回 Gemini API Key 列表：优先新账号(GEMINI_API_KEY)，其次老账号(GEMINI_API_KEY_FALLBACK)。"""
+    keys: List[str] = []
+    primary = (os.getenv("GEMINI_API_KEY") or "").strip()
+    if primary:
+        keys.append(primary)
+    fallback = (os.getenv("GEMINI_API_KEY_FALLBACK") or "").strip()
+    if fallback and fallback != primary:
+        keys.append(fallback)
+    return keys
+
+
+def _is_quota_or_rate_limit_error(http_code: Optional[int], error_obj: Optional[dict]) -> bool:
+    """判断是否为配额/限流错误，可切换备用 Key 重试。"""
+    if http_code == 429:
+        return True
+    if not error_obj:
+        return False
+    code = error_obj.get("code")
+    status = (error_obj.get("status") or "").upper()
+    return code == 429 or status == "RESOURCE_EXHAUSTED" or "RESOURCE_EXHAUSTED" in status
+
+
 def _parse_data_url(data_url: str) -> tuple:
     """从 data URL 解析出 mime_type 和 base64 字符串。返回 (mime_type, base64_str)，无法解析时返回 (None, None)。"""
     if not data_url or not isinstance(data_url, str):
@@ -532,14 +555,13 @@ def _parse_data_url(data_url: str) -> tuple:
 
 
 def call_gemini_system_with_images(prompt: str, image_data_list: List[str]) -> Optional[str]:
-    """带图片的多模态调用 Gemini，image_data_list 为 data URL 或 base64 字符串列表。"""
-    api_key = os.getenv("GEMINI_API_KEY")
-    base_endpoint = os.getenv("GEMINI_ENDPOINT", "https://generativelanguage.googleapis.com")
-    if not api_key:
+    """带图片的多模态调用 Gemini；优先主 Key，遇限流/配额用备用 Key 重试。"""
+    api_keys = _get_gemini_api_keys()
+    if not api_keys:
         print("GEMINI not configured (GEMINI_API_KEY missing)")
         return None
+    base_endpoint = os.getenv("GEMINI_ENDPOINT", "https://generativelanguage.googleapis.com")
     model_name = "gemini-3-flash-preview"
-    url = base_endpoint.rstrip("/") + f"/v1beta/models/{model_name}:generateContent?key={api_key}"
 
     parts: List[Dict[str, Any]] = [{"text": prompt}]
     for data_url in image_data_list:
@@ -560,51 +582,59 @@ def call_gemini_system_with_images(prompt: str, image_data_list: List[str]) -> O
         "generationConfig": {"temperature": 0.3, "maxOutputTokens": 65536},
     }
     data = json.dumps(payload, ensure_ascii=False).encode("utf-8")
-    req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"})
-    try:
-        with urllib.request.urlopen(req, timeout=90) as resp:
-            raw = resp.read().decode("utf-8")
-            if not raw or not raw.strip():
-                print("Gemini API 返回空 body")
-                return None
-            try:
-                obj = json.loads(raw)
-            except Exception:
-                return raw
-            if obj.get("error"):
-                print("Gemini API 错误:", obj.get("error"))
-                return None
-            candidates = obj.get("candidates") or []
-            if not candidates:
-                print("Gemini API 无 candidates")
-                return None
-            first = candidates[0] or {}
-            content = first.get("content") or {}
-            texts = []
-            for p in content.get("parts") or []:
-                if isinstance(p, dict) and "text" in p:
-                    texts.append(p["text"])
-            merged = "\n".join(texts).strip()
-            return merged if merged else None
-    except Exception as e:
-        print("call_gemini_system_with_images failed:", e)
-        return None
+
+    for idx, api_key in enumerate(api_keys):
+        url = base_endpoint.rstrip("/") + f"/v1beta/models/{model_name}:generateContent?key={api_key}"
+        req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"})
+        try:
+            with urllib.request.urlopen(req, timeout=90) as resp:
+                raw = resp.read().decode("utf-8")
+                if not raw or not raw.strip():
+                    print("Gemini API 返回空 body")
+                    continue
+                try:
+                    obj = json.loads(raw)
+                except Exception:
+                    return raw
+                err = obj.get("error")
+                if err:
+                    print("Gemini API 错误:", err)
+                    if _is_quota_or_rate_limit_error(None, err) and idx + 1 < len(api_keys):
+                        print("配额/限流，尝试备用 API Key")
+                        continue
+                    return None
+                candidates = obj.get("candidates") or []
+                if not candidates:
+                    print("Gemini API 无 candidates")
+                    return None
+                first = candidates[0] or {}
+                content = first.get("content") or {}
+                texts = []
+                for p in content.get("parts") or []:
+                    if isinstance(p, dict) and "text" in p:
+                        texts.append(p["text"])
+                merged = "\n".join(texts).strip()
+                return merged if merged else None
+        except urllib.error.HTTPError as e:
+            print("call_gemini_system_with_images HTTPError:", e.code, e.reason)
+            if _is_quota_or_rate_limit_error(e.code, None) and idx + 1 < len(api_keys):
+                print("配额/限流，尝试备用 API Key")
+                continue
+            return None
+        except Exception as e:
+            print("call_gemini_system_with_images failed:", e)
+            return None
+    return None
 
 
 def call_gemini_system(prompt: str) -> Optional[str]:
-    """尝试调用 Google Gemini 接口，返回模型生成的文本（或 None 表示未调用/失败）。"""
-    api_key = os.getenv("GEMINI_API_KEY")
-    # 对于 Google AI Studio，推荐使用 https://generativelanguage.googleapis.com 作为基础地址
-    base_endpoint = os.getenv("GEMINI_ENDPOINT", "https://generativelanguage.googleapis.com")
-    if not api_key:
+    """调用 Google Gemini 接口；优先主 Key，遇限流/配额用备用 Key 重试。"""
+    api_keys = _get_gemini_api_keys()
+    if not api_keys:
         print("GEMINI not configured (GEMINI_API_KEY missing)")
         return None
-
-    # 这里按照 Google AI Studio 的 REST API 规范调用 Gemini 3 Pro（当前为 preview 模型）
-    # 文档地址可参考：https://ai.google.dev/gemini-api/docs
-    # 如果后续正式版 model name 有变，可以只改下面这一行。
+    base_endpoint = os.getenv("GEMINI_ENDPOINT", "https://generativelanguage.googleapis.com")
     model_name = "gemini-3-flash-preview"
-    url = base_endpoint.rstrip('/') + f"/v1beta/models/{model_name}:generateContent?key={api_key}"
 
     payload = {
         "contents": [
@@ -618,47 +648,55 @@ def call_gemini_system(prompt: str) -> Optional[str]:
             "maxOutputTokens": 65536,
         },
     }
-
     data = json.dumps(payload, ensure_ascii=False).encode("utf-8")
-    req = urllib.request.Request(
-        url,
-        data=data,
-        headers={
-            "Content-Type": "application/json",
-        },
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=60) as resp:
-            raw = resp.read().decode("utf-8")
-            if not raw or not raw.strip():
-                print("Gemini API 返回空 body")
-                return None
-            try:
-                obj = json.loads(raw)
-            except Exception:
-                return raw
 
-            if obj.get("error"):
-                print("Gemini API 错误:", obj.get("error"))
-                return None
-
-            candidates = obj.get("candidates") or []
-            if not candidates:
-                print("Gemini API 无 candidates，原始响应:", raw[:500])
-                return None
-
-            first = candidates[0] or {}
-            content = first.get("content") or {}
-            parts = content.get("parts") or []
-            texts = []
-            for p in parts:
-                if isinstance(p, dict) and "text" in p:
-                    texts.append(p["text"])
-            merged = "\n".join(texts).strip()
-            if not merged:
-                print("Gemini 候选内容无文本，可能被安全过滤。finishReason:", first.get("finishReason"))
-                return None
-            return merged
-    except Exception as e:
-        print("call_gemini_system failed:", e)
-        return None
+    for idx, api_key in enumerate(api_keys):
+        url = base_endpoint.rstrip("/") + f"/v1beta/models/{model_name}:generateContent?key={api_key}"
+        req = urllib.request.Request(
+            url,
+            data=data,
+            headers={"Content-Type": "application/json"},
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=60) as resp:
+                raw = resp.read().decode("utf-8")
+                if not raw or not raw.strip():
+                    print("Gemini API 返回空 body")
+                    continue
+                try:
+                    obj = json.loads(raw)
+                except Exception:
+                    return raw
+                err = obj.get("error")
+                if err:
+                    print("Gemini API 错误:", err)
+                    if _is_quota_or_rate_limit_error(None, err) and idx + 1 < len(api_keys):
+                        print("配额/限流，尝试备用 API Key")
+                        continue
+                    return None
+                candidates = obj.get("candidates") or []
+                if not candidates:
+                    print("Gemini API 无 candidates，原始响应:", raw[:500])
+                    return None
+                first = candidates[0] or {}
+                content = first.get("content") or {}
+                parts = content.get("parts") or []
+                texts = []
+                for p in parts:
+                    if isinstance(p, dict) and "text" in p:
+                        texts.append(p["text"])
+                merged = "\n".join(texts).strip()
+                if not merged:
+                    print("Gemini 候选内容无文本，可能被安全过滤。finishReason:", first.get("finishReason"))
+                    return None
+                return merged
+        except urllib.error.HTTPError as e:
+            print("call_gemini_system HTTPError:", e.code, e.reason)
+            if _is_quota_or_rate_limit_error(e.code, None) and idx + 1 < len(api_keys):
+                print("配额/限流，尝试备用 API Key")
+                continue
+            return None
+        except Exception as e:
+            print("call_gemini_system failed:", e)
+            return None
+    return None
