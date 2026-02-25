@@ -1,7 +1,12 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { EXAM_TYPES, REGIONS } from '../constants';
 import { Paper } from '../types';
 import { track } from '../services/analytics';
+
+const PREFETCH_AFTER_FILTER_COUNT = 12;
+const PREFETCH_SCROLL_BATCH = 6;
+const PREFETCH_BATCH_SIZE = 3;
+const PREFETCH_DELAYS_MS = [150, 400, 650, 900];
 
 interface HomeProps {
   onSelectPaper: (paper: Paper) => void;
@@ -14,6 +19,8 @@ interface HomeProps {
 
 const Home: React.FC<HomeProps> = ({ onSelectPaper, onPrefetchPaper, filters, setFilters, papers, isLoading }) => {
   const [regionExpanded, setRegionExpanded] = useState(false);
+  const lastPrefetchedIndexRef = useRef(0);
+  const sentinelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (filters.type === '事业单位' && filters.region === '国考') {
@@ -98,10 +105,40 @@ const Home: React.FC<HomeProps> = ({ onSelectPaper, onPrefetchPaper, filters, se
 
   useEffect(() => {
     if (!onPrefetchPaper || filteredPapers.length === 0) return;
-    const ids = filteredPapers.slice(0, 3).map(p => p.id);
-    const timer = setTimeout(() => ids.forEach(id => onPrefetchPaper(id)), 150);
-    return () => clearTimeout(timer);
+    lastPrefetchedIndexRef.current = 0;
+    const list = filteredPapers;
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    PREFETCH_DELAYS_MS.forEach((delay, i) => {
+      const start = i * PREFETCH_BATCH_SIZE;
+      const batch = list.slice(start, start + PREFETCH_BATCH_SIZE);
+      const t = setTimeout(() => {
+        batch.forEach(p => onPrefetchPaper(p.id));
+        if (i === PREFETCH_DELAYS_MS.length - 1) {
+          lastPrefetchedIndexRef.current = Math.min(PREFETCH_AFTER_FILTER_COUNT, list.length);
+        }
+      }, delay);
+      timers.push(t);
+    });
+    return () => timers.forEach(clearTimeout);
   }, [filters.type, filters.region, papers.length]);
+
+  useEffect(() => {
+    if (!onPrefetchPaper || filteredPapers.length === 0 || !sentinelRef.current) return;
+    const list = filteredPapers;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (!entries[0]?.isIntersecting) return;
+        const from = lastPrefetchedIndexRef.current;
+        if (from >= list.length) return;
+        const batch = list.slice(from, from + PREFETCH_SCROLL_BATCH);
+        batch.forEach(p => onPrefetchPaper(p.id));
+        lastPrefetchedIndexRef.current = from + batch.length;
+      },
+      { rootMargin: '200px' }
+    );
+    observer.observe(sentinelRef.current);
+    return () => observer.disconnect();
+  }, [filters.type, filters.region, filteredPapers.length]);
 
   return (
     <div className="max-w-7xl mx-auto px-4 md:px-6 py-6 md:py-12">
@@ -203,48 +240,53 @@ const Home: React.FC<HomeProps> = ({ onSelectPaper, onPrefetchPaper, filters, se
       {isLoading ? (
         <div className="text-center py-20 text-gray-400">正在从后端加载试卷...</div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-          {filteredPapers.length > 0 ? (
-            filteredPapers.map(paper => (
-              <div 
-                key={paper.id} 
-                className="bg-white rounded-2xl md:rounded-[32px] border border-black/[0.02] apple-card-shadow apple-card-hover overflow-hidden cursor-pointer flex flex-col group p-1"
-                onMouseEnter={() => onPrefetchPaper?.(paper.id)}
-                onTouchStart={() => onPrefetchPaper?.(paper.id)}
-                onClick={() => {
-                  track.paperClick(paper);
-                  onSelectPaper(paper);
-                }}
-              >
-                <div className="p-5 md:p-8 pb-3 flex-1">
-                  <div className="flex justify-between items-center mb-3 md:mb-5">
-                    <div className="bg-[#f5f5f7] text-[#1d1d1f] text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">{paper.examType}</div>
-                    <div className="text-[#86868b] text-[11px] md:text-[12px] font-medium">{paper.year}</div>
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+            {filteredPapers.length > 0 ? (
+              filteredPapers.map(paper => (
+                <div 
+                  key={paper.id} 
+                  className="bg-white rounded-2xl md:rounded-[32px] border border-black/[0.02] apple-card-shadow apple-card-hover overflow-hidden cursor-pointer flex flex-col group p-1"
+                  onMouseEnter={() => onPrefetchPaper?.(paper.id)}
+                  onTouchStart={() => onPrefetchPaper?.(paper.id)}
+                  onClick={() => {
+                    track.paperClick(paper);
+                    onSelectPaper(paper);
+                  }}
+                >
+                  <div className="p-5 md:p-8 pb-3 flex-1">
+                    <div className="flex justify-between items-center mb-3 md:mb-5">
+                      <div className="bg-[#f5f5f7] text-[#1d1d1f] text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">{paper.examType}</div>
+                      <div className="text-[#86868b] text-[11px] md:text-[12px] font-medium">{paper.year}</div>
+                    </div>
+                    <h3 className="text-base md:text-xl font-bold text-[#1d1d1f] group-hover:text-[#0071e3] transition-colors duration-500 leading-tight">
+                      {paper.name}
+                    </h3>
                   </div>
-                  <h3 className="text-base md:text-xl font-bold text-[#1d1d1f] group-hover:text-[#0071e3] transition-colors duration-500 leading-tight">
-                    {paper.name}
-                  </h3>
-                </div>
-                <div className="bg-[#f5f5f7] rounded-xl md:rounded-[24px] m-1 p-3 md:p-4 flex justify-between items-center transition-all duration-700 group-hover:bg-[#0071e3]">
-                  <span className="text-[11px] md:text-[12px] font-bold text-[#86868b] group-hover:text-white transition-colors">
-                    开始测评
-                  </span>
-                  <div className="bg-white w-7 h-7 md:w-8 md:h-8 rounded-full flex items-center justify-center text-[#1d1d1f] shadow-sm transition-all duration-500 group-hover:rotate-[-45deg]">
-                    <i className="fas fa-arrow-right text-[10px]"></i>
+                  <div className="bg-[#f5f5f7] rounded-xl md:rounded-[24px] m-1 p-3 md:p-4 flex justify-between items-center transition-all duration-700 group-hover:bg-[#0071e3]">
+                    <span className="text-[11px] md:text-[12px] font-bold text-[#86868b] group-hover:text-white transition-colors">
+                      开始测评
+                    </span>
+                    <div className="bg-white w-7 h-7 md:w-8 md:h-8 rounded-full flex items-center justify-center text-[#1d1d1f] shadow-sm transition-all duration-500 group-hover:rotate-[-45deg]">
+                      <i className="fas fa-arrow-right text-[10px]"></i>
+                    </div>
                   </div>
                 </div>
+              ))
+            ) : (
+              <div className="col-span-full py-16 md:py-24 text-center bg-white/40 rounded-[32px] border border-dashed border-black/10 mx-2">
+                <div className="bg-white w-12 h-12 md:w-16 md:h-16 rounded-[20px] md:rounded-[24px] shadow-sm flex items-center justify-center mx-auto mb-4 text-[#d1d1d6]">
+                  <i className="fas fa-tray text-2xl"></i>
+                </div>
+                <p className="text-[#1d1d1f] font-bold text-base">暂无匹配试卷</p>
+                <p className="text-[#86868b] text-xs md:text-sm mt-1 px-8">请检查后端 data 文件夹是否有对应的 .json 文件</p>
               </div>
-            ))
-          ) : (
-            <div className="col-span-full py-16 md:py-24 text-center bg-white/40 rounded-[32px] border border-dashed border-black/10 mx-2">
-              <div className="bg-white w-12 h-12 md:w-16 md:h-16 rounded-[20px] md:rounded-[24px] shadow-sm flex items-center justify-center mx-auto mb-4 text-[#d1d1d6]">
-                <i className="fas fa-tray text-2xl"></i>
-              </div>
-              <p className="text-[#1d1d1f] font-bold text-base">暂无匹配试卷</p>
-              <p className="text-[#86868b] text-xs md:text-sm mt-1 px-8">请检查后端 data 文件夹是否有对应的 .json 文件</p>
-            </div>
+            )}
+          </div>
+          {filteredPapers.length > 0 && (
+            <div ref={sentinelRef} className="h-px w-full" aria-hidden="true" />
           )}
-        </div>
+        </>
       )}
     </div>
   );
