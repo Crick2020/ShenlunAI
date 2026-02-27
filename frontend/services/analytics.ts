@@ -5,6 +5,7 @@
  */
 
 import type { Paper, Question, HistoryRecord } from '../types';
+import { QuestionType } from '../types';
 
 declare global {
   interface Window {
@@ -31,7 +32,69 @@ function sendParams(eventName: string, params: Record<string, unknown>) {
   send(eventName, 'event', label);
 }
 
+// ── 会话 / 留存辅助 ────────────────────────────────────────────────────────
+const LS_FIRST_VISIT  = 'shenlun_first_visit';
+const LS_LAST_VISIT   = 'shenlun_last_visit';
+const LS_VISIT_COUNT  = 'shenlun_visit_count';
+
+function getToday(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function daysBetween(a: string, b: string): number {
+  return Math.round((new Date(b).getTime() - new Date(a).getTime()) / 86400000);
+}
+
+/**
+ * 读取并更新 localStorage 中的访问记录。
+ * 返回本次会话的关键统计字段，供 userSessionStart 上报。
+ */
+function computeAndUpdateSession() {
+  const today = getToday();
+  const firstVisit = localStorage.getItem(LS_FIRST_VISIT);
+  const lastVisit  = localStorage.getItem(LS_LAST_VISIT);
+  const visitCount = parseInt(localStorage.getItem(LS_VISIT_COUNT) || '0', 10);
+
+  const isNewUser = !firstVisit;
+  const isNewDay  = lastVisit !== today;
+
+  const daysSinceFirst = firstVisit ? daysBetween(firstVisit, today) : 0;
+  const lastVisitDaysAgo = lastVisit && lastVisit !== today ? daysBetween(lastVisit, today) : 0;
+  const newVisitCount = isNewDay ? visitCount + 1 : visitCount;
+
+  if (isNewUser) localStorage.setItem(LS_FIRST_VISIT, today);
+  if (isNewDay)  {
+    localStorage.setItem(LS_LAST_VISIT, today);
+    localStorage.setItem(LS_VISIT_COUNT, String(newVisitCount));
+  }
+
+  return { isNewUser, isNewDay, visitCount: newVisitCount, daysSinceFirst, lastVisitDaysAgo };
+}
+// ──────────────────────────────────────────────────────────────────────────
+
 export const track = {
+  /**
+   * 用户会话开始（每次打开页面触发）。
+   * - is_new_user: 首次访问
+   * - is_new_day: 今天首次访问（用于 DAU 统计）
+   * - visit_count: 累计访问天数
+   * - days_since_first: 距首次访问的天数（留存分析）
+   * - last_visit_days_ago: 距上次访问的天数（0 = 当天已访问过）
+   */
+  userSessionStart() {
+    try {
+      const { isNewUser, isNewDay, visitCount, daysSinceFirst, lastVisitDaysAgo } =
+        computeAndUpdateSession();
+      sendParams('user_session_start', {
+        is_new_user: isNewUser,
+        is_new_day: isNewDay,
+        visit_count: visitCount,
+        days_since_first: daysSinceFirst,
+        last_visit_days_ago: lastVisitDaysAgo,
+      });
+    } catch {}
+  },
+
   /** 页面浏览：home | exam | report | profile */
   pageView(page: 'home' | 'exam' | 'report' | 'profile') {
     send('page_view', 'view', page);
@@ -48,20 +111,28 @@ export const track = {
     });
   },
 
-  /** 做题页点击「提交并批改」 */
-  paperSubmitClick(paper: Paper, question: Question) {
+  /**
+   * 做题页点击「提交并批改」。
+   * 新增 question_type（SMALL / ESSAY）和 answer_length（答案字数）。
+   */
+  paperSubmitClick(paper: Paper, question: Question, answerLength?: number) {
     sendParams('paper_submit_click', {
       paper_id: paper.id,
       paper_name: paper.name,
       question_id: question.id,
       question_title: question.title,
+      question_type: question.type,
+      answer_length: answerLength ?? 0,
     });
   },
 
-  /** 批改结果：成功或失败，仅接口返回后上报一次 */
+  /**
+   * 批改结果：成功或失败，仅接口返回后上报一次。
+   * 新增 question_type 以便分开统计小题/大题批改量。
+   */
   gradingResult(
     paper: { id: string; name: string },
-    question: { id: string; title: string },
+    question: { id: string; title: string; type?: QuestionType },
     status: 'success' | 'fail',
     error?: string
   ) {
@@ -69,12 +140,13 @@ export const track = {
       paper_id: paper.id,
       paper_name: paper.name,
       question_id: question.id,
+      question_type: question.type ?? 'UNKNOWN',
       status,
       ...(error && { error: error.slice(0, 200) }),
     });
   },
 
-  /** 首页筛选变更 */
+  /** 首页筛选变更（含地区 tag 点击） */
   filterChange(filterType: 'type' | 'region', value: string) {
     sendParams('filter_change', { filter_type: filterType, value });
   },
@@ -84,14 +156,41 @@ export const track = {
     sendParams('exam_back', { paper_id: paperId });
   },
 
-  /** 做题页材料/题目 Tab 切换 */
+  /** 做题页材料/题目 Tab 切换（移动端） */
   examTabSwitch(tab: 'material' | 'question') {
     sendParams('exam_tab_switch', { tab });
   },
 
-  /** 做题页点击拍照/上传 */
-  photoUploadClick(paperId: string, questionId: string) {
-    sendParams('photo_upload_click', { paper_id: paperId, question_id: questionId });
+  /**
+   * 做题页切换题目。
+   * question_index 从 0 开始；question_type 区分小题/大题。
+   */
+  questionSwitch(paperId: string, questionIndex: number, questionType: QuestionType) {
+    sendParams('question_switch', {
+      paper_id: paperId,
+      question_index: questionIndex,
+      question_type: questionType,
+    });
+  },
+
+  /**
+   * 用户在某题首次开始作答（输入任意字符时触发一次）。
+   * 用于分析「看了但没答」vs「真正作答」的转化漏斗。
+   */
+  answerStart(paperId: string, questionId: string, questionType: QuestionType) {
+    sendParams('answer_start', {
+      paper_id: paperId,
+      question_id: questionId,
+      question_type: questionType,
+    });
+  },
+
+  /**
+   * 做题页点击拍照/上传，或通过粘贴上传图片成功。
+   * source: 'button'（点击上传按钮）| 'paste'（粘贴）
+   */
+  photoUploadClick(paperId: string, questionId: string, source: 'button' | 'paste' = 'button') {
+    sendParams('photo_upload_click', { paper_id: paperId, question_id: questionId, source });
   },
 
   /** 支付弹窗确认去批改 */

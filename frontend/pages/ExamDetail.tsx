@@ -1,5 +1,5 @@
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Paper, Question, Material, QuestionType } from '../types';
 import { track } from '../services/analytics';
 
@@ -16,18 +16,39 @@ const ExamDetail: React.FC<ExamDetailProps> = ({ paper, onGrade, onBack }) => {
   const [images, setImages] = useState<Record<string, string[]>>({});
   const [mobileView, setMobileView] = useState<'materials' | 'question'>('materials');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // 记录已触发过 answerStart 的题目 id，避免重复上报
+  const answeredQuestions = useRef<Set<string>>(new Set());
 
   const currentQuestion = paper.questions[activeQuestionIndex];
   const currentAnswer = answers[currentQuestion.id] || '';
   const currentQuestionImages = images[currentQuestion.id] || [];
 
+  // 切题时上报 question_switch（第 0 题首次渲染不上报，属于初始状态）
+  const prevQuestionIndexRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (prevQuestionIndexRef.current === null) {
+      prevQuestionIndexRef.current = activeQuestionIndex;
+      return;
+    }
+    if (prevQuestionIndexRef.current !== activeQuestionIndex) {
+      track.questionSwitch(paper.id, activeQuestionIndex, currentQuestion.type);
+      prevQuestionIndexRef.current = activeQuestionIndex;
+    }
+  }, [activeQuestionIndex]);
+
   const handleAnswerChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setAnswers(prev => ({ ...prev, [currentQuestion.id]: e.target.value }));
+    const value = e.target.value;
+    // 首次有输入时上报 answer_start
+    if (value.length > 0 && !answeredQuestions.current.has(currentQuestion.id)) {
+      answeredQuestions.current.add(currentQuestion.id);
+      track.answerStart(paper.id, currentQuestion.id, currentQuestion.type);
+    }
+    setAnswers(prev => ({ ...prev, [currentQuestion.id]: value }));
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
-    if (files) {
+    if (files && files.length > 0) {
       Array.from(files).forEach(file => {
         const reader = new FileReader();
         reader.onloadend = () => {
@@ -39,6 +60,7 @@ const ExamDetail: React.FC<ExamDetailProps> = ({ paper, onGrade, onBack }) => {
         };
         reader.readAsDataURL(file);
       });
+      // 文件选择成功后上报（source=button 已在按钮 onClick 里上报，此处补报实际上传成功）
     }
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
@@ -73,7 +95,10 @@ const ExamDetail: React.FC<ExamDetailProps> = ({ paper, onGrade, onBack }) => {
         }
       }
     });
-    if (hasImage) e.preventDefault();
+    if (hasImage) {
+      track.photoUploadClick(paper.id, currentQuestion.id, 'paste');
+      e.preventDefault();
+    }
   };
 
   const toChineseNum = (n: number) => {
@@ -213,7 +238,7 @@ const ExamDetail: React.FC<ExamDetailProps> = ({ paper, onGrade, onBack }) => {
                     <div className="hidden md:flex md:items-center space-x-2 md:space-x-4">
                       <button 
                         onClick={() => {
-                          track.photoUploadClick(paper.id, currentQuestion.id);
+                          track.photoUploadClick(paper.id, currentQuestion.id, 'button');
                           fileInputRef.current?.click();
                         }}
                         className="bg-white border border-black/[0.1] px-4 py-2.5 rounded-xl text-xs font-bold hover:bg-[#f5f5f7] transition-all flex items-center justify-center space-x-2"
@@ -223,7 +248,7 @@ const ExamDetail: React.FC<ExamDetailProps> = ({ paper, onGrade, onBack }) => {
                       </button>
                       <button 
                         onClick={() => {
-                          track.paperSubmitClick(paper, currentQuestion);
+                          track.paperSubmitClick(paper, currentQuestion, currentAnswer.length);
                           onGrade(currentQuestion, currentAnswer, currentQuestionImages);
                         }}
                         className="bg-[#0071e3] text-white px-6 md:px-10 py-2.5 rounded-full text-xs md:text-sm font-bold shadow-lg shadow-blue-500/20 active:scale-95 transition-all"
@@ -239,7 +264,7 @@ const ExamDetail: React.FC<ExamDetailProps> = ({ paper, onGrade, onBack }) => {
                   <div className="flex items-center space-x-3">
                     <button 
                       onClick={() => {
-                        track.photoUploadClick(paper.id, currentQuestion.id);
+                        track.photoUploadClick(paper.id, currentQuestion.id, 'button');
                         fileInputRef.current?.click();
                       }}
                       className="w-14 h-14 rounded-full bg-white border border-black/[0.08] shadow-xl flex items-center justify-center text-[#86868b] active:scale-90 transition-transform"
@@ -248,7 +273,7 @@ const ExamDetail: React.FC<ExamDetailProps> = ({ paper, onGrade, onBack }) => {
                     </button>
                     <button 
                       onClick={() => {
-                        track.paperSubmitClick(paper, currentQuestion);
+                        track.paperSubmitClick(paper, currentQuestion, currentAnswer.length);
                         onGrade(currentQuestion, currentAnswer, currentQuestionImages);
                       }}
                       className="w-14 h-14 rounded-full bg-[#0071e3] text-white shadow-xl shadow-blue-500/30 flex items-center justify-center active:scale-90 transition-transform"

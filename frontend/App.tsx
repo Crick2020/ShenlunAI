@@ -105,6 +105,11 @@ const App: React.FC = () => {
       });
   }, []);
 
+  // 会话开始埋点（每次打开页面触发，用于 DAU / 留存统计）
+  useEffect(() => {
+    track.userSessionStart();
+  }, []);
+
   // 页面浏览埋点
   useEffect(() => {
     const page = currentPage as 'home' | 'exam' | 'report' | 'profile';
@@ -209,7 +214,7 @@ const App: React.FC = () => {
       const mainContent = (rawResult?.content ?? rawResult?.modelRawOutput ?? '').trim();
       // 无 Gemini 返回内容（如后端未配置或报错占位）时不进入批改页，避免展示模拟/空白
       if (!mainContent) {
-        track.gradingResult(selectedPaper, pendingGrading.question, 'fail', 'no content');
+        track.gradingResult(selectedPaper, { id: pendingGrading.question.id, title: pendingGrading.question.title, type: pendingGrading.question.type }, 'fail', 'no content');
         alert('服务器忙，请稍后再试');
         return;
       }
@@ -244,11 +249,11 @@ const App: React.FC = () => {
       setHistory(updatedHistory);
       localStorage.setItem('history', JSON.stringify(updatedHistory));
       setSelectedRecord(newRecord);
-      track.gradingResult(selectedPaper, pendingGrading.question, 'success');
+      track.gradingResult(selectedPaper, { id: pendingGrading.question.id, title: pendingGrading.question.title, type: pendingGrading.question.type }, 'success');
       setCurrentPage('report');
     } catch (error: any) {
       const msg = error?.message || String(error);
-      track.gradingResult(selectedPaper, pendingGrading.question, 'fail', msg);
+      track.gradingResult(selectedPaper, { id: pendingGrading.question.id, title: pendingGrading.question.title, type: pendingGrading.question.type }, 'fail', msg);
       alert('服务器忙，请稍后再试');
       console.error(error);
     } finally {
