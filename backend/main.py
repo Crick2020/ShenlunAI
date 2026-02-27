@@ -275,6 +275,13 @@ def grade_essay(request: Request, payload: dict):
         answers = { payload.get("question_id"): payload.get("user_answer") }
     # 拍照上传：仅有 answer_images 时也视为有答案，用占位文字满足后续校验
     answer_images: List[str] = payload.get("answer_images") or []
+    has_images_flag = bool(payload.get("has_images"))
+    print(f"[批改] has_images_flag={has_images_flag}, answer_images_count={len(answer_images)}")
+    if has_images_flag and not answer_images:
+        raise HTTPException(
+            status_code=400,
+            detail="前端标记有图片但未收到图片数据，请稍等图片加载完成（约 1～2 秒）后再点击提交。",
+        )
     if answer_images and not answers and payload.get("question_id"):
         answers = { payload.get("question_id"): "（考生上传了作答图片，请根据图片内容批改）" }
     # 或者前端可能发送 question_id(s) 列表（无答案）

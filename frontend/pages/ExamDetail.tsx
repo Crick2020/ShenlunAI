@@ -14,6 +14,7 @@ const ExamDetail: React.FC<ExamDetailProps> = ({ paper, onGrade, onBack }) => {
   const [activeQuestionIndex, setActiveQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [images, setImages] = useState<Record<string, string[]>>({});
+  const [uploadingCount, setUploadingCount] = useState(0);
   const [mobileView, setMobileView] = useState<'materials' | 'question'>('materials');
   const fileInputRef = useRef<HTMLInputElement>(null);
   // 记录已触发过 answerStart 的题目 id，避免重复上报
@@ -22,6 +23,7 @@ const ExamDetail: React.FC<ExamDetailProps> = ({ paper, onGrade, onBack }) => {
   const currentQuestion = paper.questions[activeQuestionIndex];
   const currentAnswer = answers[currentQuestion.id] || '';
   const currentQuestionImages = images[currentQuestion.id] || [];
+  const isUploadingImages = uploadingCount > 0;
 
   // 切题时上报 question_switch（第 0 题首次渲染不上报，属于初始状态）
   const prevQuestionIndexRef = useRef<number | null>(null);
@@ -49,6 +51,7 @@ const ExamDetail: React.FC<ExamDetailProps> = ({ paper, onGrade, onBack }) => {
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files.length > 0) {
+      setUploadingCount(prev => prev + files.length);
       Array.from(files).forEach(file => {
         const reader = new FileReader();
         reader.onloadend = () => {
@@ -57,10 +60,10 @@ const ExamDetail: React.FC<ExamDetailProps> = ({ paper, onGrade, onBack }) => {
             const currentImages = prev[currentQuestion.id] || [];
             return { ...prev, [currentQuestion.id]: [...currentImages, result] };
           });
+          setUploadingCount(prev => prev - 1);
         };
         reader.readAsDataURL(file);
       });
-      // 文件选择成功后上报（source=button 已在按钮 onClick 里上报，此处补报实际上传成功）
     }
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
@@ -83,6 +86,7 @@ const ExamDetail: React.FC<ExamDetailProps> = ({ paper, onGrade, onBack }) => {
         hasImage = true;
         const file = item.getAsFile();
         if (file) {
+          setUploadingCount(prev => prev + 1);
           const reader = new FileReader();
           reader.onloadend = () => {
             const result = reader.result as string;
@@ -90,6 +94,7 @@ const ExamDetail: React.FC<ExamDetailProps> = ({ paper, onGrade, onBack }) => {
               const currentImages = prev[currentQuestion.id] || [];
               return { ...prev, [currentQuestion.id]: [...currentImages, result] };
             });
+            setUploadingCount(prev => prev - 1);
           };
           reader.readAsDataURL(file);
         }
@@ -99,6 +104,15 @@ const ExamDetail: React.FC<ExamDetailProps> = ({ paper, onGrade, onBack }) => {
       track.photoUploadClick(paper.id, currentQuestion.id, 'paste');
       e.preventDefault();
     }
+  };
+
+  const handleSubmitClick = () => {
+    if (isUploadingImages) {
+      alert('图片正在处理中，请稍等 1～2 秒后再提交');
+      return;
+    }
+    track.paperSubmitClick(paper, currentQuestion, currentAnswer.length);
+    onGrade(currentQuestion, currentAnswer, currentQuestionImages);
   };
 
   const toChineseNum = (n: number) => {
@@ -247,13 +261,11 @@ const ExamDetail: React.FC<ExamDetailProps> = ({ paper, onGrade, onBack }) => {
                         <span>拍照上传</span>
                       </button>
                       <button 
-                        onClick={() => {
-                          track.paperSubmitClick(paper, currentQuestion, currentAnswer.length);
-                          onGrade(currentQuestion, currentAnswer, currentQuestionImages);
-                        }}
-                        className="bg-[#0071e3] text-white px-6 md:px-10 py-2.5 rounded-full text-xs md:text-sm font-bold shadow-lg shadow-blue-500/20 active:scale-95 transition-all"
+                        onClick={handleSubmitClick}
+                        disabled={isUploadingImages}
+                        className={`bg-[#0071e3] text-white px-6 md:px-10 py-2.5 rounded-full text-xs md:text-sm font-bold shadow-lg shadow-blue-500/20 transition-all ${isUploadingImages ? 'opacity-60 cursor-not-allowed' : 'active:scale-95'}`}
                       >
-                        提交并批改
+                        {isUploadingImages ? '图片加载中...' : '提交并批改'}
                       </button>
                     </div>
                   </div>
@@ -272,11 +284,9 @@ const ExamDetail: React.FC<ExamDetailProps> = ({ paper, onGrade, onBack }) => {
                       <i className="fas fa-camera text-xl"></i>
                     </button>
                     <button 
-                      onClick={() => {
-                        track.paperSubmitClick(paper, currentQuestion, currentAnswer.length);
-                        onGrade(currentQuestion, currentAnswer, currentQuestionImages);
-                      }}
-                      className="w-14 h-14 rounded-full bg-[#0071e3] text-white shadow-xl shadow-blue-500/30 flex items-center justify-center active:scale-90 transition-transform"
+                      onClick={handleSubmitClick}
+                      disabled={isUploadingImages}
+                      className={`w-14 h-14 rounded-full bg-[#0071e3] text-white shadow-xl shadow-blue-500/30 flex items-center justify-center transition-transform ${isUploadingImages ? 'opacity-60 cursor-not-allowed' : 'active:scale-90'}`}
                     >
                       <i className="fas fa-check text-xl"></i>
                     </button>
