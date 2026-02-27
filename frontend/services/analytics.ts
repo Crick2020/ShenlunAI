@@ -1,14 +1,15 @@
 /**
  * 统一埋点层：所有统计上报仅通过本模块，与业务解耦。
- * 同时支持百度统计（_hmt）和 Umami（window.umami）双平台上报。
+ * 支持百度统计（_hmt）和 Umami（自建 fetch 上报，不依赖官方 script 的 404 端点）。
  *
  * 接入说明：
- * - 百度统计：index.html 已内嵌脚本，无需额外操作。
- * - Umami：在 index.html 中将 YOUR_UMAMI_WEBSITE_ID 替换为 umami.is 后台的 Website ID。
+ * - 百度统计：index.html 已内嵌脚本。
+ * - Umami：在 .env 中配置 VITE_UMAMI_WEBSITE_ID（必填），可选 VITE_UMAMI_API_URL（默认 https://cloud.umami.is）。
+ *   若 Cloud 仍 404，可尝试改为自建实例地址或咨询 Umami 官方当前推荐端点。
  *
  * 如何确认埋点是否发送：
- * - 开发环境：打开浏览器 Console，筛选 [analytics]，每次触发会打印事件名和参数。
- * - 生产环境：F12 → Network，筛选 cloud.umami.is 或 hm.baidu.com 可看到上报请求。
+ * - 开发环境：Console 筛选 [analytics] 看日志。
+ * - 生产环境：F12 → Network 筛选 umami 或配置的 API 域名。
  */
 
 import type { Paper, Question, HistoryRecord } from '../types';
@@ -17,16 +18,15 @@ import { QuestionType } from '../types';
 declare global {
   interface Window {
     _hmt?: Array<[string, ...unknown[]]>;
-    umami?: {
-      track(eventName: string, data?: Record<string, unknown>): void;
-      identify(data: Record<string, unknown>): void;
-    };
   }
 }
 
 const isDev = typeof import.meta !== 'undefined' && (import.meta as any).env?.DEV !== undefined
   ? (import.meta as any).env.DEV
   : (typeof process !== 'undefined' && process.env?.NODE_ENV === 'development');
+
+const UMAMI_WEBSITE_ID = typeof import.meta !== 'undefined' ? (import.meta as any).env?.VITE_UMAMI_WEBSITE_ID : undefined;
+const UMAMI_API_URL = (typeof import.meta !== 'undefined' ? (import.meta as any).env?.VITE_UMAMI_API_URL : undefined) || 'https://cloud.umami.is';
 
 /** 向百度统计上报 */
 function sendBaidu(eventName: string, action: string, label: string, value?: number) {
@@ -35,11 +35,31 @@ function sendBaidu(eventName: string, action: string, label: string, value?: num
   }
 }
 
-/** 向 Umami 上报自定义事件（事件名 + 完整参数对象） */
+/**
+ * 使用 fetch 直接向 Umami API 上报，避免官方 script 的默认端点 404。
+ * 格式见 https://umami.is/docs/api/sending-stats
+ */
 function sendUmami(eventName: string, data?: Record<string, unknown>) {
-  if (typeof window !== 'undefined' && window.umami) {
-    window.umami.track(eventName, data);
-  }
+  if (!UMAMI_WEBSITE_ID || typeof window === 'undefined') return;
+  const url = `${UMAMI_API_URL.replace(/\/$/, '')}/api/send`;
+  const screen = typeof window.screen !== 'undefined' ? `${window.screen.width}x${window.screen.height}` : '';
+  const payload = {
+    website: UMAMI_WEBSITE_ID,
+    name: eventName,
+    hostname: window.location.hostname || '',
+    url: window.location.pathname || '/',
+    title: document.title || '',
+    referrer: document.referrer || '',
+    language: navigator.language || '',
+    screen,
+    ...(data && Object.keys(data).length > 0 ? { data } : {}),
+  };
+  fetch(url, {
+    method: 'POST',
+    keepalive: true,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ type: 'event', payload }),
+  }).catch(() => {});
 }
 
 /**

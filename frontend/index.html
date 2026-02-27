@@ -181,8 +181,7 @@
         s.parentNode.insertBefore(hm, s);
       })();
     </script>
-    <!-- Umami 统计：data-host-url 强制使用 Cloud 域名，避免脚本内默认的 api-gateway.umami.dev 返回 404 -->
-    <script defer src="https://cloud.umami.is/script.js" data-website-id="5db61007-f67d-44f0-895b-c0eff3c92835" data-host-url="https://cloud.umami.is"></script>
+    <!-- Umami 统计已改为在 analytics.ts 内用 fetch 上报，需在 .env 中配置 VITE_UMAMI_WEBSITE_ID，不再在此加载 script -->
 </head>
 <body class="text-[#1d1d1f]">
     <div id="root"></div>
