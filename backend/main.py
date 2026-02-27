@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime, timedelta, timezone
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
@@ -8,6 +8,8 @@ import json
 import os
 import re
 import threading
+import time
+from zoneinfo import ZoneInfo
 import urllib.request
 import urllib.error
 from typing import Optional, List, Dict, Any
@@ -475,8 +477,11 @@ Output Constraints:
     prompt_lines.append("\n请按上述要求，直接输出完整的 Markdown 分析报告。")
     prompt = "\n".join(prompt_lines)
 
-    # 有图片时走多模态接口，否则仅文本
+    # 有图片时走多模态接口，否则仅文本；Google Gemini 失败则 fallback 到钱多多
     gemini_raw = call_gemini_system_with_images(prompt, answer_images) if answer_images else call_gemini_system(prompt)
+    if not gemini_raw:
+        print("[批改] Google Gemini 无结果，尝试钱多多平台...")
+        gemini_raw = call_qianduoduo_gemini(prompt)
     if gemini_raw:
         body = gemini_raw.strip()
         if not body:
@@ -562,6 +567,121 @@ def _get_gemini_api_keys() -> List[str]:
     return keys
 
 
+_gemini_disabled_until: Optional[float] = None
+_gemini_disabled_lock = threading.Lock()
+
+
+def _is_gemini_temporarily_disabled() -> bool:
+    """是否处于“额度已用完”的临时禁用窗口内。"""
+    global _gemini_disabled_until
+    with _gemini_disabled_lock:
+        if not _gemini_disabled_until:
+            return False
+        now = time.time()
+        if now >= _gemini_disabled_until:
+            # 冷却期已过，自动恢复
+            _gemini_disabled_until = None
+            return False
+        return True
+
+
+def _mark_gemini_quota_exhausted():
+    """当所有 Gemini Key 都返回额度/限流错误时，禁用至“下一次太平洋时间 0 点”或指定冷却期。"""
+    global _gemini_disabled_until
+
+    # 如果显式配置了 GEMINI_COOLDOWN_SECONDS，则优先生效（兼容自定义需求）
+    cooldown_env = os.getenv("GEMINI_COOLDOWN_SECONDS")
+    if cooldown_env:
+        try:
+            cooldown = int(cooldown_env)
+        except Exception:
+            cooldown = 0
+        if cooldown > 0:
+            with _gemini_disabled_lock:
+                _gemini_disabled_until = time.time() + cooldown
+            return
+
+    # 否则按需求：禁用到“下一次太平洋时间（PT）0 点”
+    try:
+        now_utc = datetime.now(timezone.utc)
+        pt_tz = ZoneInfo("America/Los_Angeles")
+        now_pt = now_utc.astimezone(pt_tz)
+        next_midnight_pt = (now_pt + timedelta(days=1)).replace(
+            hour=0, minute=0, second=0, microsecond=0
+        )
+        next_midnight_utc = next_midnight_pt.astimezone(timezone.utc)
+        disabled_until_ts = next_midnight_utc.timestamp()
+    except Exception as e:
+        # 如果计算 PT 时间失败，则退回到一个保守的 24 小时冷却
+        print("计算 Gemini 冷却至 PT 午夜失败，退回 24 小时冷却:", e)
+        disabled_until_ts = time.time() + 24 * 3600
+
+    with _gemini_disabled_lock:
+        _gemini_disabled_until = disabled_until_ts
+
+
+def call_qianduoduo_gemini(prompt: str) -> Optional[str]:
+    """通过钱多多平台（OpenAI兼容格式）调用 Gemini 模型。
+    
+    环境变量：
+      QIANDUODUO_API_KEY  - 钱多多后台生成的 sk-xxx 令牌（必填）
+      QIANDUODUO_ENDPOINT - API Base URL，默认 https://ob6nfbpu76.apifox.cn（可选）
+      QIANDUODUO_MODEL    - 模型名称，默认 gemini-2.5-flash（可选）
+    """
+    api_key = (os.getenv("QIANDUODUO_API_KEY") or "").strip()
+    if not api_key:
+        print("钱多多未配置 (QIANDUODUO_API_KEY 缺失)")
+        return None
+
+    base_endpoint = (os.getenv("QIANDUODUO_ENDPOINT") or "").strip().rstrip("/")
+    if not base_endpoint:
+        print("钱多多未配置 (QIANDUODUO_ENDPOINT 缺失)")
+        return None
+
+    model_name = (os.getenv("QIANDUODUO_MODEL") or "gemini-2.5-flash").strip()
+
+    url = base_endpoint + "/v1/chat/completions"
+    payload = {
+        "model": model_name,
+        "messages": [{"role": "user", "content": prompt}],
+        "temperature": 0.3,
+        "max_tokens": 65536,
+    }
+    data = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {api_key}",
+    }
+    req = urllib.request.Request(url, data=data, headers=headers)
+    try:
+        with urllib.request.urlopen(req, timeout=120) as resp:
+            raw = resp.read().decode("utf-8")
+            if not raw or not raw.strip():
+                print("钱多多 API 返回空 body")
+                return None
+            try:
+                obj = json.loads(raw)
+            except Exception:
+                return raw
+            err = obj.get("error")
+            if err:
+                print("钱多多 API 错误:", err)
+                return None
+            choices = obj.get("choices") or []
+            if not choices:
+                print("钱多多 API 无 choices")
+                return None
+            message = (choices[0] or {}).get("message") or {}
+            content = (message.get("content") or "").strip()
+            return content if content else None
+    except urllib.error.HTTPError as e:
+        print("call_qianduoduo_gemini HTTPError:", e.code, e.reason)
+        return None
+    except Exception as e:
+        print("call_qianduoduo_gemini failed:", e)
+        return None
+
+
 def _is_quota_or_rate_limit_error(http_code: Optional[int], error_obj: Optional[dict]) -> bool:
     """判断是否为配额/限流错误，可切换备用 Key 重试。"""
     if http_code == 429:
@@ -594,7 +714,10 @@ def _parse_data_url(data_url: str) -> tuple:
 
 
 def call_gemini_system_with_images(prompt: str, image_data_list: List[str]) -> Optional[str]:
-    """带图片的多模态调用 Gemini；优先主 Key，遇限流/配额用备用 Key 重试。"""
+    """带图片的多模态调用 Gemini；优先主 Key，遇限流/配额用备用 Key 重试；若所有 Key 都额度用完，则进入冷却期。"""
+    if _is_gemini_temporarily_disabled():
+        print("Gemini 已标记为额度用完（多模态），当前请求直接跳过 Gemini。")
+        return None
     api_keys = _get_gemini_api_keys()
     if not api_keys:
         print("GEMINI not configured (GEMINI_API_KEY missing)")
@@ -638,9 +761,12 @@ def call_gemini_system_with_images(prompt: str, image_data_list: List[str]) -> O
                 err = obj.get("error")
                 if err:
                     print("Gemini API 错误:", err)
-                    if _is_quota_or_rate_limit_error(None, err) and idx + 1 < len(api_keys):
-                        print("配额/限流，尝试备用 API Key")
-                        continue
+                    if _is_quota_or_rate_limit_error(None, err):
+                        if idx + 1 < len(api_keys):
+                            print("配额/限流，尝试备用 API Key")
+                            continue
+                        print("Gemini 所有 Key 多模态额度均已用完，进入冷却期。")
+                        _mark_gemini_quota_exhausted()
                     return None
                 candidates = obj.get("candidates") or []
                 if not candidates:
@@ -656,9 +782,12 @@ def call_gemini_system_with_images(prompt: str, image_data_list: List[str]) -> O
                 return merged if merged else None
         except urllib.error.HTTPError as e:
             print("call_gemini_system_with_images HTTPError:", e.code, e.reason)
-            if _is_quota_or_rate_limit_error(e.code, None) and idx + 1 < len(api_keys):
-                print("配额/限流，尝试备用 API Key")
-                continue
+            if _is_quota_or_rate_limit_error(e.code, None):
+                if idx + 1 < len(api_keys):
+                    print("配额/限流，尝试备用 API Key")
+                    continue
+                print("Gemini 所有 Key 多模态 HTTP 限流/额度已用完，进入冷却期。")
+                _mark_gemini_quota_exhausted()
             return None
         except Exception as e:
             print("call_gemini_system_with_images failed:", e)
@@ -667,7 +796,11 @@ def call_gemini_system_with_images(prompt: str, image_data_list: List[str]) -> O
 
 
 def call_gemini_system(prompt: str) -> Optional[str]:
-    """调用 Google Gemini 接口；优先主 Key，遇限流/配额用备用 Key 重试。"""
+    """调用 Google Gemini 接口；优先主 Key，遇限流/配额用备用 Key 重试；若所有 Key 都额度用完，则进入冷却期。"""
+    if _is_gemini_temporarily_disabled():
+        print("Gemini 已标记为额度用完（纯文本），当前请求直接跳过 Gemini。")
+        return None
+
     api_keys = _get_gemini_api_keys()
     if not api_keys:
         print("GEMINI not configured (GEMINI_API_KEY missing)")
@@ -709,9 +842,12 @@ def call_gemini_system(prompt: str) -> Optional[str]:
                 err = obj.get("error")
                 if err:
                     print("Gemini API 错误:", err)
-                    if _is_quota_or_rate_limit_error(None, err) and idx + 1 < len(api_keys):
-                        print("配额/限流，尝试备用 API Key")
-                        continue
+                    if _is_quota_or_rate_limit_error(None, err):
+                        if idx + 1 < len(api_keys):
+                            print("配额/限流，尝试备用 API Key")
+                            continue
+                        print("Gemini 所有 Key 文本额度均已用完，进入冷却期。")
+                        _mark_gemini_quota_exhausted()
                     return None
                 candidates = obj.get("candidates") or []
                 if not candidates:
@@ -731,9 +867,12 @@ def call_gemini_system(prompt: str) -> Optional[str]:
                 return merged
         except urllib.error.HTTPError as e:
             print("call_gemini_system HTTPError:", e.code, e.reason)
-            if _is_quota_or_rate_limit_error(e.code, None) and idx + 1 < len(api_keys):
-                print("配额/限流，尝试备用 API Key")
-                continue
+            if _is_quota_or_rate_limit_error(e.code, None):
+                if idx + 1 < len(api_keys):
+                    print("配额/限流，尝试备用 API Key")
+                    continue
+                print("Gemini 所有 Key 文本 HTTP 限流/额度已用完，进入冷却期。")
+                _mark_gemini_quota_exhausted()
             return None
         except Exception as e:
             print("call_gemini_system failed:", e)
