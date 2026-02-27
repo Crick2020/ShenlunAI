@@ -1,7 +1,14 @@
 /**
  * 统一埋点层：所有统计上报仅通过本模块，与业务解耦。
- * 支持百度统计 _hmt；开发环境仅 log 不上报。
- * 接入说明：在 index.html 中引入百度统计 hm.js（将 YOUR_BAIDU_HM_ID 替换为实际站点 ID）。
+ * 同时支持百度统计（_hmt）和 Umami（window.umami）双平台上报。
+ *
+ * 接入说明：
+ * - 百度统计：index.html 已内嵌脚本，无需额外操作。
+ * - Umami：在 index.html 中将 YOUR_UMAMI_WEBSITE_ID 替换为 umami.is 后台的 Website ID。
+ *
+ * 如何确认埋点是否发送：
+ * - 开发环境：打开浏览器 Console，筛选 [analytics]，每次触发会打印事件名和参数。
+ * - 生产环境：F12 → Network，筛选 cloud.umami.is 或 hm.baidu.com 可看到上报请求。
  */
 
 import type { Paper, Question, HistoryRecord } from '../types';
@@ -10,6 +17,10 @@ import { QuestionType } from '../types';
 declare global {
   interface Window {
     _hmt?: Array<[string, ...unknown[]]>;
+    umami?: {
+      track(eventName: string, data?: Record<string, unknown>): void;
+      identify(data: Record<string, unknown>): void;
+    };
   }
 }
 
@@ -17,19 +28,40 @@ const isDev = typeof import.meta !== 'undefined' && (import.meta as any).env?.DE
   ? (import.meta as any).env.DEV
   : (typeof process !== 'undefined' && process.env?.NODE_ENV === 'development');
 
-function send(eventName: string, action: string, label: string, value?: number) {
-  if (isDev) {
-    console.log('[analytics]', eventName, action, label, value ?? '');
-    return;
-  }
+/** 向百度统计上报 */
+function sendBaidu(eventName: string, action: string, label: string, value?: number) {
   if (typeof window !== 'undefined' && window._hmt) {
     window._hmt.push(['_trackEvent', eventName, action, label, value ?? 0]);
   }
 }
 
+/** 向 Umami 上报自定义事件（事件名 + 完整参数对象） */
+function sendUmami(eventName: string, data?: Record<string, unknown>) {
+  if (typeof window !== 'undefined' && window.umami) {
+    window.umami.track(eventName, data);
+  }
+}
+
+/**
+ * 统一上报入口：同时发送到百度统计和 Umami。
+ * 开发环境只打印日志，不发真实请求。
+ */
+function send(eventName: string, action: string, label: string, value?: number) {
+  if (isDev) {
+    console.log('[analytics]', eventName, action, label, value ?? '');
+    return;
+  }
+  sendBaidu(eventName, action, label, value);
+  sendUmami(eventName, { action, label, ...(value !== undefined && { value }) });
+}
+
 function sendParams(eventName: string, params: Record<string, unknown>) {
-  const label = JSON.stringify(params);
-  send(eventName, 'event', label);
+  if (isDev) {
+    console.log('[analytics]', eventName, params);
+    return;
+  }
+  sendBaidu(eventName, 'event', JSON.stringify(params));
+  sendUmami(eventName, params);
 }
 
 // ── 会话 / 留存辅助 ────────────────────────────────────────────────────────
