@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Paper, Question, Material, QuestionType } from '../types';
 import { track } from '../services/analytics';
-import { getFeedbackUrl, CHANGELOG_URL } from '../constants';
+import { openFeedback, CHANGELOG_URL } from '../constants';
 
 interface ExamDetailProps {
   paper: Paper;
@@ -190,7 +190,7 @@ const ExamDetail: React.FC<ExamDetailProps> = ({ paper, onGrade, onBack, fromRep
           {moreOpen && (
             <div className="absolute right-0 top-full mt-2 w-40 rounded-2xl apple-more-menu py-2 z-[60] animate-in fade-in slide-in-from-top-2 duration-200">
               <button
-                onClick={() => { setMoreOpen(false); window.open(getFeedbackUrl({ id: paper.id, name: paper.name }), '_blank', 'noopener,noreferrer'); }}
+                onClick={() => { setMoreOpen(false); openFeedback({ id: paper.id, name: paper.name }); }}
                 className="apple-more-item flex items-center gap-3 w-full text-left px-4 py-3 text-[14px] text-[#1d1d1f]"
               >
                 <div className="apple-more-icon bg-[#34c759]/10 shrink-0">

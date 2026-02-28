@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { track } from '../services/analytics';
-import { getFeedbackUrl, CHANGELOG_URL } from '../constants';
+import { openFeedback, CHANGELOG_URL } from '../constants';
 
 interface NavbarProps {
   onNavigate: (page: string) => void;
@@ -23,7 +23,7 @@ const Navbar: React.FC<NavbarProps> = ({ onNavigate }) => {
   const openFeedback = () => {
     setMoreOpen(false);
     track.navClick('feedback');
-    window.open(getFeedbackUrl(), '_blank', 'noopener,noreferrer');
+    openFeedback();
   };
 
   const openChangelog = () => {

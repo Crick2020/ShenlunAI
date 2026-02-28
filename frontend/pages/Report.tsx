@@ -3,7 +3,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { HistoryRecord } from '../types';
 import { track } from '../services/analytics';
-import { getFeedbackUrl, CHANGELOG_URL } from '../constants';
+import { openFeedback, CHANGELOG_URL } from '../constants';
 
 interface ReportProps {
   record: HistoryRecord;
@@ -64,7 +64,7 @@ const Report: React.FC<ReportProps> = ({ record, onBack }) => {
             {moreOpen && (
               <div className="absolute right-0 top-full mt-2 w-40 rounded-2xl apple-more-menu py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
                 <button
-                  onClick={() => { setMoreOpen(false); window.open(getFeedbackUrl({ name: paperName }), '_blank', 'noopener,noreferrer'); }}
+                  onClick={() => { setMoreOpen(false); openFeedback({ name: paperName }); }}
                   className="apple-more-item flex items-center gap-3 w-full text-left px-4 py-3 text-[14px] text-[#1d1d1f]"
                 >
                   <div className="apple-more-icon bg-[#34c759]/10 shrink-0">
