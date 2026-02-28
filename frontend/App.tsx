@@ -310,9 +310,6 @@ const App: React.FC = () => {
     <div className="min-h-screen bg-gray-50">
       {currentPage !== 'exam' && (
         <Navbar 
-          user={user} 
-          onLogin={() => {}} 
-          onLogout={handleLogout}
           onNavigate={(page) => {
             const url = getUrl();
             if (page === 'home') {

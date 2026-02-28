@@ -2,6 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Paper, Question, Material, QuestionType } from '../types';
 import { track } from '../services/analytics';
+import { getFeedbackUrl, CHANGELOG_URL } from '../constants';
 
 interface ExamDetailProps {
   paper: Paper;
@@ -18,7 +19,9 @@ const ExamDetail: React.FC<ExamDetailProps> = ({ paper, onGrade, onBack, fromRep
   const [images, setImages] = useState<Record<string, string[]>>({});
   const [uploadingCount, setUploadingCount] = useState(0);
   const [mobileView, setMobileView] = useState<'materials' | 'question'>(fromReport ? 'question' : 'materials');
+  const [moreOpen, setMoreOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const moreMenuRef = useRef<HTMLDivElement>(null);
   // 记录已触发过 answerStart 的题目 id，避免重复上报
   const answeredQuestions = useRef<Set<string>>(new Set());
 
@@ -148,6 +151,14 @@ const ExamDetail: React.FC<ExamDetailProps> = ({ paper, onGrade, onBack, fromRep
 
   const wordCount = currentAnswer.length;
 
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (moreMenuRef.current && !moreMenuRef.current.contains(e.target as Node)) setMoreOpen(false);
+    };
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, []);
+
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-white relative">
 
@@ -166,6 +177,39 @@ const ExamDetail: React.FC<ExamDetailProps> = ({ paper, onGrade, onBack, fromRep
         <h1 className="text-sm md:text-base font-semibold text-[#1d1d1f] truncate max-w-[70%] text-center">
           {paper.name}
         </h1>
+        <div className="absolute right-4 top-1/2 -translate-y-1/2" ref={moreMenuRef}>
+          <button
+            onClick={() => setMoreOpen((v) => !v)}
+            className={`w-9 h-9 rounded-full flex items-center justify-center text-[#1d1d1f] transition-all duration-200 ${
+              moreOpen ? 'bg-[#e5e5ea]' : 'bg-[#f5f5f7] hover:bg-[#e8e8ed] active:bg-[#e5e5ea]'
+            }`}
+            aria-label="更多"
+          >
+            <i className="fas fa-ellipsis text-[15px]" />
+          </button>
+          {moreOpen && (
+            <div className="absolute right-0 top-full mt-2 w-40 rounded-2xl apple-more-menu py-2 z-[60] animate-in fade-in slide-in-from-top-2 duration-200">
+              <button
+                onClick={() => { setMoreOpen(false); window.open(getFeedbackUrl({ id: paper.id, name: paper.name }), '_blank', 'noopener,noreferrer'); }}
+                className="apple-more-item flex items-center gap-3 w-full text-left px-4 py-3 text-[14px] text-[#1d1d1f]"
+              >
+                <div className="apple-more-icon bg-[#34c759]/10 shrink-0">
+                  <i className="far fa-comment-dots text-[14px] text-[#34c759]" />
+                </div>
+                <span>意见建议</span>
+              </button>
+              <button
+                onClick={() => { setMoreOpen(false); window.open(CHANGELOG_URL, '_blank', 'noopener,noreferrer'); }}
+                className="apple-more-item flex items-center gap-3 w-full text-left px-4 py-3 text-[14px] text-[#1d1d1f]"
+              >
+                <div className="apple-more-icon bg-[#af52de]/10 shrink-0">
+                  <i className="fas fa-clipboard-list text-[14px] text-[#af52de]" />
+                </div>
+                <span>更新日志</span>
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Main Content Area */}

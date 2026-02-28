@@ -3,6 +3,20 @@ import { Paper, QuestionType } from './types';
 /** 后端 API 根地址。本地开发时在 frontend 目录创建 .env.development 并设置 VITE_API_BASE=http://localhost:8000 */
 export const API_BASE = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_BASE) || 'https://shenlun-backend.onrender.com';
 
+/** 腾讯兔小巢：意见建议（接入文档 https://txc.qq.com/helper/fiveFaq） */
+export const FEEDBACK_URL = 'https://txc.qq.com/products/799248';
+/** 更新日志 */
+export const CHANGELOG_URL = 'https://txc.qq.com/products/799248/change-log';
+
+/** 带试卷上下文的意见建议链接（试卷页/批改结果页进入时带上，便于反馈排查） */
+export function getFeedbackUrl(paperInfo?: { id?: string; name: string } | null): string {
+  if (!paperInfo?.name) return FEEDBACK_URL;
+  const params = new URLSearchParams();
+  params.set('paperName', paperInfo.name);
+  if (paperInfo.id) params.set('paperId', paperInfo.id);
+  return `${FEEDBACK_URL}?${params.toString()}`;
+}
+
 export const EXAM_TYPES = ['公务员', '事业单位'];
 export const REGIONS = ['国考', '北京', '浙江', '广东', '山东', '江苏', '四川'];
 export const YEARS = [2025, 2024, 2023, 2022, 2021];

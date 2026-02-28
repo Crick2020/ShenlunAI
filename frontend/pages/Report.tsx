@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { HistoryRecord } from '../types';
 import { track } from '../services/analytics';
+import { getFeedbackUrl, CHANGELOG_URL } from '../constants';
 
 interface ReportProps {
   record: HistoryRecord;
@@ -11,6 +12,16 @@ interface ReportProps {
 
 const Report: React.FC<ReportProps> = ({ record, onBack }) => {
   const { result, paperName, questionTitle } = record;
+  const [moreOpen, setMoreOpen] = useState(false);
+  const moreMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (moreMenuRef.current && !moreMenuRef.current.contains(e.target as Node)) setMoreOpen(false);
+    };
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, []);
   const content =
     result.modelRawOutput ??
     (record.rawGradingResponse && (record.rawGradingResponse.content ?? record.rawGradingResponse.modelRawOutput));
@@ -39,12 +50,47 @@ const Report: React.FC<ReportProps> = ({ record, onBack }) => {
           </div>
           <span className="text-sm font-semibold">返回列表</span>
         </button>
-        <button
-          onClick={handleCopyAll}
-          className="bg-[#1d1d1f] text-white px-6 md:px-8 py-3 rounded-2xl text-sm font-bold shadow-xl shadow-black/10 hover:bg-black transition-all"
-        >
-          <i className="far fa-copy mr-2"></i> 一键复制
-        </button>
+        <div className="flex items-center gap-3">
+          <div className="relative" ref={moreMenuRef}>
+            <button
+              onClick={() => setMoreOpen((v) => !v)}
+              className={`w-10 h-10 rounded-full flex items-center justify-center text-[#1d1d1f] transition-all duration-200 ${
+                moreOpen ? 'bg-[#e5e5ea]' : 'bg-[#f5f5f7] hover:bg-[#e8e8ed] active:bg-[#e5e5ea] border border-black/[0.06]'
+              }`}
+              aria-label="更多"
+            >
+              <i className="fas fa-ellipsis text-[15px]" />
+            </button>
+            {moreOpen && (
+              <div className="absolute right-0 top-full mt-2 w-40 rounded-2xl apple-more-menu py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                <button
+                  onClick={() => { setMoreOpen(false); window.open(getFeedbackUrl({ name: paperName }), '_blank', 'noopener,noreferrer'); }}
+                  className="apple-more-item flex items-center gap-3 w-full text-left px-4 py-3 text-[14px] text-[#1d1d1f]"
+                >
+                  <div className="apple-more-icon bg-[#34c759]/10 shrink-0">
+                    <i className="far fa-comment-dots text-[14px] text-[#34c759]" />
+                  </div>
+                  <span>意见建议</span>
+                </button>
+                <button
+                  onClick={() => { setMoreOpen(false); window.open(CHANGELOG_URL, '_blank', 'noopener,noreferrer'); }}
+                  className="apple-more-item flex items-center gap-3 w-full text-left px-4 py-3 text-[14px] text-[#1d1d1f]"
+                >
+                  <div className="apple-more-icon bg-[#af52de]/10 shrink-0">
+                    <i className="fas fa-clipboard-list text-[14px] text-[#af52de]" />
+                  </div>
+                  <span>更新日志</span>
+                </button>
+              </div>
+            )}
+          </div>
+          <button
+            onClick={handleCopyAll}
+            className="bg-[#1d1d1f] text-white px-6 md:px-8 py-3 rounded-2xl text-sm font-bold shadow-xl shadow-black/10 hover:bg-black transition-all"
+          >
+            <i className="far fa-copy mr-2"></i> 一键复制
+          </button>
+        </div>
       </div>
 
       <div className="space-y-6 md:space-y-8">
