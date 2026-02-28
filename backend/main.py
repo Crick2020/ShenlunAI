@@ -505,6 +505,13 @@ Output Constraints:
             gemini_raw = call_qianduoduo_gemini(prompt)
     if gemini_raw:
         body = gemini_raw.strip()
+        # Render 日志：输出 AI 批改结果（便于排查与审计）
+        print("[AI批改输出] 长度:", len(body))
+        if len(body) <= 5000:
+            print("[AI批改输出]", body)
+        else:
+            print("[AI批改输出]", body[:5000])
+            print("[AI批改输出] ... (已截断，总长 %d 字符)" % len(body))
         if not body:
             print("Gemini 返回为空文本")
             return _fallback_grading_result(model_input, "模型未返回内容（可能被截断或安全过滤）", gemini_raw)
