@@ -64,7 +64,16 @@
             "maxScore": 20,
             "wordLimit": 300,
             "type": "SMALL",
-            "materialIds": ["m1", "m3", "m4", "m5", "m6", "m7", "m8", "m10"]
+            "materialIds": [
+                "m1",
+                "m3",
+                "m4",
+                "m5",
+                "m6",
+                "m7",
+                "m8",
+                "m10"
+            ]
         },
         {
             "id": "q2",
@@ -73,7 +82,9 @@
             "maxScore": 20,
             "wordLimit": 300,
             "type": "SMALL",
-            "materialIds": ["m4"]
+            "materialIds": [
+                "m4"
+            ]
         },
         {
             "id": "q3",
@@ -82,7 +93,9 @@
             "maxScore": 20,
             "wordLimit": 350,
             "type": "SMALL",
-            "materialIds": ["m9"]
+            "materialIds": [
+                "m9"
+            ]
         },
         {
             "id": "q4",
@@ -91,7 +104,18 @@
             "maxScore": 40,
             "wordLimit": 900,
             "type": "ESSAY",
-            "materialIds": ["m1", "m3", "m4", "m7", "m8", "m10"]
+            "materialIds": [
+                "m1",
+                "m10",
+                "m2",
+                "m3",
+                "m4",
+                "m5",
+                "m6",
+                "m7",
+                "m8",
+                "m9"
+            ]
         }
     ]
 }

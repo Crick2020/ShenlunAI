@@ -17,6 +17,8 @@ export interface Question {
   maxScore: number;
   wordLimit: number;
   type: QuestionType;
+  /** 小题关联的材料 id 列表，仅提交这些材料给批改接口 */
+  materialIds?: string[];
 }
 
 export interface Paper {

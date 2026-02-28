@@ -19,10 +19,17 @@ export class GeminiService {
     const hasImages = !!(images && images.length > 0);
     const answerText = (userAnswer && userAnswer.trim()) || (hasImages ? "（考生上传了作答图片，请根据图片内容批改）" : "");
 
+    // 只提交当前题目关联的材料，避免把整卷材料都传给后端
+    const materialIds = question.materialIds;
+    const materialsToSend =
+      materialIds && materialIds.length > 0
+        ? materials.filter((m) => materialIds.includes(m.id))
+        : materials;
+
     try {
       const body: Record<string, unknown> = {
         paperId,
-        materials,
+        materials: materialsToSend,
         question: {
           id: question.id,
           type: question.type,
