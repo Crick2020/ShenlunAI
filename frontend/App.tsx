@@ -60,6 +60,8 @@ const App: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<string>('home');
   const [selectedPaper, setSelectedPaper] = useState<Paper | null>(null);
   const [selectedRecord, setSelectedRecord] = useState<HistoryRecord | null>(null);
+  /** 从批改结果页返回到试卷详情页时置为 true，用于手机端默认显示「问题」tab */
+  const [backFromReportToExam, setBackFromReportToExam] = useState(false);
   const [filters, setFilters] = useState({ type: '公务员', region: '国考' });
   const [user, setUser] = useState<User | null>({
     id: 'u-guest',
@@ -85,6 +87,30 @@ const App: React.FC = () => {
   useEffect(() => {
     const savedHistory = localStorage.getItem('history');
     if (savedHistory) setHistory(JSON.parse(savedHistory));
+  }, []);
+
+  // 同步地址栏与页面状态，并响应手机物理返回键/手势
+  useEffect(() => {
+    const url = window.location.pathname + window.location.search;
+    if (currentPage === 'home' && !window.history.state?.page) {
+      window.history.replaceState({ page: 'home' }, '', url);
+    }
+  }, []);
+
+  useEffect(() => {
+    const handlePopState = (e: PopStateEvent) => {
+      const page = (e.state?.page as string) || 'home';
+      setCurrentPage(page);
+      if (page === 'home') {
+        setSelectedPaper(null);
+        setSelectedRecord(null);
+        setBackFromReportToExam(false);
+      } else if (page === 'exam') {
+        setBackFromReportToExam(true);
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
   useEffect(() => {
@@ -148,11 +174,17 @@ const App: React.FC = () => {
       .finally(() => inflightPrefetches.current.delete(paperId));
   };
 
+  const goToExam = () => {
+    setBackFromReportToExam(false);
+    setCurrentPage('exam');
+    window.history.pushState({ page: 'exam' }, '', window.location.pathname + window.location.search);
+  };
+
   const handleSelectPaper = async (summaryPaper: Paper) => {
     const memHit = paperDetailMemCache.current.get(summaryPaper.id);
     if (memHit) {
       setSelectedPaper(memHit);
-      setCurrentPage('exam');
+      goToExam();
       return;
     }
 
@@ -160,7 +192,7 @@ const App: React.FC = () => {
     if (lsHit) {
       paperDetailMemCache.current.set(summaryPaper.id, lsHit);
       setSelectedPaper(lsHit);
-      setCurrentPage('exam');
+      goToExam();
       return;
     }
 
@@ -176,7 +208,7 @@ const App: React.FC = () => {
       writeCachedDetail(summaryPaper.id, fullPaperData);
 
       setSelectedPaper(fullPaperData);
-      setCurrentPage('exam');
+      goToExam();
     } catch (error) {
       console.error(error);
       alert(`无法打开试卷：${summaryPaper.name}\n请检查后端 data 文件夹里有没有对应的 JSON 文件。`);
@@ -256,6 +288,7 @@ const App: React.FC = () => {
         gradingPreview: mainContent,
       });
       setCurrentPage('report');
+      window.history.pushState({ page: 'report', from: 'exam' }, '', window.location.pathname + window.location.search);
     } catch (error: any) {
       const msg = error?.message || String(error);
       track.gradingResult(selectedPaper, { id: pendingGrading.question.id, title: pendingGrading.question.title, type: pendingGrading.question.type }, 'fail', msg, {
@@ -292,15 +325,24 @@ const App: React.FC = () => {
         )}
         
         {currentPage === 'exam' && selectedPaper && (
-          <ExamDetail paper={selectedPaper} onGrade={startGradingProcess} onBack={() => setCurrentPage('home')} />
+          <ExamDetail
+            paper={selectedPaper}
+            onGrade={startGradingProcess}
+            onBack={() => window.history.back()}
+            fromReport={backFromReportToExam}
+          />
         )}
 
         {currentPage === 'report' && selectedRecord && (
           <Report 
             record={selectedRecord} 
             onBack={() => {
-              setSelectedRecord(null);
-              setCurrentPage('profile');
+              if (selectedPaper) {
+                window.history.back();
+              } else {
+                setSelectedRecord(null);
+                setCurrentPage('profile');
+              }
             }} 
           />
         )}

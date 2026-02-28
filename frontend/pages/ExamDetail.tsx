@@ -7,15 +7,17 @@ interface ExamDetailProps {
   paper: Paper;
   onGrade: (question: Question, answer: string, images?: string[]) => void;
   onBack: () => void;
+  /** 从批改结果页返回时为 true，手机端默认显示「问题」tab */
+  fromReport?: boolean;
 }
 
-const ExamDetail: React.FC<ExamDetailProps> = ({ paper, onGrade, onBack }) => {
+const ExamDetail: React.FC<ExamDetailProps> = ({ paper, onGrade, onBack, fromReport }) => {
   const [activeMaterialIndex, setActiveMaterialIndex] = useState(0);
   const [activeQuestionIndex, setActiveQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [images, setImages] = useState<Record<string, string[]>>({});
   const [uploadingCount, setUploadingCount] = useState(0);
-  const [mobileView, setMobileView] = useState<'materials' | 'question'>('materials');
+  const [mobileView, setMobileView] = useState<'materials' | 'question'>(fromReport ? 'question' : 'materials');
   const fileInputRef = useRef<HTMLInputElement>(null);
   // 记录已触发过 answerStart 的题目 id，避免重复上报
   const answeredQuestions = useRef<Set<string>>(new Set());
