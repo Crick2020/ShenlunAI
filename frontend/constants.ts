@@ -8,16 +8,40 @@ export const FEEDBACK_URL = 'https://p1ygyyk2nl3.feishu.cn/share/base/form/shrcn
 /** 更新日志 */
 export const CHANGELOG_URL = 'https://txc.qq.com/products/799248/change-log';
 
-/** 打开意见反馈（新窗口），可选带上试卷信息作为 URL 参数供表单或统计使用 */
+/** 打开意见反馈（新窗口），可选带上试卷信息。延迟执行并用 <a> 点击，减少手机/电脑上与下拉关闭冲突导致的崩溃 */
 export function openFeedback(paperInfo?: { id?: string; name: string } | null): void {
-  let url = FEEDBACK_URL;
-  if (paperInfo?.name) {
+  const url = (() => {
+    if (!paperInfo?.name) return FEEDBACK_URL;
     const params = new URLSearchParams();
     params.set('paperName', paperInfo.name);
     if (paperInfo.id) params.set('paperId', paperInfo.id);
-    url = `${FEEDBACK_URL}${FEEDBACK_URL.includes('?') ? '&' : '?'}${params.toString()}`;
+    return `${FEEDBACK_URL}${FEEDBACK_URL.includes('?') ? '&' : '?'}${params.toString()}`;
+  })();
+  const doOpen = () => {
+    try {
+      const a = document.createElement('a');
+      a.href = url;
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
+      a.style.display = 'none';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        try {
+          if (a.parentNode) document.body.removeChild(a);
+        } catch { /* ignore */ }
+      }, 300);
+    } catch {
+      try {
+        window.open(url, '_blank', 'noopener,noreferrer');
+      } catch { /* ignore */ }
+    }
+  };
+  try {
+    setTimeout(doOpen, 150);
+  } catch {
+    doOpen();
   }
-  window.open(url, '_blank', 'noopener,noreferrer');
 }
 
 export const EXAM_TYPES = ['公务员', '事业单位'];
