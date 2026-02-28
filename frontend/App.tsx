@@ -89,9 +89,11 @@ const App: React.FC = () => {
     if (savedHistory) setHistory(JSON.parse(savedHistory));
   }, []);
 
-  // 同步地址栏与页面状态，并响应手机物理返回键/手势
+  const getUrl = () => window.location.pathname + window.location.search;
+
+  // 同步地址栏与页面状态，并响应手机物理返回键/手势（保证每次进子页都 pushState，返回时回到上一页而非退出网站）
   useEffect(() => {
-    const url = window.location.pathname + window.location.search;
+    const url = getUrl();
     if (currentPage === 'home' && !window.history.state?.page) {
       window.history.replaceState({ page: 'home' }, '', url);
     }
@@ -107,6 +109,8 @@ const App: React.FC = () => {
         setBackFromReportToExam(false);
       } else if (page === 'exam') {
         setBackFromReportToExam(true);
+      } else if (page === 'profile') {
+        setSelectedRecord(null);
       }
     };
     window.addEventListener('popstate', handlePopState);
@@ -177,7 +181,7 @@ const App: React.FC = () => {
   const goToExam = () => {
     setBackFromReportToExam(false);
     setCurrentPage('exam');
-    window.history.pushState({ page: 'exam' }, '', window.location.pathname + window.location.search);
+    window.history.pushState({ page: 'exam' }, '', getUrl());
   };
 
   const handleSelectPaper = async (summaryPaper: Paper) => {
@@ -288,7 +292,7 @@ const App: React.FC = () => {
         gradingPreview: mainContent,
       });
       setCurrentPage('report');
-      window.history.pushState({ page: 'report', from: 'exam' }, '', window.location.pathname + window.location.search);
+      window.history.pushState({ page: 'report', from: 'exam' }, '', getUrl());
     } catch (error: any) {
       const msg = error?.message || String(error);
       track.gradingResult(selectedPaper, { id: pendingGrading.question.id, title: pendingGrading.question.title, type: pendingGrading.question.type }, 'fail', msg, {
@@ -310,11 +314,18 @@ const App: React.FC = () => {
           onLogin={() => {}} 
           onLogout={handleLogout}
           onNavigate={(page) => {
+            const url = getUrl();
             if (page === 'home') {
               setSelectedPaper(null);
               setSelectedRecord(null);
+              setCurrentPage('home');
+              window.history.replaceState({ page: 'home' }, '', url);
+            } else if (page === 'profile') {
+              setCurrentPage('profile');
+              window.history.pushState({ page: 'profile' }, '', url);
+            } else {
+              setCurrentPage(page);
             }
-            setCurrentPage(page);
           }}
         />
       )}
@@ -336,14 +347,7 @@ const App: React.FC = () => {
         {currentPage === 'report' && selectedRecord && (
           <Report 
             record={selectedRecord} 
-            onBack={() => {
-              if (selectedPaper) {
-                window.history.back();
-              } else {
-                setSelectedRecord(null);
-                setCurrentPage('profile');
-              }
-            }} 
+            onBack={() => window.history.back()}
           />
         )}
 
@@ -353,6 +357,7 @@ const App: React.FC = () => {
             onViewRecord={(rec) => {
               setSelectedRecord(rec);
               setCurrentPage('report');
+              window.history.pushState({ page: 'report' }, '', getUrl());
             }} 
           />
         )}
