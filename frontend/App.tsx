@@ -214,7 +214,9 @@ const App: React.FC = () => {
       const mainContent = (rawResult?.content ?? rawResult?.modelRawOutput ?? '').trim();
       // 无 Gemini 返回内容（如后端未配置或报错占位）时不进入批改页，避免展示模拟/空白
       if (!mainContent) {
-        track.gradingResult(selectedPaper, { id: pendingGrading.question.id, title: pendingGrading.question.title, type: pendingGrading.question.type }, 'fail', 'no content');
+        track.gradingResult(selectedPaper, { id: pendingGrading.question.id, title: pendingGrading.question.title, type: pendingGrading.question.type }, 'fail', 'no content', {
+          answerPreview: pendingGrading.answer,
+        });
         alert('服务器忙，请稍后再试');
         return;
       }
@@ -249,11 +251,16 @@ const App: React.FC = () => {
       setHistory(updatedHistory);
       localStorage.setItem('history', JSON.stringify(updatedHistory));
       setSelectedRecord(newRecord);
-      track.gradingResult(selectedPaper, { id: pendingGrading.question.id, title: pendingGrading.question.title, type: pendingGrading.question.type }, 'success');
+      track.gradingResult(selectedPaper, { id: pendingGrading.question.id, title: pendingGrading.question.title, type: pendingGrading.question.type }, 'success', undefined, {
+        answerPreview: pendingGrading.answer,
+        gradingPreview: mainContent,
+      });
       setCurrentPage('report');
     } catch (error: any) {
       const msg = error?.message || String(error);
-      track.gradingResult(selectedPaper, { id: pendingGrading.question.id, title: pendingGrading.question.title, type: pendingGrading.question.type }, 'fail', msg);
+      track.gradingResult(selectedPaper, { id: pendingGrading.question.id, title: pendingGrading.question.title, type: pendingGrading.question.type }, 'fail', msg, {
+        answerPreview: pendingGrading.answer,
+      });
       alert('服务器忙，请稍后再试');
       console.error(error);
     } finally {

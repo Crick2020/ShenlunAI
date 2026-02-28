@@ -84,6 +84,10 @@ function sendParams(eventName: string, params: Record<string, unknown>) {
   sendUmami(eventName, params);
 }
 
+/** 批改结果上报到 Umami 时的预览截断长度（避免单条事件过大） */
+const MAX_ANSWER_PREVIEW = 300;
+const MAX_GRADING_PREVIEW = 500;
+
 // ── 会话 / 留存辅助 ────────────────────────────────────────────────────────
 const LS_FIRST_VISIT  = 'shenlun_first_visit';
 const LS_LAST_VISIT   = 'shenlun_last_visit';
@@ -180,14 +184,21 @@ export const track = {
 
   /**
    * 批改结果：成功或失败，仅接口返回后上报一次。
-   * 新增 question_type 以便分开统计小题/大题批改量。
+   * 可选传入用户答案与 AI 批改内容预览，会截断后上报到 Umami（便于在统计里查看抽样）。
    */
   gradingResult(
     paper: { id: string; name: string },
     question: { id: string; title: string; type?: QuestionType },
     status: 'success' | 'fail',
-    error?: string
+    error?: string,
+    options?: { answerPreview?: string; gradingPreview?: string }
   ) {
+    const answerPreview = options?.answerPreview != null
+      ? String(options.answerPreview).slice(0, MAX_ANSWER_PREVIEW)
+      : undefined;
+    const gradingPreview = options?.gradingPreview != null
+      ? String(options.gradingPreview).slice(0, MAX_GRADING_PREVIEW)
+      : undefined;
     sendParams('grading_result', {
       paper_id: paper.id,
       paper_name: paper.name,
@@ -195,6 +206,8 @@ export const track = {
       question_type: question.type ?? 'UNKNOWN',
       status,
       ...(error && { error: error.slice(0, 200) }),
+      ...(answerPreview !== undefined && { answer_preview: answerPreview }),
+      ...(gradingPreview !== undefined && { grading_preview: gradingPreview }),
     });
   },
 
