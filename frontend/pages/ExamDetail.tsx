@@ -38,6 +38,36 @@ const ExamDetail: React.FC<ExamDetailProps> = ({ paper, onGrade, onBack }) => {
     }
   }, [activeQuestionIndex]);
 
+  const compressImage = (file: File): Promise<string> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        const MAX_DIM = 1600;
+        let w = img.width, h = img.height;
+        if (w > MAX_DIM || h > MAX_DIM) {
+          const ratio = Math.min(MAX_DIM / w, MAX_DIM / h);
+          w = Math.round(w * ratio);
+          h = Math.round(h * ratio);
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d')!;
+        ctx.drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', 0.7));
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.readAsDataURL(file);
+      };
+      img.src = url;
+    });
+  };
+
   const handleAnswerChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
     // 首次有输入时上报 answer_start
@@ -53,16 +83,13 @@ const ExamDetail: React.FC<ExamDetailProps> = ({ paper, onGrade, onBack }) => {
     if (files && files.length > 0) {
       setUploadingCount(prev => prev + files.length);
       Array.from(files).forEach(file => {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          const result = reader.result as string;
+        compressImage(file).then(result => {
           setImages(prev => {
             const currentImages = prev[currentQuestion.id] || [];
             return { ...prev, [currentQuestion.id]: [...currentImages, result] };
           });
           setUploadingCount(prev => prev - 1);
-        };
-        reader.readAsDataURL(file);
+        });
       });
     }
     if (fileInputRef.current) fileInputRef.current.value = '';
@@ -87,16 +114,13 @@ const ExamDetail: React.FC<ExamDetailProps> = ({ paper, onGrade, onBack }) => {
         const file = item.getAsFile();
         if (file) {
           setUploadingCount(prev => prev + 1);
-          const reader = new FileReader();
-          reader.onloadend = () => {
-            const result = reader.result as string;
+          compressImage(file).then(result => {
             setImages(prev => {
               const currentImages = prev[currentQuestion.id] || [];
               return { ...prev, [currentQuestion.id]: [...currentImages, result] };
             });
             setUploadingCount(prev => prev - 1);
-          };
-          reader.readAsDataURL(file);
+          });
         }
       }
     });

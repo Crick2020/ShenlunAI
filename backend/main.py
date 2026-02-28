@@ -276,7 +276,8 @@ def grade_essay(request: Request, payload: dict):
     # 拍照上传：仅有 answer_images 时也视为有答案，用占位文字满足后续校验
     answer_images: List[str] = payload.get("answer_images") or []
     has_images_flag = bool(payload.get("has_images"))
-    print(f"[批改] has_images_flag={has_images_flag}, answer_images_count={len(answer_images)}")
+    img_sizes = [len(img) for img in answer_images] if answer_images else []
+    print(f"[批改] has_images_flag={has_images_flag}, answer_images_count={len(answer_images)}, img_sizes_chars={img_sizes}")
     if has_images_flag and not answer_images:
         raise HTTPException(
             status_code=400,
@@ -485,10 +486,19 @@ Output Constraints:
     prompt = "\n".join(prompt_lines)
 
     # 有图片时走多模态接口，否则仅文本；Google Gemini 失败则 fallback 到钱多多
-    gemini_raw = call_gemini_system_with_images(prompt, answer_images) if answer_images else call_gemini_system(prompt)
-    if not gemini_raw:
-        print("[批改] Google Gemini 无结果，尝试钱多多平台...")
-        gemini_raw = call_qianduoduo_gemini(prompt)
+    if answer_images:
+        gemini_raw = call_gemini_system_with_images(prompt, answer_images)
+        if not gemini_raw:
+            print("[批改] Gemini 多模态调用失败（图片可能过大或 API 异常），将直接返回错误而非静默丢弃图片")
+            raise HTTPException(
+                status_code=503,
+                detail="图片批改服务暂时不可用，请稍后重试。如多次失败，可尝试减少图片数量或改用文字作答。",
+            )
+    else:
+        gemini_raw = call_gemini_system(prompt)
+        if not gemini_raw:
+            print("[批改] Google Gemini 无结果，尝试钱多多平台...")
+            gemini_raw = call_qianduoduo_gemini(prompt)
     if gemini_raw:
         body = gemini_raw.strip()
         if not body:
@@ -733,24 +743,31 @@ def call_gemini_system_with_images(prompt: str, image_data_list: List[str]) -> O
     model_name = "gemini-3-flash-preview"
 
     parts: List[Dict[str, Any]] = [{"text": prompt}]
-    for data_url in image_data_list:
+    parsed_count = 0
+    for i, data_url in enumerate(image_data_list):
         mime, b64 = _parse_data_url(data_url)
         if not b64:
+            print(f"[多模态] 第{i+1}张图片解析失败，data_url前50字符: {(data_url or '')[:50]}")
             continue
+        parsed_count += 1
+        print(f"[多模态] 第{i+1}张图片解析成功, mime={mime}, base64长度={len(b64)}")
         parts.append({
             "inlineData": {
                 "mimeType": mime or "image/jpeg",
                 "data": b64,
             }
         })
+    print(f"[多模态] 共{len(image_data_list)}张图片, 成功解析{parsed_count}张")
     if len(parts) <= 1:
-        return call_gemini_system(prompt)
+        print("[多模态] 所有图片解析失败，回退到纯文本模式")
+        return None
 
     payload = {
         "contents": [{"role": "user", "parts": parts}],
         "generationConfig": {"temperature": 0.3, "maxOutputTokens": 65536},
     }
     data = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+    print(f"[多模态] Gemini 请求体大小: {len(data)} 字节 ({len(data)/1024/1024:.2f} MB)")
 
     for idx, api_key in enumerate(api_keys):
         url = base_endpoint.rstrip("/") + f"/v1beta/models/{model_name}:generateContent?key={api_key}"
