@@ -168,9 +168,10 @@ Output Constraints:
 
 ## 三、API 调用参数（与 prompt 一起生效）
 
-- **temperature**：0.3（在 0.2–0.4 之间）
-- **maxOutputTokens**：4096
-- 有图片时走 `call_gemini_system_with_images`（多模态），无图片时走 `call_gemini_system`（纯文本）。
+- **temperature**：小题 0.15，大作文 0.3
+- **top_p**：小题 0.85，大作文 0.90
+- **maxOutputTokens**：65536
+- 有图片时走 `call_gemini_system_with_images`（多模态），无图片时走 `call_gemini_system`（纯文本）。AI Studio 与钱多多均使用上述 temperature / top_p。
 
 ---
 

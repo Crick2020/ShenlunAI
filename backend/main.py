@@ -560,13 +560,16 @@ Output Constraints:
     prompt_lines.append("\n请按上述要求，直接输出完整的 Markdown 分析报告。")
     prompt = "\n".join(prompt_lines)
 
+    # 小题 temperature=0.15 / top_p=0.85，大作文 temperature=0.3 / top_p=0.90
+    temperature = 0.15 if not has_essay else 0.3
+    top_p = 0.85 if not has_essay else 0.90
     # 有图片时走多模态接口，否则仅文本；Gemini 失败时先尝试钱多多多模态兜底
     if answer_images:
-        gemini_raw = call_gemini_system_with_images(prompt, answer_images)
+        gemini_raw = call_gemini_system_with_images(prompt, answer_images, temperature=temperature, top_p=top_p)
         if not gemini_raw:
             # 兜底：尝试钱多多多模态（OpenAI 兼容格式支持图片）
             print("[批改] Gemini 多模态失败，尝试钱多多多模态兜底...")
-            gemini_raw = call_qianduoduo_gemini_with_images(prompt, answer_images)
+            gemini_raw = call_qianduoduo_gemini_with_images(prompt, answer_images, temperature=temperature, top_p=top_p)
             if not gemini_raw:
                 print("[批改] 钱多多多模态也失败，返回 503")
                 raise HTTPException(
@@ -574,10 +577,10 @@ Output Constraints:
                     detail="图片批改服务暂时不可用。请稍后重试，或减少图片数量、改用文字作答后再提交。",
                 )
     else:
-        gemini_raw = call_gemini_system(prompt)
+        gemini_raw = call_gemini_system(prompt, temperature=temperature, top_p=top_p)
         if not gemini_raw:
             print("[批改] Google Gemini 无结果，尝试钱多多平台...")
-            gemini_raw = call_qianduoduo_gemini(prompt)
+            gemini_raw = call_qianduoduo_gemini(prompt, temperature=temperature, top_p=top_p)
     if gemini_raw:
         body = gemini_raw.strip()
         # Render 日志：输出 AI 批改结果（便于排查与审计）
@@ -723,7 +726,13 @@ def _mark_gemini_quota_exhausted():
         _gemini_disabled_until = disabled_until_ts
 
 
-def call_qianduoduo_gemini(prompt: str, content_parts: Optional[List[Any]] = None) -> Optional[str]:
+def call_qianduoduo_gemini(
+    prompt: str,
+    content_parts: Optional[List[Any]] = None,
+    *,
+    temperature: float = 0.3,
+    top_p: float = 0.9,
+) -> Optional[str]:
     """通过钱多多平台（OpenAI 兼容格式）调用 Gemini 模型。
     支持纯文本或多模态（文本+图片，content_parts 为 OpenAI content 数组）。
     环境变量：
@@ -751,7 +760,8 @@ def call_qianduoduo_gemini(prompt: str, content_parts: Optional[List[Any]] = Non
     payload = {
         "model": model_name,
         "messages": [{"role": "user", "content": content}],
-        "temperature": 0.3,
+        "temperature": temperature,
+        "top_p": top_p,
         "max_tokens": 65536,
     }
     data = json.dumps(payload, ensure_ascii=False).encode("utf-8")
@@ -804,13 +814,17 @@ def _build_openai_content_parts(prompt: str, image_data_list: List[str]) -> List
 
 
 def call_qianduoduo_gemini_with_images(
-    prompt: str, image_data_list: List[str]
+    prompt: str,
+    image_data_list: List[str],
+    *,
+    temperature: float = 0.3,
+    top_p: float = 0.9,
 ) -> Optional[str]:
     """钱多多多模态调用（OpenAI 兼容格式，content 为 parts 数组）。"""
     parts = _build_openai_content_parts(prompt, image_data_list)
     if len(parts) <= 1:
         return None
-    return call_qianduoduo_gemini(prompt, content_parts=parts)
+    return call_qianduoduo_gemini(prompt, content_parts=parts, temperature=temperature, top_p=top_p)
 
 
 def _is_quota_or_rate_limit_error(http_code: Optional[int], error_obj: Optional[dict]) -> bool:
@@ -844,7 +858,13 @@ def _parse_data_url(data_url: str) -> tuple:
     return ("image/jpeg", s)
 
 
-def call_gemini_system_with_images(prompt: str, image_data_list: List[str]) -> Optional[str]:
+def call_gemini_system_with_images(
+    prompt: str,
+    image_data_list: List[str],
+    *,
+    temperature: float = 0.3,
+    top_p: float = 0.9,
+) -> Optional[str]:
     """带图片的多模态调用 Gemini；优先主 Key，遇限流/配额用备用 Key 重试；若所有 Key 都额度用完，则进入冷却期。"""
     if _is_gemini_temporarily_disabled():
         print("Gemini 已标记为额度用完（多模态），当前请求直接跳过 Gemini。")
@@ -878,7 +898,7 @@ def call_gemini_system_with_images(prompt: str, image_data_list: List[str]) -> O
 
     payload = {
         "contents": [{"role": "user", "parts": parts}],
-        "generationConfig": {"temperature": 0.3, "maxOutputTokens": 65536},
+        "generationConfig": {"temperature": temperature, "topP": top_p, "maxOutputTokens": 65536},
     }
     data = json.dumps(payload, ensure_ascii=False).encode("utf-8")
     print(f"[多模态] Gemini 请求体大小: {len(data)} 字节 ({len(data)/1024/1024:.2f} MB)")
@@ -933,7 +953,12 @@ def call_gemini_system_with_images(prompt: str, image_data_list: List[str]) -> O
     return None
 
 
-def call_gemini_system(prompt: str) -> Optional[str]:
+def call_gemini_system(
+    prompt: str,
+    *,
+    temperature: float = 0.3,
+    top_p: float = 0.9,
+) -> Optional[str]:
     """调用 Google Gemini 接口；优先主 Key，遇限流/配额用备用 Key 重试；若所有 Key 都额度用完，则进入冷却期。"""
     if _is_gemini_temporarily_disabled():
         print("Gemini 已标记为额度用完（纯文本），当前请求直接跳过 Gemini。")
@@ -954,7 +979,8 @@ def call_gemini_system(prompt: str) -> Optional[str]:
             }
         ],
         "generationConfig": {
-            "temperature": 0.3,
+            "temperature": temperature,
+            "topP": top_p,
             "maxOutputTokens": 65536,
         },
     }
