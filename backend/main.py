@@ -365,15 +365,33 @@ def grade_essay(request: Request, payload: dict):
             materials_to_send = list(materials)
         print(f"[批改] 大作文题，发送材料数: {len(materials_to_send)} (试卷文件: {len(paper_materials)}, payload: {len(materials)})")
     else:
+        # 小题：只发本题对应的材料。materialIds 从试卷题目 + 前端 payload 两处合并，避免试卷缺字段时误发全卷
         mid_set = set()
         for q in questions_for_model:
             ids = q.get("materialIds") or q.get("material_ids")
             if ids:
                 mid_set.update(ids if isinstance(ids, list) else [ids])
+        # 兼容前端单题提交：payload 里的 question / questions 也可能带有 materialIds，一并纳入
+        single_q = payload.get("question")
+        if isinstance(single_q, dict):
+            ids = single_q.get("materialIds") or single_q.get("material_ids")
+            if ids:
+                mid_set.update(ids if isinstance(ids, list) else [ids])
+        for q in payload.get("questions") or []:
+            if isinstance(q, dict):
+                ids = q.get("materialIds") or q.get("material_ids")
+                if ids:
+                    mid_set.update(ids if isinstance(ids, list) else [ids])
         if mid_set:
             materials_to_send = [m for m in materials if m.get("id") in mid_set]
+            sent_ids = [m.get("id") for m in materials_to_send]
+            print(f"[批改] 小题，按 materialIds 筛选：题目指定 {sorted(mid_set)}，实际发送材料 id={sent_ids}，共 {len(materials_to_send)} 份")
+            if not materials_to_send and materials:
+                print(f"[批改] 警告：题目指定了 materialIds {sorted(mid_set)}，但当前材料列表的 id 为 {[m.get('id') for m in materials]}，无匹配项；将发送 0 份材料，可能影响批改")
         else:
+            # 未找到任何 materialIds 时才回退为全卷（并打日志便于排查）
             materials_to_send = list(materials)
+            print(f"[批改] 小题，未找到 materialIds（题目或 payload 均无），回退发送全卷材料共 {len(materials_to_send)} 份；建议在试卷 JSON 或前端传题时补充 materialIds")
 
     # 后端自统计：按天记录小题/大作文提交量及当日用户 IP（用于每日用户量）
     try:
