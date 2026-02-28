@@ -3,17 +3,35 @@ import { Paper, QuestionType } from './types';
 /** 后端 API 根地址。本地开发时在 frontend 目录创建 .env.development 并设置 VITE_API_BASE=http://localhost:8000 */
 export const API_BASE = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_BASE) || 'https://shenlun-backend.onrender.com';
 
-/** 腾讯兔小巢：意见建议（接入文档 https://txc.qq.com/helper/fiveFaq） */
+/** 腾讯兔小巢：意见建议（接入文档 https://txc.qq.com/helper/fiveFaq，登录态 https://txc.qq.com/helper/configLogonState） */
 export const FEEDBACK_URL = 'https://txc.qq.com/products/799248';
 /** 更新日志 */
 export const CHANGELOG_URL = 'https://txc.qq.com/products/799248/change-log';
 
-/** 带试卷上下文的意见建议链接（试卷页/批改结果页进入时带上，便于反馈排查） */
+const TXC_UID_KEY = 'shenlun_txc_uid';
+
+/** 获取或生成用于兔小巢的匿名用户 ID（存 localStorage，用户不清理则保持不变，便于匿名登录） */
+export function getFeedbackUserId(): string {
+  try {
+    let uid = localStorage.getItem(TXC_UID_KEY);
+    if (!uid) {
+      uid = 'anon_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+      localStorage.setItem(TXC_UID_KEY, uid);
+    }
+    return uid;
+  } catch {
+    return 'anon_' + Math.random().toString(36).slice(2);
+  }
+}
+
+/** 带匿名用户 ID 与可选试卷上下文的意见建议链接（openid 用于兔小巢匿名登录态） */
 export function getFeedbackUrl(paperInfo?: { id?: string; name: string } | null): string {
-  if (!paperInfo?.name) return FEEDBACK_URL;
   const params = new URLSearchParams();
-  params.set('paperName', paperInfo.name);
-  if (paperInfo.id) params.set('paperId', paperInfo.id);
+  params.set('openid', getFeedbackUserId());
+  if (paperInfo?.name) {
+    params.set('paperName', paperInfo.name);
+    if (paperInfo.id) params.set('paperId', paperInfo.id);
+  }
   return `${FEEDBACK_URL}?${params.toString()}`;
 }
 
