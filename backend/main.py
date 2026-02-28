@@ -485,15 +485,19 @@ Output Constraints:
     prompt_lines.append("\n请按上述要求，直接输出完整的 Markdown 分析报告。")
     prompt = "\n".join(prompt_lines)
 
-    # 有图片时走多模态接口，否则仅文本；Google Gemini 失败则 fallback 到钱多多
+    # 有图片时走多模态接口，否则仅文本；Gemini 失败时先尝试钱多多多模态兜底
     if answer_images:
         gemini_raw = call_gemini_system_with_images(prompt, answer_images)
         if not gemini_raw:
-            print("[批改] Gemini 多模态调用失败（图片可能过大或 API 异常），将直接返回错误而非静默丢弃图片")
-            raise HTTPException(
-                status_code=503,
-                detail="图片批改服务暂时不可用，请稍后重试。如多次失败，可尝试减少图片数量或改用文字作答。",
-            )
+            # 兜底：尝试钱多多多模态（OpenAI 兼容格式支持图片）
+            print("[批改] Gemini 多模态失败，尝试钱多多多模态兜底...")
+            gemini_raw = call_qianduoduo_gemini_with_images(prompt, answer_images)
+            if not gemini_raw:
+                print("[批改] 钱多多多模态也失败，返回 503")
+                raise HTTPException(
+                    status_code=503,
+                    detail="图片批改服务暂时不可用。请稍后重试，或减少图片数量、改用文字作答后再提交。",
+                )
     else:
         gemini_raw = call_gemini_system(prompt)
         if not gemini_raw:
@@ -637,9 +641,9 @@ def _mark_gemini_quota_exhausted():
         _gemini_disabled_until = disabled_until_ts
 
 
-def call_qianduoduo_gemini(prompt: str) -> Optional[str]:
-    """通过钱多多平台（OpenAI兼容格式）调用 Gemini 模型。
-    
+def call_qianduoduo_gemini(prompt: str, content_parts: Optional[List[Any]] = None) -> Optional[str]:
+    """通过钱多多平台（OpenAI 兼容格式）调用 Gemini 模型。
+    支持纯文本或多模态（文本+图片，content_parts 为 OpenAI content 数组）。
     环境变量：
       QIANDUODUO_API_KEY  - 钱多多后台生成的 sk-xxx 令牌（必填）
       QIANDUODUO_ENDPOINT - API Base URL，默认 https://ob6nfbpu76.apifox.cn（可选）
@@ -658,9 +662,13 @@ def call_qianduoduo_gemini(prompt: str) -> Optional[str]:
     model_name = (os.getenv("QIANDUODUO_MODEL") or "gemini-2.5-flash").strip()
 
     url = base_endpoint + "/v1/chat/completions"
+    if content_parts:
+        content = content_parts
+    else:
+        content = prompt
     payload = {
         "model": model_name,
-        "messages": [{"role": "user", "content": prompt}],
+        "messages": [{"role": "user", "content": content}],
         "temperature": 0.3,
         "max_tokens": 65536,
     }
@@ -697,6 +705,30 @@ def call_qianduoduo_gemini(prompt: str) -> Optional[str]:
     except Exception as e:
         print("call_qianduoduo_gemini failed:", e)
         return None
+
+
+def _build_openai_content_parts(prompt: str, image_data_list: List[str]) -> List[Dict[str, Any]]:
+    """把 prompt 文本与 data URL 列表转成 OpenAI 多模态 content 数组。"""
+    parts: List[Dict[str, Any]] = [{"type": "text", "text": prompt}]
+    for data_url in image_data_list:
+        mime, b64 = _parse_data_url(data_url)
+        if not b64:
+            continue
+        parts.append({
+            "type": "image_url",
+            "image_url": {"url": data_url},
+        })
+    return parts
+
+
+def call_qianduoduo_gemini_with_images(
+    prompt: str, image_data_list: List[str]
+) -> Optional[str]:
+    """钱多多多模态调用（OpenAI 兼容格式，content 为 parts 数组）。"""
+    parts = _build_openai_content_parts(prompt, image_data_list)
+    if len(parts) <= 1:
+        return None
+    return call_qianduoduo_gemini(prompt, content_parts=parts)
 
 
 def _is_quota_or_rate_limit_error(http_code: Optional[int], error_obj: Optional[dict]) -> bool:
@@ -759,7 +791,7 @@ def call_gemini_system_with_images(prompt: str, image_data_list: List[str]) -> O
         })
     print(f"[多模态] 共{len(image_data_list)}张图片, 成功解析{parsed_count}张")
     if len(parts) <= 1:
-        print("[多模态] 所有图片解析失败，回退到纯文本模式")
+        print("[多模态] 所有图片解析失败，无法带图批改")
         return None
 
     payload = {
