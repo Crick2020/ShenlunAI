@@ -27,8 +27,11 @@ export class GeminiService {
         : materials;
 
     try {
+      // 每次提交生成唯一会话 id，确保后端按「新对话」处理，仅批改本次上传的答案
+      const gradingSessionId = `session-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
       const body: Record<string, unknown> = {
         paperId,
+        gradingSessionId,
         materials: materialsToSend,
         question: {
           id: question.id,

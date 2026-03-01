@@ -529,8 +529,13 @@ Output Constraints:
 - 报告中请明确写出得分（例如：得分：X/满分Y），便于系统解析。
 """
 
+    # 每次批改均为独立任务，不复用任何历史对话；在 prompt 首行明确要求仅根据本次请求内容批改
+    grading_session_id = payload.get("gradingSessionId") or ("req-%s" % int(time.time() * 1000))
+    print("[批改] 新对话/独立任务 session=%s" % grading_session_id)
+
     # 构造 prompt：材料全文发给 Gemini，要求以 Markdown 直接输出（不要求 JSON）
     prompt_lines = []
+    prompt_lines.append("【重要】本次为全新、独立的批改任务。请仅根据本请求下方提供的「材料」「题目」与「学生答案」进行批改，勿参考、勿引用任何其他对话或历史内容。")
     if has_essay:
         prompt_lines.append(ESSAY_GRADING_INSTRUCTION)
     else:

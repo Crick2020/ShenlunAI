@@ -83,6 +83,12 @@ const App: React.FC = () => {
     answer: string;
     images?: string[];
   } | null>(null);
+  /** 每次点击「批改」时冻结的作答快照，确保提交到后端的一定是本次上传的答案（避免误用旧会话/旧答案） */
+  const pendingGradingSnapshotRef = useRef<{
+    question: Question;
+    answer: string;
+    images?: string[];
+  } | null>(null);
 
   useEffect(() => {
     const savedHistory = localStorage.getItem('history');
@@ -226,39 +232,42 @@ const App: React.FC = () => {
       alert('请先填写您的作答内容或上传答案图片');
       return;
     }
-    setPendingGrading({ question, answer, images });
+    const snapshot = { question, answer, images };
+    setPendingGrading(snapshot);
+    pendingGradingSnapshotRef.current = snapshot;
     setIsPaymentModalOpen(true);
   };
 
   const executeGrading = async () => {
-    if (!pendingGrading || !selectedPaper) return;
+    const snapshot = pendingGradingSnapshotRef.current;
+    if (!snapshot || !selectedPaper) return;
     
     setIsPaymentModalOpen(false);
     setIsGrading(true);
 
     try {
-      // 这里会调用 geminiService，它已经改成了连接你的 Python 后端
+      // 使用点击「批改」时冻结的快照发起请求，确保后端批改的一定是本次上传的答案（新对话）
       const rawResult: any = await geminiService.gradeEssay(
         selectedPaper.id,
         selectedPaper.materials,
-        pendingGrading.question,
-        pendingGrading.answer,
-        pendingGrading.images
+        snapshot.question,
+        snapshot.answer,
+        snapshot.images
       );
 
       // 后端现在直接返回 Markdown 正文（content/modelRawOutput），前端仅展示该内容
       const mainContent = (rawResult?.content ?? rawResult?.modelRawOutput ?? '').trim();
       // 无 Gemini 返回内容（如后端未配置或报错占位）时不进入批改页，避免展示模拟/空白
       if (!mainContent) {
-        track.gradingResult(selectedPaper, { id: pendingGrading.question.id, title: pendingGrading.question.title, type: pendingGrading.question.type }, 'fail', 'no content', {
-          answerPreview: pendingGrading.answer,
+        track.gradingResult(selectedPaper, { id: snapshot.question.id, title: snapshot.question.title, type: snapshot.question.type }, 'fail', 'no content', {
+          answerPreview: snapshot.answer,
         });
         alert('服务器忙，请稍后再试');
         return;
       }
       const normalizedResult: GradingResult = {
         score: rawResult?.score ?? 0,
-        maxScore: rawResult?.maxScore ?? (pendingGrading.question.maxScore || 100),
+        maxScore: rawResult?.maxScore ?? (snapshot.question.maxScore || 100),
         radarData: rawResult?.radarData ?? {
           points: 80,
           logic: 80,
@@ -275,11 +284,11 @@ const App: React.FC = () => {
       const newRecord: HistoryRecord = {
         id: Math.random().toString(36).substr(2, 9),
         paperName: selectedPaper.name,
-        questionTitle: pendingGrading.question.title,
+        questionTitle: snapshot.question.title,
         score: normalizedResult.score,
         timestamp: Date.now(),
         result: normalizedResult,
-        userAnswer: pendingGrading.answer,
+        userAnswer: snapshot.answer,
         rawGradingResponse: rawResult,
       };
 
@@ -287,22 +296,25 @@ const App: React.FC = () => {
       setHistory(updatedHistory);
       localStorage.setItem('history', JSON.stringify(updatedHistory));
       setSelectedRecord(newRecord);
-      track.gradingResult(selectedPaper, { id: pendingGrading.question.id, title: pendingGrading.question.title, type: pendingGrading.question.type }, 'success', undefined, {
-        answerPreview: pendingGrading.answer,
+      track.gradingResult(selectedPaper, { id: snapshot.question.id, title: snapshot.question.title, type: snapshot.question.type }, 'success', undefined, {
+        answerPreview: snapshot.answer,
         gradingPreview: mainContent,
       });
       setCurrentPage('report');
       window.history.pushState({ page: 'report', from: 'exam' }, '', getUrl());
     } catch (error: any) {
       const msg = error?.message || String(error);
-      track.gradingResult(selectedPaper, { id: pendingGrading.question.id, title: pendingGrading.question.title, type: pendingGrading.question.type }, 'fail', msg, {
-        answerPreview: pendingGrading.answer,
-      });
+      if (snapshot) {
+        track.gradingResult(selectedPaper, { id: snapshot.question.id, title: snapshot.question.title, type: snapshot.question.type }, 'fail', msg, {
+          answerPreview: snapshot.answer,
+        });
+      }
       alert('服务器忙，请稍后再试');
       console.error(error);
     } finally {
       setIsGrading(false);
       setPendingGrading(null);
+      pendingGradingSnapshotRef.current = null;
     }
   };
 
