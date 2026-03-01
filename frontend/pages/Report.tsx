@@ -5,6 +5,28 @@ import { HistoryRecord } from '../types';
 import { track } from '../services/analytics';
 import { openFeedback, CHANGELOG_URL } from '../constants';
 
+/** 预处理 AI 返回的 Markdown：修复未闭合的 ** 等，避免渲染不全或粗体错乱 */
+function normalizeReportMarkdown(raw: string): string {
+  if (!raw || !raw.trim()) return raw;
+  let s = raw;
+  // 按行处理，避免破坏代码块内的 **
+  const lines = s.split('\n');
+  let inCodeBlock = false;
+  const out: string[] = [];
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (line.trimStart().startsWith('```')) inCodeBlock = !inCodeBlock;
+    if (!inCodeBlock && line.includes('**')) {
+      const count = (line.match(/\*\*/g) || []).length;
+      if (count % 2 === 1) out.push(line + '**');
+      else out.push(line);
+    } else {
+      out.push(line);
+    }
+  }
+  return out.join('\n');
+}
+
 interface ReportProps {
   record: HistoryRecord;
   onBack: () => void;
@@ -22,9 +44,10 @@ const Report: React.FC<ReportProps> = ({ record, onBack }) => {
     document.addEventListener('click', handleClickOutside);
     return () => document.removeEventListener('click', handleClickOutside);
   }, []);
-  const content =
+  const rawContent =
     result.modelRawOutput ??
     (record.rawGradingResponse && (record.rawGradingResponse.content ?? record.rawGradingResponse.modelRawOutput));
+  const content = rawContent ? normalizeReportMarkdown(rawContent) : '';
 
   const handleCopyAll = () => {
     track.reportCopy();
@@ -33,7 +56,7 @@ const Report: React.FC<ReportProps> = ({ record, onBack }) => {
       `**试卷**：${paperName}`,
       `**题目**：${questionTitle}`,
       ``,
-      content || '',
+      content || rawContent || '',
     ].join('\n');
     navigator.clipboard.writeText(text).then(() => alert('已复制到剪贴板')).catch(() => alert('复制失败'));
   };
@@ -105,8 +128,14 @@ const Report: React.FC<ReportProps> = ({ record, onBack }) => {
             <p className="text-[#86868b] font-medium text-base md:text-lg mt-2">{paperName}</p>
           </div>
 
-          <div className="p-6 md:p-12 pb-16 md:pb-20">
-            <div className="prose prose-slate max-w-none prose-headings:text-[#1d1d1f] prose-p:text-[#1d1d1f] prose-li:text-[#1d1d1f] prose-strong:text-[#1d1d1f] prose-p:my-3 prose-ul:my-3 prose-ol:my-3 prose-li:my-1 prose-headings:mt-6 prose-headings:mb-3 first:prose-headings:mt-0 prose-headings:break-words prose-p:break-words">
+          <div className="p-6 md:p-12 pb-20 md:pb-24 overflow-visible min-h-0">
+            <div className="prose prose-slate max-w-none overflow-visible
+              prose-headings:text-[#1d1d1f] prose-headings:break-words
+              prose-p:text-[#1d1d1f] prose-p:my-3 prose-p:break-words
+              prose-li:text-[#1d1d1f] prose-ul:my-3 prose-ol:my-3 prose-li:my-1
+              prose-strong:text-[#1d1d1f] prose-strong:font-bold
+              prose-headings:mt-6 prose-headings:mb-3 first:prose-headings:mt-0
+              prose-pre:overflow-x-auto prose-pre:max-w-full">
               {content ? (
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
               ) : (
