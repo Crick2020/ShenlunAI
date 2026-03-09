@@ -15,13 +15,20 @@ function normalizeReportMarkdown(raw: string): string {
   const out: string[] = [];
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
+    let processed = line;
     if (line.trimStart().startsWith('```')) inCodeBlock = !inCodeBlock;
-    if (!inCodeBlock && line.includes('**')) {
-      const count = (line.match(/\*\*/g) || []).length;
-      if (count % 2 === 1) out.push(line + '**');
-      else out.push(line);
+    if (!inCodeBlock) {
+      // 将「如下： **一、」「。 **二、」这类写在同一行的粗体序号拆成多段，增强可读性
+      processed = processed
+        .replace(/如下：\s*\*\*/g, '如下：\n\n**')
+        .replace(/。\s*\*\*/g, '。\n\n**');
+    }
+    if (!inCodeBlock && processed.includes('**')) {
+      const count = (processed.match(/\*\*/g) || []).length;
+      if (count % 2 === 1) out.push(processed + '**');
+      else out.push(processed);
     } else {
-      out.push(line);
+      out.push(processed);
     }
   }
   return out.join('\n');
