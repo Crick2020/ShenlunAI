@@ -4,6 +4,47 @@ import { Paper, QuestionType } from './types';
 /** 后端 API 根地址。本地开发时在 frontend 目录创建 .env.development 并设置 VITE_API_BASE=http://localhost:8000 */
 export const API_BASE = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_BASE) || 'https://shenlun-backend.onrender.com';
 
+/** 意见反馈：飞书表单 */
+export const FEEDBACK_URL = 'https://p1ygyyk2nl3.feishu.cn/share/base/form/shrcnRZ3RNCnzgJ0SeTm27MBX7e';
+/** 更新日志 */
+export const CHANGELOG_URL = 'https://txc.qq.com/products/799248/change-log';
+
+/** 打开意见反馈（新窗口），可选带上试卷信息 */
+export function openFeedback(paperInfo?: { id?: string; name: string } | null): void {
+  const url = (() => {
+    if (!paperInfo?.name) return FEEDBACK_URL;
+    const params = new URLSearchParams();
+    params.set('paperName', paperInfo.name);
+    if (paperInfo.id) params.set('paperId', paperInfo.id);
+    return `${FEEDBACK_URL}${FEEDBACK_URL.includes('?') ? '&' : '?'}${params.toString()}`;
+  })();
+  const doOpen = () => {
+    try {
+      const a = document.createElement('a');
+      a.href = url;
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
+      a.style.display = 'none';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        try {
+          if (a.parentNode) document.body.removeChild(a);
+        } catch { /* ignore */ }
+      }, 300);
+    } catch {
+      try {
+        window.open(url, '_blank', 'noopener,noreferrer');
+      } catch { /* ignore */ }
+    }
+  };
+  try {
+    setTimeout(doOpen, 150);
+  } catch {
+    doOpen();
+  }
+}
+
 export const EXAM_TYPES = ['公务员', '事业单位'];
 export const REGIONS = ['全国', '北京', '浙江', '广东', '山东', '江苏', '四川'];
 export const YEARS = [2025, 2024, 2023, 2022, 2021];

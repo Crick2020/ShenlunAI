@@ -145,10 +145,7 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navbar 
-        user={user} 
-        onLogin={() => {}} 
-        onLogout={handleLogout}
+      <Navbar
         onNavigate={(page) => {
           if (page === 'home') {
             setSelectedPaper(null);

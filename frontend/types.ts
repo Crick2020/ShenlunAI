@@ -1,8 +1,32 @@
+/** 材料末尾「工作笔记」等结构化块（与 PDF 表格对应，正文可含 <u> 下划线） */
+export type MaterialNotebookSection =
+  | {
+      type: 'paragraph';
+      title: string;
+      bodyHtml: string;
+    }
+  | {
+      type: 'remark_table';
+      title: string;
+      rows: { leftHtml: string; remark?: string }[];
+    }
+  | {
+      type: 'doc_list';
+      title: string;
+      items: { heading: string; excerptHtml: string; remark?: string }[];
+    }
+  | {
+      type: 'discussion';
+      title: string;
+      introLines?: string[];
+      points: { speaker: string; bodyHtml: string }[];
+    };
 
 export interface Material {
   id: string;
   title: string;
   content: string;
+  notebookSections?: MaterialNotebookSection[];
 }
 
 export enum QuestionType {

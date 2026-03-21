@@ -14,9 +14,30 @@ import { track } from './services/analytics';
  * 试卷列表缓存按后端地址分键，避免「连本地后端」却仍读到上次缓存的线上列表（无事业单位）。
  * 旧键 shenlun_papers_v3 不再读取，首次加载会重新拉取。
  */
-const LS_PAPERS_LIST = `shenlun_papers_v5_${encodeURIComponent(API_BASE)}`;
-const LS_PAPER_DETAIL_PREFIX = 'shenlun_pd_';
+const LS_PAPERS_LIST = `shenlun_papers_v6_${encodeURIComponent(API_BASE)}`;
+/**
+ * 试卷详情 localStorage：须带版本号。仅改 backend JSON 时用户浏览器可能仍用旧缓存（含已删的 OCR 占位），
+ * bump 版本号可全员失效旧缓存；启动时也会清掉旧前缀键。
+ */
+const LS_PAPER_DETAIL_PREFIX = `shenlun_pd_v80_${encodeURIComponent(API_BASE)}_`;
 const MAX_CACHED_DETAILS = 30;
+
+function removeLegacyPaperDetailCaches() {
+  try {
+    const toRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (!k) continue;
+      if (k.startsWith('shenlun_pd_') && !k.startsWith(LS_PAPER_DETAIL_PREFIX)) {
+        toRemove.push(k);
+      }
+    }
+    toRemove.forEach((key) => localStorage.removeItem(key));
+  } catch {
+    /* ignore */
+  }
+}
+removeLegacyPaperDetailCaches();
 
 function readCachedList(): Paper[] {
   try {
@@ -197,7 +218,7 @@ const App: React.FC = () => {
       return;
     }
     inflightPrefetches.current.add(paperId);
-    fetch(`${API_BASE}/api/paper?id=${paperId}`)
+    fetch(`${API_BASE}/api/paper?id=${paperId}`, { cache: 'no-store' })
       .then(res => res.ok ? res.json() : null)
       .then(data => {
         if (data) {
@@ -233,7 +254,9 @@ const App: React.FC = () => {
 
     setIsLoadingPaper(true);
     try {
-      const response = await fetch(`${API_BASE}/api/paper?id=${summaryPaper.id}`);
+      const response = await fetch(`${API_BASE}/api/paper?id=${summaryPaper.id}`, {
+        cache: 'no-store',
+      });
       if (!response.ok) {
         throw new Error("试卷加载失败，可能是后端没有这个文件");
       }
@@ -251,6 +274,24 @@ const App: React.FC = () => {
       setIsLoadingPaper(false);
     }
   };
+
+  /** 地址栏 ?paper=试卷id 时自动打开该卷；同步从地址栏去掉 paper，避免刷新仍带参数而重复进入同一卷 */
+  useEffect(() => {
+    if (isPapersLoading) return;
+    const params = new URLSearchParams(window.location.search);
+    const paperId = params.get('paper');
+    if (!paperId) return;
+    const summary = papers.find((p) => p.id === paperId);
+    if (!summary) return;
+    params.delete('paper');
+    const qs = params.toString();
+    window.history.replaceState(
+      window.history.state ?? { page: 'home' },
+      '',
+      window.location.pathname + (qs ? `?${qs}` : '')
+    );
+    void handleSelectPaper(summary);
+  }, [isPapersLoading, papers]);
 
   const startGradingProcess = (question: Question, answer: string, images?: string[]) => {
     if (!answer.trim() && (!images || images.length === 0)) {

@@ -6,7 +6,8 @@ export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, '.', '');
     return {
       server: {
-        port: 3000,
+        // 与仓库根目录 frontend/ 错开，避免误在子目录运行 dev 时占满 3000 看不到最新版
+        port: 3001,
         host: '0.0.0.0',
       },
       plugins: [react()],

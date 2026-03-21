@@ -31,13 +31,210 @@
             font-family: 'Noto Serif SC', serif;
         }
 
+        /* 材料正文内嵌图片（含外链 COS） */
+        .material-content img {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin: 1rem auto;
+            border-radius: 4px;
+        }
+
+        /* 材料正文内嵌表格（如问卷统计表） */
+        .material-content table.material-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+            font-size: 0.95em;
+        }
+        .material-content table.material-table th,
+        .material-content table.material-table td {
+            border: 1px solid #d1d1d6;
+            padding: 10px 12px;
+            vertical-align: top;
+            text-align: left;
+        }
+        .material-content table.material-table thead th {
+            background: #f5f5f7;
+            font-weight: 600;
+        }
+        .material-content .material-table-caption {
+            margin: 1rem 0 0.5rem;
+            font-size: 0.95em;
+            line-height: 1.5;
+            color: #1d1d1f;
+        }
+
         /* 材料区划线句：PDF 中划线的句子在前端对应显示下划线 */
         .font-serif-sc u,
-        .material-content u {
+        .material-content u,
+        .notebook-remark-table u,
+        .notebook-doc-table u,
+        .notebook-para-table u,
+        .notebook-intro-table u,
+        .notebook-discussion-table u {
             text-decoration: underline;
             text-underline-offset: 4px;
             text-decoration-thickness: 1.5px;
             text-decoration-color: #1d1d1f;
+        }
+
+        /* 工作笔记「发言 / 备注」表格：印刷稿式边框与表头 */
+        .notebook-remark-table {
+            border-collapse: collapse;
+            width: 100%;
+            table-layout: fixed;
+            font-size: 1.0625rem;
+            line-height: 1.85;
+            color: #1d1d1f;
+        }
+        .notebook-remark-table col:first-child { width: 72%; }
+        .notebook-remark-table col:last-child { width: 28%; }
+        .notebook-remark-table th,
+        .notebook-remark-table td {
+            border: 1px solid #1d1d1f;
+            padding: 0.875rem 1rem;
+            vertical-align: top;
+            word-break: break-word;
+        }
+        .notebook-remark-table thead th {
+            background: #e8e8ed;
+            font-weight: 700;
+            text-align: center;
+            padding: 0.55rem 0.75rem;
+        }
+        .notebook-remark-table tbody td:first-child {
+            text-align: justify;
+            text-align-last: left;
+        }
+        .notebook-remark-table tbody td:last-child {
+            background: #f7f7f8;
+        }
+
+        /* 工作笔记「阅览室 · 搜集资料」三列表：资料 | 摘录 | 备注 */
+        .notebook-doc-table {
+            border-collapse: collapse;
+            width: 100%;
+            table-layout: fixed;
+            font-size: 1.0625rem;
+            line-height: 1.85;
+            color: #1d1d1f;
+        }
+        .notebook-doc-table col:nth-child(1) { width: 26%; }
+        .notebook-doc-table col:nth-child(2) { width: 56%; }
+        .notebook-doc-table col:nth-child(3) { width: 18%; }
+        .notebook-doc-table th,
+        .notebook-doc-table td {
+            border: 1px solid #1d1d1f;
+            padding: 0.75rem 0.875rem;
+            vertical-align: top;
+            word-break: break-word;
+        }
+        .notebook-doc-table thead th {
+            background: #e8e8ed;
+            font-weight: 700;
+            text-align: center;
+            padding: 0.5rem 0.65rem;
+        }
+        .notebook-doc-table tbody td:nth-child(1) {
+            text-align: left;
+            font-weight: 600;
+        }
+        .notebook-doc-table tbody td:nth-child(2) {
+            text-align: justify;
+            text-align-last: left;
+        }
+        .notebook-doc-table tbody td:nth-child(3) {
+            background: #f7f7f8;
+            color: #0071e3;
+            text-align: left;
+            font-size: 0.95em;
+        }
+
+        /* 工作笔记：管委会等单段记录（单列） */
+        .notebook-para-table {
+            border-collapse: collapse;
+            width: 100%;
+            table-layout: fixed;
+            font-size: 1.0625rem;
+            line-height: 1.85;
+            color: #1d1d1f;
+        }
+        .notebook-para-table th,
+        .notebook-para-table td {
+            border: 1px solid #1d1d1f;
+            padding: 0.75rem 0.875rem;
+            vertical-align: top;
+            word-break: break-word;
+        }
+        .notebook-para-table thead th {
+            background: #e8e8ed;
+            font-weight: 700;
+            text-align: center;
+            padding: 0.5rem 0.65rem;
+        }
+        .notebook-para-table tbody td {
+            text-align: justify;
+            text-align-last: left;
+        }
+
+        /* 工作笔记：调研会「议程」单列 */
+        .notebook-intro-table {
+            border-collapse: collapse;
+            width: 100%;
+            table-layout: fixed;
+            font-size: 1.0625rem;
+            line-height: 1.85;
+            color: #1d1d1f;
+        }
+        .notebook-intro-table th,
+        .notebook-intro-table td {
+            border: 1px solid #1d1d1f;
+            padding: 0.75rem 0.875rem;
+            vertical-align: top;
+            word-break: break-word;
+        }
+        .notebook-intro-table thead th {
+            background: #e8e8ed;
+            font-weight: 700;
+            text-align: center;
+            padding: 0.5rem 0.65rem;
+        }
+        .notebook-intro-table tbody td {
+            text-align: left;
+        }
+
+        /* 工作笔记：调研会「发言人 | 发言内容」 */
+        .notebook-discussion-table {
+            border-collapse: collapse;
+            width: 100%;
+            table-layout: fixed;
+            font-size: 1.0625rem;
+            line-height: 1.85;
+            color: #1d1d1f;
+        }
+        .notebook-discussion-table col:first-child { width: 22%; }
+        .notebook-discussion-table col:last-child { width: 78%; }
+        .notebook-discussion-table th,
+        .notebook-discussion-table td {
+            border: 1px solid #1d1d1f;
+            padding: 0.75rem 0.875rem;
+            vertical-align: top;
+            word-break: break-word;
+        }
+        .notebook-discussion-table thead th {
+            background: #e8e8ed;
+            font-weight: 700;
+            text-align: center;
+            padding: 0.5rem 0.65rem;
+        }
+        .notebook-discussion-table tbody td:first-child {
+            text-align: left;
+            font-weight: 600;
+        }
+        .notebook-discussion-table tbody td:last-child {
+            text-align: justify;
+            text-align-last: left;
         }
 
         .apple-blur {

@@ -1,6 +1,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Paper, Question, Material, QuestionType } from '../types';
+import { Paper, Question, QuestionType } from '../types';
+import type { MaterialNotebookSection } from '../types';
 import { track } from '../services/analytics';
 import { API_BASE, openFeedback, CHANGELOG_URL } from '../constants';
 
@@ -10,6 +11,132 @@ function rewriteDataImagesHtml(html: string): string {
   return html
     .replace(/src="\/images\//g, `src="${API_BASE}/images/`)
     .replace(/src='\/images\//g, `src='${API_BASE}/images/`);
+}
+
+function MaterialNotebookRenderer({ sections }: { sections: MaterialNotebookSection[] }) {
+  return (
+    <div className="mt-8 space-y-8 border-t border-[#d2d2d7] pt-8">
+      {sections.map((sec, idx) => (
+        <section key={idx} className="space-y-4">
+          <h3 className="text-lg font-bold text-[#1d1d1f] leading-snug">{sec.title}</h3>
+          {sec.type === 'paragraph' && (
+            <div className="overflow-x-auto -mx-1 md:mx-0 rounded-sm">
+              <table className="notebook-para-table min-w-[280px]">
+                <thead>
+                  <tr>
+                    <th scope="col">记录</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td dangerouslySetInnerHTML={{ __html: rewriteDataImagesHtml(sec.bodyHtml) }} />
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          )}
+          {sec.type === 'remark_table' && (
+            <div className="overflow-x-auto -mx-1 md:mx-0 rounded-sm">
+              <table className="notebook-remark-table min-w-[320px]">
+                <colgroup>
+                  <col />
+                  <col />
+                </colgroup>
+                <thead>
+                  <tr>
+                    <th scope="col">发言</th>
+                    <th scope="col">备注</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sec.rows.map((r, i) => (
+                    <tr key={i}>
+                      <td dangerouslySetInnerHTML={{ __html: rewriteDataImagesHtml(r.leftHtml) }} />
+                      <td className="whitespace-pre-wrap text-left">{r.remark ?? ''}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {sec.type === 'doc_list' && (
+            <div className="space-y-3 text-[#1d1d1f]">
+              <p className="font-medium">搜集资料：</p>
+              <div className="overflow-x-auto -mx-1 md:mx-0 rounded-sm">
+                <table className="notebook-doc-table min-w-[320px]">
+                  <colgroup>
+                    <col />
+                    <col />
+                    <col />
+                  </colgroup>
+                  <thead>
+                    <tr>
+                      <th scope="col">资料</th>
+                      <th scope="col">摘录</th>
+                      <th scope="col">备注</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sec.items.map((it, i) => (
+                      <tr key={i}>
+                        <td>{it.heading}</td>
+                        <td dangerouslySetInnerHTML={{ __html: rewriteDataImagesHtml(it.excerptHtml) }} />
+                        <td>{it.remark ?? ''}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+          {sec.type === 'discussion' && (
+            <div className="space-y-4 text-[#1d1d1f] leading-[1.85]">
+              {sec.introLines && sec.introLines.length > 0 && (
+                <div className="overflow-x-auto -mx-1 md:mx-0 rounded-sm">
+                  <table className="notebook-intro-table min-w-[280px]">
+                    <thead>
+                      <tr>
+                        <th scope="col">议程</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {sec.introLines.map((line, i) => (
+                        <tr key={i}>
+                          <td>{line}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              <div className="overflow-x-auto -mx-1 md:mx-0 rounded-sm">
+                <table className="notebook-discussion-table min-w-[320px]">
+                  <colgroup>
+                    <col />
+                    <col />
+                  </colgroup>
+                  <thead>
+                    <tr>
+                      <th scope="col">发言人</th>
+                      <th scope="col">发言内容</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sec.points.map((p, i) => (
+                      <tr key={i}>
+                        <td>{p.speaker}</td>
+                        <td dangerouslySetInnerHTML={{ __html: rewriteDataImagesHtml(p.bodyHtml) }} />
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </section>
+      ))}
+    </div>
+  );
 }
 
 interface ExamDetailProps {
@@ -246,6 +373,12 @@ const ExamDetail: React.FC<ExamDetailProps> = ({ paper, onGrade, onBack, fromRep
                 className="material-content font-serif-sc text-lg md:text-lg leading-[1.8] md:leading-[2] text-[#1d1d1f] text-justify whitespace-pre-wrap select-text selection:bg-blue-100"
                 dangerouslySetInnerHTML={{ __html: rewriteDataImagesHtml(paper.materials[activeMaterialIndex].content) }}
               />
+              {paper.materials[activeMaterialIndex].notebookSections &&
+                paper.materials[activeMaterialIndex].notebookSections!.length > 0 && (
+                  <div className="font-serif-sc text-lg md:text-lg">
+                    <MaterialNotebookRenderer sections={paper.materials[activeMaterialIndex].notebookSections!} />
+                  </div>
+                )}
             </div>
           </div>
         </div>

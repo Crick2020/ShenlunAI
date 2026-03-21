@@ -48,7 +48,7 @@ const Navbar: React.FC<NavbarProps> = ({ onNavigate }) => {
             <button onClick={() => { track.navClick('history'); onNavigate('profile'); }} className="text-sm font-medium text-[#1d1d1f]/70 hover:text-[#0071e3] transition-colors">历史批改</button>
           </div>
 
-          <div className="flex items-center" ref={menuRef}>
+          <div className="relative flex items-center" ref={menuRef}>
             <button
               onClick={() => setMoreOpen((v) => !v)}
               className={`flex items-center gap-2 px-4 py-2 rounded-full text-[13px] md:text-[14px] font-semibold text-[#1d1d1f] transition-all duration-200 ${
@@ -63,7 +63,7 @@ const Navbar: React.FC<NavbarProps> = ({ onNavigate }) => {
             </button>
 
             {moreOpen && (
-              <div className="absolute right-4 md:right-6 top-full mt-2 w-44 rounded-2xl apple-more-menu py-2 z-[70] animate-in fade-in slide-in-from-top-2 duration-200">
+              <div className="absolute right-0 top-full mt-2 w-44 rounded-2xl apple-more-menu py-2 z-[70] animate-in fade-in slide-in-from-top-2 duration-200">
                 <button
                   onClick={() => { setMoreOpen(false); track.navClick('profile'); onNavigate('profile'); }}
                   className="apple-more-item flex items-center gap-3 w-full text-left px-4 py-3 text-[14px] text-[#1d1d1f]"

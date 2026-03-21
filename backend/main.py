@@ -44,6 +44,7 @@ app.add_middleware(GZipMiddleware, minimum_size=500)
 _papers_index: list = []
 _papers_cache: Dict[str, dict] = {}
 _papers_json_cache: Dict[str, bytes] = {}
+_papers_file_mtime: Dict[str, float] = {}
 _papers_index_json: bytes = b"[]"
 _papers_index_etag: str = '"empty"'
 
@@ -73,13 +74,14 @@ def _sort_key(p):
 
 def _build_index():
     """遍历 data 目录，将所有试卷加载到内存，构建排好序的索引列表。"""
-    global _papers_index, _papers_cache, _papers_json_cache, _papers_index_json, _papers_index_etag
+    global _papers_index, _papers_cache, _papers_json_cache, _papers_file_mtime, _papers_index_json, _papers_index_etag
     data_dir = get_data_dir()
     if not os.path.isdir(data_dir):
         os.makedirs(data_dir, exist_ok=True)
         _papers_index = []
         _papers_cache = {}
         _papers_json_cache = {}
+        _papers_file_mtime = {}
         _papers_index_json = b"[]"
         _papers_index_etag = '"empty"'
         return
@@ -87,6 +89,7 @@ def _build_index():
     papers = []
     cache: Dict[str, dict] = {}
     json_cache: Dict[str, bytes] = {}
+    mtime_map: Dict[str, float] = {}
     for filename in os.listdir(data_dir):
         if not filename.endswith(".json"):
             continue
@@ -97,6 +100,7 @@ def _build_index():
             pid = content.get("id", filename[:-5])
             cache[pid] = content
             json_cache[pid] = json.dumps(content, ensure_ascii=False).encode("utf-8")
+            mtime_map[pid] = os.path.getmtime(file_path)
             papers.append({
                 "id": pid,
                 "name": content.get("name", "未命名试卷"),
@@ -111,6 +115,7 @@ def _build_index():
     _papers_index = papers
     _papers_cache = cache
     _papers_json_cache = json_cache
+    _papers_file_mtime = mtime_map
     _papers_index_json = json.dumps(papers, ensure_ascii=False).encode("utf-8")
     _papers_index_etag = f'"{hashlib.md5(_papers_index_json).hexdigest()}"'
     by_type = Counter((p.get("examType") or "未标注") for p in papers)
@@ -128,8 +133,35 @@ def startup_load():
     _build_index()
 
 
+def _refresh_paper_cache_if_stale(paper_id: str) -> None:
+    """若磁盘上的试卷 JSON 比内存缓存新，则重新加载该份试卷（改 data 后无需重启后端）。"""
+    global _papers_cache, _papers_json_cache, _papers_file_mtime
+    data_dir = get_data_dir()
+    file_path = os.path.join(data_dir, f"{paper_id}.json")
+    if not os.path.isfile(file_path):
+        return
+    try:
+        mtime = os.path.getmtime(file_path)
+    except OSError:
+        return
+    prev = _papers_file_mtime.get(paper_id)
+    if prev is not None and mtime <= prev:
+        return
+    try:
+        with open(file_path, "r", encoding="utf-8") as f:
+            content = json.load(f)
+    except Exception as e:
+        print(f"[试卷缓存] 刷新失败 {file_path}: {e}")
+        return
+    pid = content.get("id", paper_id)
+    _papers_cache[pid] = content
+    _papers_json_cache[pid] = json.dumps(content, ensure_ascii=False).encode("utf-8")
+    _papers_file_mtime[pid] = mtime
+
+
 def _load_paper_by_id(paper_id: str):
     """优先从内存缓存读取试卷，缓存未命中时回退到磁盘读取。"""
+    _refresh_paper_cache_if_stale(paper_id)
     if paper_id in _papers_cache:
         return _papers_cache[paper_id]
     data_dir = get_data_dir()
@@ -176,6 +208,7 @@ def list_papers(request: Request):
 @app.get("/api/paper")
 def get_paper(id: str):
     paper_id = id.replace(".json", "") if id.endswith(".json") else id
+    _refresh_paper_cache_if_stale(paper_id)
     _cache_headers = {"Cache-Control": "public, max-age=31536000, immutable"}
 
     if paper_id in _papers_json_cache:
