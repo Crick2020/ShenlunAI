@@ -10,8 +10,11 @@ import { API_BASE } from './constants';
 import { geminiService } from './services/geminiService';
 import { track } from './services/analytics';
 
-/** 升级版本号可使老用户丢弃旧列表缓存；v3 配合首页始终展示「事业单位」标签的更新 */
-const LS_PAPERS_LIST = 'shenlun_papers_v3';
+/**
+ * 试卷列表缓存按后端地址分键，避免「连本地后端」却仍读到上次缓存的线上列表（无事业单位）。
+ * 旧键 shenlun_papers_v3 不再读取，首次加载会重新拉取。
+ */
+const LS_PAPERS_LIST = `shenlun_papers_v5_${encodeURIComponent(API_BASE)}`;
 const LS_PAPER_DETAIL_PREFIX = 'shenlun_pd_';
 const MAX_CACHED_DETAILS = 30;
 
@@ -56,6 +59,15 @@ function evictOldDetails() {
 }
 
 const cachedList = readCachedList();
+
+if (import.meta.env.DEV) {
+  console.log('[API] 当前后端地址 API_BASE =', API_BASE);
+  if (String(API_BASE).includes('onrender.com')) {
+    console.warn(
+      '[API] 开发环境仍指向线上 Render。若要在本地看事业单位试卷，请在 frontend/.env.development 设置 VITE_API_BASE=http://localhost:8000 后重启 npm run dev'
+    );
+  }
+}
 
 const App: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<string>('home');
