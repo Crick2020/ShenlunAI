@@ -10,7 +10,8 @@ import { API_BASE } from './constants';
 import { geminiService } from './services/geminiService';
 import { track } from './services/analytics';
 
-const LS_PAPERS_LIST = 'shenlun_papers_v1';
+/** 升级版本号可使老用户丢弃仅含公务员的旧列表缓存，拉取含事业单位等的新列表 */
+const LS_PAPERS_LIST = 'shenlun_papers_v2';
 const LS_PAPER_DETAIL_PREFIX = 'shenlun_pd_';
 const MAX_CACHED_DETAILS = 30;
 
@@ -124,10 +125,13 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    fetch(`${API_BASE}/api/list`)
-      .then(res => res.json())
+    fetch(`${API_BASE}/api/list`, { cache: 'no-store' })
+      .then(res => {
+        if (!res.ok) throw new Error(`请求失败: ${res.status}`);
+        return res.json();
+      })
       .then(data => {
-        const mappedData = data.map((p: any) => ({
+        const mappedData = (Array.isArray(data) ? data : []).map((p: any) => ({
           ...p,
           region: p.region === '国家' ? '国考' : p.region
         }));
