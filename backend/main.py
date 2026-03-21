@@ -3,6 +3,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse, Response
+from fastapi.staticfiles import StaticFiles
 import hashlib
 import json
 import os
@@ -1047,3 +1048,9 @@ def call_gemini_system(
             print("call_gemini_system failed:", e)
             return None
     return None
+
+
+# 题目 Markdown 中的图片路径为 /images/...，放在所有 API 路由之后挂载
+_images_dir = os.path.join(get_data_dir(), "images")
+if os.path.isdir(_images_dir):
+    app.mount("/images", StaticFiles(directory=_images_dir), name="images")

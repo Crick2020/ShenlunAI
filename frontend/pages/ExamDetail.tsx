@@ -2,7 +2,15 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Paper, Question, Material, QuestionType } from '../types';
 import { track } from '../services/analytics';
-import { openFeedback, CHANGELOG_URL } from '../constants';
+import { API_BASE, openFeedback, CHANGELOG_URL } from '../constants';
+
+/** 材料 HTML 中图片多为 /images/...，与后端 API 同主机挂载时需指到 API 根地址 */
+function rewriteDataImagesHtml(html: string): string {
+  if (!html) return html;
+  return html
+    .replace(/src="\/images\//g, `src="${API_BASE}/images/`)
+    .replace(/src='\/images\//g, `src='${API_BASE}/images/`);
+}
 
 interface ExamDetailProps {
   paper: Paper;
@@ -236,7 +244,7 @@ const ExamDetail: React.FC<ExamDetailProps> = ({ paper, onGrade, onBack, fromRep
               <h2 className="text-xl md:text-xl font-bold mb-4 md:mb-8 text-[#1d1d1f] tracking-tight">{paper.materials[activeMaterialIndex].title}</h2>
               <div
                 className="material-content font-serif-sc text-lg md:text-lg leading-[1.8] md:leading-[2] text-[#1d1d1f] text-justify whitespace-pre-wrap select-text selection:bg-blue-100"
-                dangerouslySetInnerHTML={{ __html: paper.materials[activeMaterialIndex].content }}
+                dangerouslySetInnerHTML={{ __html: rewriteDataImagesHtml(paper.materials[activeMaterialIndex].content) }}
               />
             </div>
           </div>

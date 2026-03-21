@@ -10,8 +10,8 @@ import { API_BASE } from './constants';
 import { geminiService } from './services/geminiService';
 import { track } from './services/analytics';
 
-/** 升级版本号可使老用户丢弃仅含公务员的旧列表缓存，拉取含事业单位等的新列表 */
-const LS_PAPERS_LIST = 'shenlun_papers_v2';
+/** 升级版本号可使老用户丢弃旧列表缓存；v3 配合首页始终展示「事业单位」标签的更新 */
+const LS_PAPERS_LIST = 'shenlun_papers_v3';
 const LS_PAPER_DETAIL_PREFIX = 'shenlun_pd_';
 const MAX_CACHED_DETAILS = 30;
 

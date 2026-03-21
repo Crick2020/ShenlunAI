@@ -1,7 +1,10 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { EXAM_TYPES, REGIONS } from '../constants';
 import { Paper } from '../types';
 import { track } from '../services/analytics';
+
+/** 事业单位全国联考 JSON 多为 region「全国」；无数据时也要能选「全国」，避免只剩省市导致筛不到卷 */
+const REGIONS_SYDW_FALLBACK = ['全国', ...REGIONS.filter(r => r !== '国考')];
 
 const PREFETCH_AFTER_FILTER_COUNT = 12;
 const PREFETCH_SCROLL_BATCH = 6;
@@ -24,36 +27,56 @@ const Home: React.FC<HomeProps> = ({ onSelectPaper, onPrefetchPaper, filters, se
 
   useEffect(() => {
     if (filters.type === '事业单位' && filters.region === '国考') {
-      setFilters(prev => ({ ...prev, region: '北京' }));
+      setFilters(prev => ({ ...prev, region: '全国' }));
     }
   }, [filters.type]);
 
-  // 动态计算：只有后端返回中存在试卷的考试类型/地区才显示
-  const examTypesFromPapers = Array.from(new Set(
-    papers
-      .map(p => p.examType || '')
-      .filter(Boolean)
-  ));
-  const availableExamTypes = examTypesFromPapers.length ? examTypesFromPapers : EXAM_TYPES;
+  const examTypesFromPapers = useMemo(
+    () => Array.from(new Set(papers.map(p => p.examType || '').filter(Boolean))),
+    [papers]
+  );
 
-  const regionsFromPapers = Array.from(new Set(
-    papers
-      .filter(p => (p.examType ? p.examType === filters.type : true))
-      .map(p => p.region || '')
-      .filter(Boolean)
-  ));
-  const availableRegions = filters.type === '事业单位'
-    ? (regionsFromPapers.length ? regionsFromPapers.filter(r => r !== '国考') : REGIONS.filter(r => r !== '国考'))
-    : (regionsFromPapers.length ? regionsFromPapers : REGIONS);
+  /** 始终保留 EXAM_TYPES（公务员/事业单位），避免后端暂未返回事业单位试卷时把「事业单位」标签整个隐藏 */
+  const availableExamTypes = useMemo(
+    () => Array.from(new Set([...EXAM_TYPES, ...examTypesFromPapers])),
+    [examTypesFromPapers]
+  );
 
-  // 把 "国考" 固定放前面，其他省市按首字拼音顺序排序（使用 localeCompare 对中文进行排序）
-  const displayedRegions = (() => {
+  const regionsFromPapers = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          papers
+            .filter(p => (p.examType ? p.examType === filters.type : true))
+            .map(p => p.region || '')
+            .filter(Boolean)
+        )
+      ),
+    [papers, filters.type]
+  );
+
+  const availableRegions = useMemo(() => {
+    if (filters.type === '事业单位') {
+      return regionsFromPapers.length
+        ? regionsFromPapers.filter(r => r !== '国考')
+        : REGIONS_SYDW_FALLBACK;
+    }
+    return regionsFromPapers.length ? regionsFromPapers : REGIONS;
+  }, [filters.type, regionsFromPapers]);
+
+  // 「国考」或「全国」固定靠前，其余按拼音排序
+  const displayedRegions = useMemo(() => {
     const arr = Array.from(new Set(availableRegions));
+    if (filters.type === '事业单位' && arr.includes('全国')) {
+      const rest = arr.filter(r => r !== '全国');
+      rest.sort((a, b) => a.localeCompare(b, 'zh'));
+      return ['全国', ...rest];
+    }
     const hasNational = arr.includes('国考');
     const rest = arr.filter(r => r !== '国考');
     rest.sort((a, b) => a.localeCompare(b, 'zh'));
     return hasNational ? ['国考', ...rest] : rest;
-  })();
+  }, [availableRegions, filters.type]);
 
   // 如果当前选中的 type/region 在可用列表中不存在，自动切换到第一个可用项
   useEffect(() => {
