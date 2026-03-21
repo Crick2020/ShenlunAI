@@ -62,6 +62,16 @@ python test_grade_api.py
 
 前提是已用上面的命令把后端跑在 8000 端口。
 
+### 4. 自检：线上后端是否已包含事业单位等试卷
+
+若首页选了「事业单位」仍为空，多半是**当前连接的后端**（默认 `https://shenlun-backend.onrender.com`）尚未部署含 `backend/data/sydw_*.json` 的版本。可在终端执行：
+
+```bash
+curl -sS "https://shenlun-backend.onrender.com/api/list" | python3 -c "import sys,json;d=json.load(sys.stdin);print('总条数', len(d));print('事业单位', sum(1 for x in d if x.get('examType')=='事业单位'))"
+```
+
+若「事业单位」为 `0`，需在仓库推送最新代码后，在 Render **重新部署**后端；本地验证请用上一节的 `.env.development` 指向 `http://localhost:8000`。
+
 ### 小结
 
 | 步骤 | 命令 / 操作 |

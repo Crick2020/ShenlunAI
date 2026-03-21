@@ -135,6 +135,15 @@ const App: React.FC = () => {
           ...p,
           region: p.region === '国家' ? '国考' : p.region
         }));
+        if (import.meta.env.DEV) {
+          const nSydw = mappedData.filter(
+            (p: { examType?: string; id?: string }) =>
+              p.examType === '事业单位' || (typeof p.id === 'string' && p.id.startsWith('sydw_'))
+          ).length;
+          console.log(
+            `[试卷列表] ${API_BASE} 共 ${mappedData.length} 条，其中事业单位/联考约 ${nSydw} 条`
+          );
+        }
         setPapers(mappedData);
         setIsPapersLoading(false);
         writeCachedList(mappedData);

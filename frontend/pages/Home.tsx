@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { EXAM_TYPES, REGIONS } from '../constants';
+import { API_BASE, EXAM_TYPES, REGIONS } from '../constants';
 import { Paper } from '../types';
 import { track } from '../services/analytics';
 
@@ -114,6 +114,17 @@ const Home: React.FC<HomeProps> = ({ onSelectPaper, onPrefetchPaper, filters, se
     const key = suffix || '';
     return orderMap[key] ?? 999;
   };
+
+  /** 当前列表接口是否返回了事业单位试卷（用于区分「筛错了」和「后端未部署数据」） */
+  const listHasInstitution = useMemo(
+    () =>
+      papers.some(
+        p =>
+          p.examType === '事业单位' ||
+          (typeof p.id === 'string' && p.id.startsWith('sydw_'))
+      ),
+    [papers]
+  );
 
   const filteredPapers = papers
     .filter(p => {
@@ -302,7 +313,19 @@ const Home: React.FC<HomeProps> = ({ onSelectPaper, onPrefetchPaper, filters, se
                   <i className="fas fa-tray text-2xl"></i>
                 </div>
                 <p className="text-[#1d1d1f] font-bold text-base">暂无匹配试卷</p>
-                <p className="text-[#86868b] text-xs md:text-sm mt-1 px-8">请检查后端 data 文件夹是否有对应的 .json 文件</p>
+                {filters.type === '事业单位' && !listHasInstitution ? (
+                  <p className="text-[#86868b] text-xs md:text-sm mt-2 px-6 max-w-xl mx-auto leading-relaxed">
+                    当前连接的后端列表里还没有事业单位试卷（接口：
+                    <span className="font-mono text-[11px] break-all">{API_BASE}</span>
+                    ）。请确认已将含 <code className="text-[11px]">backend/data/sydw_*.json</code> 的代码推送到仓库，并在
+                    Render 等托管上<strong>重新部署</strong>后端；本地验证请使用 <code className="text-[11px]">frontend/.env.development</code>{' '}
+                    中的 <code className="text-[11px]">VITE_API_BASE=http://localhost:8000</code> 并启动本机后端。
+                  </p>
+                ) : (
+                  <p className="text-[#86868b] text-xs md:text-sm mt-1 px-8">
+                    可尝试切换「所属地区」；若仍无试卷，请检查后端 data 目录是否有对应 JSON
+                  </p>
+                )}
               </div>
             )}
           </div>
