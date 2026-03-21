@@ -14,6 +14,7 @@ from zoneinfo import ZoneInfo
 import urllib.request
 import urllib.error
 from typing import Optional, List, Dict, Any
+from collections import Counter
 import sys
 import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -112,7 +113,10 @@ def _build_index():
     _papers_json_cache = json_cache
     _papers_index_json = json.dumps(papers, ensure_ascii=False).encode("utf-8")
     _papers_index_etag = f'"{hashlib.md5(_papers_index_json).hexdigest()}"'
+    by_type = Counter((p.get("examType") or "未标注") for p in papers)
+    type_line = "，".join(f"{k} {v}份" for k, v in sorted(by_type.items(), key=lambda x: (-x[1], x[0])))
     print(f"[Startup] 已加载 {len(papers)} 份试卷到内存缓存, index_size={len(_papers_index_json)} bytes, etag={_papers_index_etag}")
+    print(f"[Startup] 按考试类型: {type_line}")
 
 
 @app.on_event("startup")
