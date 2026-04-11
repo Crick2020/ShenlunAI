@@ -305,6 +305,26 @@
         .prose pre { background: #1d1d1f; color: #e5e5e7; padding: 1em; border-radius: 8px; overflow-x: auto; margin: 0.5em 0; }
         .prose pre code { background: none; padding: 0; }
         .prose blockquote { border-left: 4px solid #0071e3; padding-left: 1em; margin: 0.5em 0; color: #515154; }
+
+        /* 批改报告：引用块与标题层次（配合 normalizeReportMarkdown 解析结果） */
+        .report-markdown.prose blockquote {
+            background: rgba(0, 113, 227, 0.055);
+            border-left-width: 3px;
+            padding: 0.65em 1em 0.65em 1.05em;
+            border-radius: 0 10px 10px 0;
+            margin: 0.85em 0;
+            color: #3a3a3c;
+        }
+        .report-markdown.prose blockquote p { margin: 0.4em 0; }
+        .report-markdown.prose blockquote p:first-child { margin-top: 0; }
+        .report-markdown.prose blockquote p:last-child { margin-bottom: 0; }
+        .report-markdown.prose ol > li::marker { font-weight: 600; color: #0071e3; }
+        .report-markdown.prose h2 {
+            border-bottom: 1px solid #e8e8ed;
+            padding-bottom: 0.35em;
+            margin-top: 1.25em;
+        }
+        .report-markdown.prose hr { margin: 1.5em 0; border-color: #d2d2d7; }
         .prose table { border-collapse: collapse; width: 100%; margin: 0.5em 0; }
         .prose th, .prose td { border: 1px solid #d1d1d6; padding: 0.5em 0.75em; text-align: left; }
         .prose th { font-weight: 600; background: #f5f5f7; }

@@ -584,6 +584,7 @@ Output Constraints:
     else:
         prompt_lines.append("在评分时，请结合本题材料与一般公务员申论评分逻辑，自行归纳合理的评分尺度。")
     prompt_lines.append("请用 Markdown 格式直接输出你的分析报告（可使用标题、加粗、列表、分段等），不要输出 JSON。加粗请使用成对的 **文字**，确保每行内 ** 成对闭合，避免漏写导致前端渲染不全。报告中请明确写出得分（例如：得分：X/满分Y），便于系统解析。")
+    prompt_lines.append("排版：若使用引用块「>」，每个「>」必须位于单独一行的行首（行首可有空格）；粗体「**…**」结束后若要接引用，请先换行再写「>」；多段引用请多行书写，勿在同一行内用空格加「>」串联多段。")
     prompt_lines.append("材料（materials）如下（含完整正文，请依据材料原文评分、给出参考答案与扣分点）：")
     prompt_lines.append(json.dumps(materials_to_send, ensure_ascii=False))
     prompt_lines.append("\n题目（questions）如下（每题包含 id、title、requirements、maxScore）：")

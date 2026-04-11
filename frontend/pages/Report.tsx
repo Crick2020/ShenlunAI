@@ -4,35 +4,7 @@ import remarkGfm from 'remark-gfm';
 import { HistoryRecord } from '../types';
 import { track } from '../services/analytics';
 import { openFeedback, CHANGELOG_URL } from '../constants';
-
-/** 预处理 AI 返回的 Markdown：修复未闭合的 ** 等，避免渲染不全或粗体错乱 */
-function normalizeReportMarkdown(raw: string): string {
-  if (!raw || !raw.trim()) return raw;
-  let s = raw;
-  // 按行处理，避免破坏代码块内的 **
-  const lines = s.split('\n');
-  let inCodeBlock = false;
-  const out: string[] = [];
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    let processed = line;
-    if (line.trimStart().startsWith('```')) inCodeBlock = !inCodeBlock;
-    if (!inCodeBlock) {
-      // 将「如下： **一、」「。 **二、」这类写在同一行的粗体序号拆成多段，增强可读性
-      processed = processed
-        .replace(/如下：\s*\*\*/g, '如下：\n\n**')
-        .replace(/。\s*\*\*/g, '。\n\n**');
-    }
-    if (!inCodeBlock && processed.includes('**')) {
-      const count = (processed.match(/\*\*/g) || []).length;
-      if (count % 2 === 1) out.push(processed + '**');
-      else out.push(processed);
-    } else {
-      out.push(processed);
-    }
-  }
-  return out.join('\n');
-}
+import { normalizeReportMarkdown } from '../utils/normalizeReportMarkdown';
 
 interface ReportProps {
   record: HistoryRecord;
@@ -136,13 +108,15 @@ const Report: React.FC<ReportProps> = ({ record, onBack }) => {
           </div>
 
           <div className="p-6 md:p-12 pb-20 md:pb-24 overflow-visible min-h-0">
-            <div className="prose prose-slate max-w-none overflow-visible
+            <div
+              className="report-markdown prose prose-slate max-w-none overflow-visible
               prose-headings:text-[#1d1d1f] prose-headings:break-words
               prose-p:text-[#1d1d1f] prose-p:my-3 prose-p:break-words
               prose-li:text-[#1d1d1f] prose-ul:my-3 prose-ol:my-3 prose-li:my-1
               prose-strong:text-[#1d1d1f] prose-strong:font-bold
               prose-headings:mt-6 prose-headings:mb-3 first:prose-headings:mt-0
-              prose-pre:overflow-x-auto prose-pre:max-w-full">
+              prose-pre:overflow-x-auto prose-pre:max-w-full"
+            >
               {content ? (
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
               ) : (
