@@ -4,47 +4,11 @@ import remarkGfm from 'remark-gfm';
 import { HistoryRecord } from '../types';
 import { track } from '../services/analytics';
 import { openFeedback, CHANGELOG_URL } from '../constants';
-import { formatModelEssayAsGrid, normalizeReportMarkdown, reportMarkdownToPlainText } from '../utils/normalizeReportMarkdown';
+import { normalizeReportMarkdown, reportMarkdownToPlainText } from '../utils/normalizeReportMarkdown';
 
 interface ReportProps {
   record: HistoryRecord;
   onBack: () => void;
-}
-
-interface ModelEssaySplit {
-  before: string;
-  body: string;
-  after: string;
-}
-
-function splitModelEssay(markdown: string): ModelEssaySplit | null {
-  if (!markdown) return null;
-  const lines = markdown.split('\n');
-  const start = lines.findIndex((line) => /(?:^|\s)(?:#+\s*)?(?:\*\*)?\s*标杆范文[:：]/.test(line));
-  if (start < 0) return null;
-
-  const isNextSectionHeader = (line: string): boolean => {
-    const trimmed = line.trim();
-    if (!trimmed) return false;
-    if (/^#{1,6}\s+/.test(trimmed)) return true;
-    if (/^(?:\*\*)?\s*范文解析[:：]/.test(trimmed)) return true;
-    if (/^(?:\*\*)?\s*金句积累[:：]/.test(trimmed)) return true;
-    if (/^(?:模块|【)/.test(trimmed) && !/标杆范文/.test(trimmed)) return true;
-    return false;
-  };
-
-  let end = lines.length;
-  for (let i = start + 1; i < lines.length; i += 1) {
-    if (isNextSectionHeader(lines[i])) {
-      end = i;
-      break;
-    }
-  }
-
-  const before = lines.slice(0, start + 1).join('\n');
-  const body = lines.slice(start + 1, end).join('\n').trim();
-  const after = lines.slice(end).join('\n');
-  return { before, body, after };
 }
 
 const Report: React.FC<ReportProps> = ({ record, onBack }) => {
@@ -62,14 +26,7 @@ const Report: React.FC<ReportProps> = ({ record, onBack }) => {
   const rawContent =
     result.modelRawOutput ??
     (record.rawGradingResponse && (record.rawGradingResponse.content ?? record.rawGradingResponse.modelRawOutput));
-  const content = rawContent ? formatModelEssayAsGrid(normalizeReportMarkdown(rawContent)) : '';
-  const modelEssaySplit = splitModelEssay(content);
-  const modelEssayRows = modelEssaySplit?.body
-    ? modelEssaySplit.body
-      .split('\n')
-      .map((row) => row.trim())
-      .filter(Boolean)
-    : [];
+  const content = rawContent ? normalizeReportMarkdown(rawContent) : '';
 
   const handleCopyAll = () => {
     track.reportCopy();
@@ -157,34 +114,7 @@ const Report: React.FC<ReportProps> = ({ record, onBack }) => {
               prose-pre:overflow-x-auto prose-pre:max-w-full"
             >
               {content ? (
-                modelEssaySplit ? (
-                  <>
-                    {modelEssaySplit.before && (
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{modelEssaySplit.before}</ReactMarkdown>
-                    )}
-                    {modelEssayRows.length > 0 && (
-                      <div className="essay-grid-paper not-prose">
-                        {modelEssayRows.map((row, rowIndex) => {
-                          const chars = Array.from(row).slice(0, 25);
-                          return (
-                            <div className="essay-grid-row" key={`${rowIndex}-${row}`}>
-                              {Array.from({ length: 25 }, (_, colIndex) => (
-                                <span className="essay-grid-cell" key={`${rowIndex}-${colIndex}`}>
-                                  {chars[colIndex] || ''}
-                                </span>
-                              ))}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                    {modelEssaySplit.after && (
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{modelEssaySplit.after}</ReactMarkdown>
-                    )}
-                  </>
-                ) : (
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
-                )
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
               ) : (
                 <p className="text-[#86868b]">暂无批改内容</p>
               )}

@@ -53,6 +53,11 @@ export function normalizeReportMarkdown(raw: string): string {
       /([\u3002\uff01\uff1f；。！？;])\s*([2-9]\.)(?=[\u4e00-\u9fff])/g,
       '$1\n\n$2',
     );
+    // 兜底：2. 后面若是符号/emoji（如 ⚠️）而非中文，也要断行
+    processed = processed.replace(
+      /([\u3002\uff01\uff1f；。！？;])\s*([2-9]\.)(?=\S)/g,
+      '$1\n\n$2',
+    );
     // 「：1.xxx」且非小数（排除 1.5 这类）
     processed = processed.replace(/([：:])\s*([1-9]\.)(?=[\u4e00-\u9fff])(?!\d)/g, '$1\n\n$2');
     // 兜底：如「...） 2.材料...」这种前面不是句号也要断行
@@ -75,70 +80,6 @@ export function normalizeReportMarkdown(raw: string): string {
       out.push(line);
     }
   }
-  return out.join('\n');
-}
-
-function chunkByGridWidth(text: string, width: number): string[] {
-  const compact = text.replace(/\s+/g, '');
-  if (!compact) return [];
-  const lines: string[] = [];
-  for (let i = 0; i < compact.length; i += width) {
-    lines.push(compact.slice(i, i + width));
-  }
-  return lines;
-}
-
-/**
- * 将「标杆范文」正文整理为方格纸样式：每行 25 字。
- * 仅处理范文正文，不改标题行与后续「范文解析」等模块。
- */
-export function formatModelEssayAsGrid(markdown: string, gridWidth = 25): string {
-  if (!markdown || !markdown.trim()) return markdown;
-
-  const lines = markdown.split('\n');
-  const out: string[] = [];
-  let inModelEssayBlock = false;
-
-  const isModelEssayHeader = (line: string): boolean =>
-    /(?:^|\s)(?:#+\s*)?(?:\*\*)?\s*标杆范文[:：]/.test(line);
-
-  const isNextSectionHeader = (line: string): boolean => {
-    const trimmed = line.trim();
-    if (!trimmed) return false;
-    if (/^#{1,6}\s+/.test(trimmed)) return true;
-    if (/^(?:\*\*)?\s*范文解析[:：]/.test(trimmed)) return true;
-    if (/^(?:\*\*)?\s*金句积累[:：]/.test(trimmed)) return true;
-    if (/^(?:模块|【)/.test(trimmed) && !/标杆范文/.test(trimmed)) return true;
-    return false;
-  };
-
-  for (let i = 0; i < lines.length; i += 1) {
-    const line = lines[i];
-
-    if (!inModelEssayBlock) {
-      out.push(line);
-      if (isModelEssayHeader(line)) inModelEssayBlock = true;
-      continue;
-    }
-
-    if (isNextSectionHeader(line)) {
-      inModelEssayBlock = false;
-      out.push(line);
-      continue;
-    }
-
-    const trimmed = line.trim();
-    if (!trimmed) {
-      out.push('');
-      continue;
-    }
-
-    const plain = trimmed.replace(/^[>*\-\d.\s]+/, '');
-    const chunked = chunkByGridWidth(plain, gridWidth);
-    if (chunked.length === 0) out.push('');
-    else out.push(...chunked);
-  }
-
   return out.join('\n');
 }
 
