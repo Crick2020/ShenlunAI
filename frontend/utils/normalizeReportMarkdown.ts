@@ -16,7 +16,15 @@ const SENTENCE_THEN_QUOTE = new RegExp(
 
 export function normalizeReportMarkdown(raw: string): string {
   if (!raw || !raw.trim()) return raw;
-  const lines = raw.split('\n');
+  // 模型偶发把 Markdown 标记转义成 \*\*...\*\*，会导致页面显示字面量 **。
+  // 先做轻量“反转义”，仅处理常见格式标记，避免误改正文中的反斜杠。
+  const preprocessed = raw
+    .replace(/\\\*\\\*/g, '**')
+    .replace(/\\`/g, '`')
+    .replace(/\\#/g, '#')
+    .replace(/\\>/g, '>');
+
+  const lines = preprocessed.split('\n');
   let inCodeBlock = false;
   const expanded: string[] = [];
 
