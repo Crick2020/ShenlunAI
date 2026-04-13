@@ -4,7 +4,7 @@ import remarkGfm from 'remark-gfm';
 import { HistoryRecord } from '../types';
 import { track } from '../services/analytics';
 import { openFeedback, CHANGELOG_URL } from '../constants';
-import { normalizeReportMarkdown, reportMarkdownToPlainText } from '../utils/normalizeReportMarkdown';
+import { normalizeReportMarkdown } from '../utils/normalizeReportMarkdown';
 
 interface ReportProps {
   record: HistoryRecord;
@@ -31,8 +31,7 @@ const Report: React.FC<ReportProps> = ({ record, onBack }) => {
   const handleCopyAll = () => {
     track.reportCopy();
     const mdBody = rawContent ? normalizeReportMarkdown(rawContent) : '';
-    const bodyPlain = reportMarkdownToPlainText(mdBody);
-    const text = ['申论批改报告', `试卷：${paperName}`, `题目：${questionTitle}`, '', bodyPlain].join('\n');
+    const text = ['# 申论批改报告', `**试卷**：${paperName}`, `**题目**：${questionTitle}`, '', mdBody].join('\n');
     navigator.clipboard.writeText(text).then(() => alert('已复制到剪贴板')).catch(() => alert('复制失败'));
   };
 
