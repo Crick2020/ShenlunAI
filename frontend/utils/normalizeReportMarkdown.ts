@@ -83,6 +83,30 @@ export function normalizeReportMarkdown(raw: string): string {
   return out.join('\n');
 }
 
+/**
+ * 复制 Markdown 时，避免被部分编辑器误判为 Setext 二级标题：
+ * 若出现「正文行 + 下一行 ---/===」，在分隔线前补一个空行，强制其作为分割线而非标题下划线。
+ */
+export function normalizeReportMarkdownForCopy(raw: string): string {
+  const normalized = normalizeReportMarkdown(raw);
+  if (!normalized) return normalized;
+
+  const lines = normalized.split('\n');
+  const out: string[] = [];
+
+  for (let i = 0; i < lines.length; i += 1) {
+    const line = lines[i];
+    const isSetextUnderline = /^\s*(?:-{3,}|={3,})\s*$/.test(line);
+    if (isSetextUnderline && out.length > 0) {
+      const prev = out[out.length - 1];
+      if (prev.trim() !== '') out.push('');
+    }
+    out.push(line);
+  }
+
+  return out.join('\n');
+}
+
 /** 行首「枚举序号」改为全角句点，避免 Word/飞书 把 `1.` 识别为有序列表层级 */
 function lineLeadingEnumToFullwidthDot(line: string): string {
   return line.replace(
