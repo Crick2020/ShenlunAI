@@ -10,9 +10,12 @@ interface ReportProps {
 
 const Report: React.FC<ReportProps> = ({ record, onBack }) => {
   const { result, paperName, questionTitle } = record;
-  const content =
+  const rawContent =
     result.modelRawOutput ??
     (record.rawGradingResponse && (record.rawGradingResponse.content ?? record.rawGradingResponse.modelRawOutput));
+
+  // 去掉行首 4 空格缩进（AI 排版导致意外代码块）
+  const content = rawContent ? rawContent.replace(/^( {4})/gm, '') : rawContent;
 
   const handleCopyAll = () => {
     const text = [
@@ -58,7 +61,7 @@ const Report: React.FC<ReportProps> = ({ record, onBack }) => {
           </div>
 
           <div className="p-6 md:p-12">
-            <div className="prose prose-slate max-w-none prose-headings:text-[#1d1d1f] prose-p:text-[#1d1d1f] prose-li:text-[#1d1d1f] prose-strong:text-[#1d1d1f] prose-p:my-3 prose-ul:my-3 prose-ol:my-3 prose-li:my-1 prose-headings:mt-6 prose-headings:mb-3 first:prose-headings:mt-0">
+            <div className="prose prose-slate max-w-none prose-headings:text-[#1d1d1f] prose-p:text-[#1d1d1f] prose-li:text-[#1d1d1f] prose-strong:text-[#1d1d1f] prose-p:my-3 prose-ul:my-3 prose-ol:my-3 prose-li:my-1 prose-headings:mt-6 prose-headings:mb-3 first:prose-headings:mt-0 prose-pre:bg-[#f5f5f7] prose-pre:text-[#1d1d1f] prose-pre:border prose-pre:border-black/10 prose-code:bg-[#f0f0f2] prose-code:text-[#1d1d1f] prose-code:before:content-none prose-code:after:content-none">
               {content ? (
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
               ) : (
