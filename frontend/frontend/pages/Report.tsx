@@ -14,8 +14,17 @@ const Report: React.FC<ReportProps> = ({ record, onBack }) => {
     result.modelRawOutput ??
     (record.rawGradingResponse && (record.rawGradingResponse.content ?? record.rawGradingResponse.modelRawOutput));
 
-  // 去掉行首 4 空格缩进（AI 排版导致意外代码块）
-  const content = rawContent ? rawContent.replace(/^( {4})/gm, '') : rawContent;
+  const content = rawContent
+    ? rawContent
+        // 1. 去掉行首 4 空格缩进（AI 排版导致意外代码块）
+        .replace(/^( {4})/gm, '')
+        // 2. 修复 "** 文字" → "**文字"（** 后紧跟空格是无效加粗标记，会破坏后续所有 ** 的解析）
+        .replace(/\*\* (?=\S)/g, '**')
+        // 3. 修复 "文字 **" → "文字**"（** 前紧跟空格同理）
+        .replace(/(\S) \*\*/g, '$1**')
+        // 4. 单个 \n 转 \n\n，确保段落正常分隔（排除列表项/标题/引用块行首，避免破坏结构）
+        .replace(/([^\n])\n(?!\n)(?![*\-+\d#>`|])/g, '$1\n\n')
+    : rawContent;
 
   const handleCopyAll = () => {
     const text = [
