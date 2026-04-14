@@ -50,6 +50,8 @@ export interface GradingResult {
   /** 原始返回全文（Markdown），批改页仅展示此项 */
   modelRawOutput?: string;
   perQuestion?: Record<string, any>;
+  /** 档位，如 "B档（良好）" */
+  grade?: string;
 }
 
 export interface HistoryRecord {
@@ -61,6 +63,8 @@ export interface HistoryRecord {
   result: GradingResult;
   userAnswer: string;
   rawGradingResponse?: any;
+  /** 档位，如 "B档（良好）" */
+  grade?: string;
 }
 
 export interface User {

@@ -116,6 +116,7 @@ const App: React.FC = () => {
         modelAnswer: rawResult?.modelAnswer ?? '',
         modelRawOutput: mainContent,
         perQuestion: rawResult?.perQuestion,
+        grade: rawResult?.grade,
       };
 
       const newRecord: HistoryRecord = {
@@ -127,6 +128,7 @@ const App: React.FC = () => {
         result: normalizedResult,
         userAnswer: pendingGrading.answer,
         rawGradingResponse: rawResult,
+        grade: normalizedResult.grade,
       };
 
       const updatedHistory = [newRecord, ...history];
