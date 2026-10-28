@@ -40,7 +40,7 @@ const Navbar: React.FC<NavbarProps> = ({ onNavigate }) => {
             <div className="bg-[#0071e3] text-white w-8 h-8 md:w-9 md:h-9 rounded-lg md:rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20 group-hover:scale-105 transition-transform duration-300">
               <i className="fas fa-feather-pointed text-base md:text-lg"></i>
             </div>
-            <span className="text-lg md:text-xl font-bold tracking-tight text-[#1d1d1f]">申论智能批改</span>
+            <span className="text-lg md:text-xl font-bold tracking-tight text-[#1d1d1f]">爱学申论</span>
           </div>
 
           <div className="hidden md:flex items-center space-x-8 lg:space-x-10">

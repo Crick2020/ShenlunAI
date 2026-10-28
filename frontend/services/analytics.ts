@@ -281,7 +281,7 @@ export const track = {
   },
 
   /** 导航点击 */
-  navClick(target: 'home' | 'list' | 'history' | 'profile' | 'logout') {
+  navClick(target: 'home' | 'list' | 'history' | 'profile' | 'logout' | 'feedback' | 'changelog') {
     sendParams('nav_click', { target });
   },
 

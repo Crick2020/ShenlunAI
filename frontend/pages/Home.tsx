@@ -6,10 +6,10 @@ import { track } from '../services/analytics';
 /** 事业单位全国联考 JSON 多为 region「全国」；无数据时也要能选「全国」，避免只剩省市导致筛不到卷 */
 const REGIONS_SYDW_FALLBACK = ['全国', ...REGIONS.filter(r => r !== '国考')];
 
-const PREFETCH_AFTER_FILTER_COUNT = 12;
-const PREFETCH_SCROLL_BATCH = 6;
-const PREFETCH_BATCH_SIZE = 3;
-const PREFETCH_DELAYS_MS = [150, 400, 650, 900];
+const PREFETCH_AFTER_FILTER_COUNT = 3;
+const PREFETCH_SCROLL_BATCH = 2;
+const PREFETCH_BATCH_SIZE = 1;
+const PREFETCH_DELAYS_MS = [500, 1500, 3000];
 
 interface HomeProps {
   onSelectPaper: (paper: Paper) => void;

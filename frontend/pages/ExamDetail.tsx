@@ -10,7 +10,8 @@ function rewriteDataImagesHtml(html: string): string {
   if (!html) return html;
   return html
     .replace(/src="\/images\//g, `src="${API_BASE}/images/`)
-    .replace(/src='\/images\//g, `src='${API_BASE}/images/`);
+    .replace(/src='\/images\//g, `src='${API_BASE}/images/`)
+    .replace(/<img\b(?![^>]*\bloading=)/gi, '<img loading="lazy" decoding="async"');
 }
 
 function MaterialNotebookRenderer({ sections }: { sections: MaterialNotebookSection[] }) {

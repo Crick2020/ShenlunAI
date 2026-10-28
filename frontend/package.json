@@ -1,1 +1,37 @@
-{"name":"ai申论智批-(ai-civil-service-essay-grading-platform)","private":true,"version":"0.0.0","type":"module","scripts":{"dev":"vite","build":"vite build","preview":"vite preview","deploy:gitee":"./deploy-gitee.sh"},"dependencies":{"@google/genai":"^1.40.0","react":"^19.2.4","react-dom":"^19.2.4","react-markdown":"^9.0.1","recharts":"^3.7.0","remark-gfm":"^4.0.1"},"devDependencies":{"@types/node":"^22.14.0","@vitejs/plugin-react":"^5.0.0","typescript":"~5.8.2","vite":"^6.2.0"}}
+{
+  "name": "ai-shenlun-android",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "papers:bundle": "node scripts/prepare-bundled-papers.mjs",
+    "build:mobile": "npm run papers:bundle && vite build --mode mobile",
+    "preview": "vite preview",
+    "android:sync": "npm run build:mobile && cap sync android",
+    "android:open": "cap open android",
+    "deploy:gitee": "./deploy-gitee.sh"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.5.3",
+    "@capacitor/core": "^8.5.3",
+    "@fortawesome/fontawesome-free": "^7.3.1",
+    "@google/genai": "^1.40.0",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "react-markdown": "^9.0.1",
+    "recharts": "^3.7.0",
+    "remark-gfm": "^4.0.1"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.5.3",
+    "@types/node": "^22.14.0",
+    "@vitejs/plugin-react": "^5.0.0",
+    "autoprefixer": "^10.6.2",
+    "postcss": "^8.5.32",
+    "tailwindcss": "^3.4.17",
+    "typescript": "~5.8.2",
+    "vite": "^6.2.0"
+  }
+}

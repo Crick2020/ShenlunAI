@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">爱学申论</string>
+    <string name="title_activity_main">爱学申论</string>
+    <string name="package_name">com.aixue.shenlun</string>
+    <string name="custom_url_scheme">com.aixue.shenlun</string>
+</resources>

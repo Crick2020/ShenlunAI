@@ -21,6 +21,33 @@ const LS_PAPERS_LIST = `shenlun_papers_v6_${encodeURIComponent(API_BASE)}`;
  */
 const LS_PAPER_DETAIL_PREFIX = `shenlun_pd_v80_${encodeURIComponent(API_BASE)}_`;
 const MAX_CACHED_DETAILS = 30;
+const USE_BUNDLED_PAPERS = import.meta.env.VITE_BUNDLED_PAPERS === 'true';
+const BUNDLED_PAPER_BASE = new URL('papers/', document.baseURI).toString();
+
+async function fetchJsonWithTimeout(
+  url: string,
+  options: RequestInit = {},
+  timeoutMs = 20000
+): Promise<any> {
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(url, { ...options, signal: controller.signal });
+    if (!response.ok) {
+      throw new Error(`请求失败: ${response.status}`);
+    }
+    return await response.json();
+  } finally {
+    window.clearTimeout(timeout);
+  }
+}
+
+function normalizePaperList(data: unknown): Paper[] {
+  return (Array.isArray(data) ? data : []).map((paper: any) => ({
+    ...paper,
+    region: paper.region === '国家' ? '国考' : paper.region,
+  }));
+}
 
 function removeLegacyPaperDetailCaches() {
   try {
@@ -158,33 +185,51 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    fetch(`${API_BASE}/api/list`, { cache: 'no-store' })
-      .then(res => {
-        if (!res.ok) throw new Error(`请求失败: ${res.status}`);
-        return res.json();
-      })
-      .then(data => {
-        const mappedData = (Array.isArray(data) ? data : []).map((p: any) => ({
-          ...p,
-          region: p.region === '国家' ? '国考' : p.region
-        }));
-        if (import.meta.env.DEV) {
-          const nSydw = mappedData.filter(
-            (p: { examType?: string; id?: string }) =>
-              p.examType === '事业单位' || (typeof p.id === 'string' && p.id.startsWith('sydw_'))
-          ).length;
-          console.log(
-            `[试卷列表] ${API_BASE} 共 ${mappedData.length} 条，其中事业单位/联考约 ${nSydw} 条`
+    let cancelled = false;
+
+    const applyPapers = (data: unknown) => {
+      if (cancelled) return;
+      const mappedData = normalizePaperList(data);
+      if (mappedData.length === 0) return;
+      setPapers(mappedData);
+      setIsPapersLoading(false);
+      writeCachedList(mappedData);
+    };
+
+    const loadPapers = async () => {
+      // Android builds include the paper index and details, so the list is available
+      // immediately even when Render is cold-starting or the mobile network is weak.
+      if (USE_BUNDLED_PAPERS) {
+        try {
+          const bundledList = await fetchJsonWithTimeout(
+            `${BUNDLED_PAPER_BASE}index.json`,
+            { cache: 'force-cache' },
+            5000
           );
+          applyPapers(bundledList);
+        } catch (error) {
+          console.error('加载内置试卷列表失败:', error);
         }
-        setPapers(mappedData);
-        setIsPapersLoading(false);
-        writeCachedList(mappedData);
-      })
-      .catch(err => {
-        console.error("加载试卷失败:", err);
-        setIsPapersLoading(false);
-      });
+      }
+
+      try {
+        const remoteList = await fetchJsonWithTimeout(
+          `${API_BASE}/api/list`,
+          { cache: 'no-cache' },
+          20000
+        );
+        applyPapers(remoteList);
+      } catch (error) {
+        console.error('加载在线试卷列表失败:', error);
+      } finally {
+        if (!cancelled) setIsPapersLoading(false);
+      }
+    };
+
+    void loadPapers();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // 会话开始埋点（每次打开页面触发，用于 DAU / 留存统计）
@@ -210,6 +255,7 @@ const App: React.FC = () => {
   const inflightPrefetches = useRef<Set<string>>(new Set());
 
   const prefetchPaper = (paperId: string) => {
+    if (USE_BUNDLED_PAPERS) return;
     if (paperDetailMemCache.current.has(paperId)) return;
     if (inflightPrefetches.current.has(paperId)) return;
     const lsHit = readCachedDetail(paperId);
@@ -218,7 +264,7 @@ const App: React.FC = () => {
       return;
     }
     inflightPrefetches.current.add(paperId);
-    fetch(`${API_BASE}/api/paper?id=${paperId}`, { cache: 'no-store' })
+    fetch(`${API_BASE}/api/paper?id=${paperId}`)
       .then(res => res.ok ? res.json() : null)
       .then(data => {
         if (data) {
@@ -244,23 +290,43 @@ const App: React.FC = () => {
       return;
     }
 
-    const lsHit = readCachedDetail(summaryPaper.id);
-    if (lsHit) {
-      paperDetailMemCache.current.set(summaryPaper.id, lsHit);
-      setSelectedPaper(lsHit);
-      goToExam();
-      return;
+    if (!USE_BUNDLED_PAPERS) {
+      const lsHit = readCachedDetail(summaryPaper.id);
+      if (lsHit) {
+        paperDetailMemCache.current.set(summaryPaper.id, lsHit);
+        setSelectedPaper(lsHit);
+        goToExam();
+        return;
+      }
     }
 
     setIsLoadingPaper(true);
     try {
-      const response = await fetch(`${API_BASE}/api/paper?id=${summaryPaper.id}`, {
-        cache: 'no-store',
-      });
-      if (!response.ok) {
-        throw new Error("试卷加载失败，可能是后端没有这个文件");
+      let fullPaperData: Paper | null = null;
+
+      if (USE_BUNDLED_PAPERS) {
+        try {
+          fullPaperData = await fetchJsonWithTimeout(
+            `${BUNDLED_PAPER_BASE}${encodeURIComponent(summaryPaper.id)}.json`,
+            { cache: 'force-cache' },
+            5000
+          );
+        } catch (error) {
+          console.warn('内置试卷未找到，回退到在线接口:', error);
+        }
       }
-      const fullPaperData = await response.json();
+
+      if (!fullPaperData) {
+        fullPaperData = await fetchJsonWithTimeout(
+          `${API_BASE}/api/paper?id=${encodeURIComponent(summaryPaper.id)}`,
+          {},
+          20000
+        );
+      }
+
+      if (!fullPaperData) {
+        throw new Error('试卷数据为空');
+      }
 
       paperDetailMemCache.current.set(summaryPaper.id, fullPaperData);
       writeCachedDetail(summaryPaper.id, fullPaperData);
@@ -407,7 +473,7 @@ const App: React.FC = () => {
 
       <main>
         {currentPage === 'home' && (
-          <Home onSelectPaper={handleSelectPaper} onPrefetchPaper={prefetchPaper} filters={filters} setFilters={setFilters} papers={papers} isLoading={isPapersLoading} />
+          <Home onSelectPaper={handleSelectPaper} onPrefetchPaper={USE_BUNDLED_PAPERS ? undefined : prefetchPaper} filters={filters} setFilters={setFilters} papers={papers} isLoading={isPapersLoading} />
         )}
         
         {currentPage === 'exam' && selectedPaper && (
