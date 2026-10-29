@@ -13,7 +13,7 @@ import time
 from zoneinfo import ZoneInfo
 import urllib.request
 import urllib.error
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Tuple
 from collections import Counter
 import sys
 import os
@@ -368,7 +368,14 @@ def get_submit_stats():
 # ---------------------------------------------------------
 @app.post("/api/grade")
 def grade_essay(request: Request, payload: dict):
-    print("收到前端提交的答案:", payload)
+    print(
+        "[批改] 收到请求: paper_id=%s question_id=%s has_images=%s"
+        % (
+            payload.get("paperId") or payload.get("id"),
+            payload.get("question_id"),
+            bool(payload.get("has_images")),
+        )
+    )
 
     # 支持传入 paperId 来从 data 中读取试卷（优先从文件加载，兼容 Render 部署）
     paper = None
@@ -693,7 +700,7 @@ Output Constraints:
     grading_session_id = payload.get("gradingSessionId") or ("req-%s" % int(time.time() * 1000))
     print("[批改] 新对话/独立任务 session=%s" % grading_session_id)
 
-    # 构造 prompt：材料全文发给 Gemini，要求以 Markdown 直接输出（不要求 JSON）
+    # 构造 prompt：材料全文发给批改模型，要求以 Markdown 直接输出（不要求 JSON）
     prompt_lines = []
     prompt_lines.append("【重要】本次为全新、独立的批改任务。请仅根据本请求下方提供的「材料」「题目」与「学生答案」进行批改，勿参考、勿引用任何其他对话或历史内容。")
     if has_essay:
@@ -749,36 +756,21 @@ Output Constraints:
     # 小题 temperature=0.15 / top_p=0.85，大作文 temperature=0.3 / top_p=0.90
     temperature = 0.15 if not has_essay else 0.3
     top_p = 0.85 if not has_essay else 0.90
-    # 有图片时走多模态接口，否则仅文本；Gemini 失败时先尝试钱多多多模态兜底
-    if answer_images:
-        gemini_raw = call_gemini_system_with_images(prompt, answer_images, temperature=temperature, top_p=top_p)
-        if not gemini_raw:
-            # 兜底：尝试钱多多多模态（OpenAI 兼容格式支持图片）
-            print("[批改] Gemini 多模态失败，尝试钱多多多模态兜底...")
-            gemini_raw = call_qianduoduo_gemini_with_images(prompt, answer_images, temperature=temperature, top_p=top_p)
-            if not gemini_raw:
-                print("[批改] 钱多多多模态也失败，返回 503")
-                raise HTTPException(
-                    status_code=503,
-                    detail="图片批改服务暂时不可用。请稍后重试，或减少图片数量、改用文字作答后再提交。",
-                )
-    else:
-        gemini_raw = call_gemini_system(prompt, temperature=temperature, top_p=top_p)
-        if not gemini_raw:
-            print("[批改] Google Gemini 无结果，尝试钱多多平台...")
-            gemini_raw = call_qianduoduo_gemini(prompt, temperature=temperature, top_p=top_p)
-    if gemini_raw:
-        body = gemini_raw.strip()
-        # Render 日志：输出 AI 批改结果（便于排查与审计）
-        print("[AI批改输出] 长度:", len(body))
-        if len(body) <= 5000:
-            print("[AI批改输出]", body)
-        else:
-            print("[AI批改输出]", body[:5000])
-            print("[AI批改输出] ... (已截断，总长 %d 字符)" % len(body))
+    model_raw, model_provider, model_name = call_grading_model(
+        prompt,
+        answer_images,
+        temperature=temperature,
+        top_p=top_p,
+    )
+    if model_raw:
+        body = model_raw.strip()
+        print(
+            "[AI批改输出] provider=%s model=%s length=%d"
+            % (model_provider, model_name, len(body))
+        )
         if not body:
-            print("Gemini 返回为空文本")
-            return _fallback_grading_result(model_input, "模型未返回内容（可能被截断或安全过滤）", gemini_raw)
+            print("模型返回为空文本")
+            return _fallback_grading_result(model_input, "模型未返回内容（可能被截断或安全过滤）", model_raw)
 
         # 不再解析 JSON，直接返回 Markdown 全文；尝试从正文中解析档位/估分区间供前端使用
         score, max_score = _parse_score_from_markdown(body)
@@ -796,7 +788,15 @@ Output Constraints:
             "detailedComments": [],
             "perQuestion": {},
             "modelAnswer": "",
+            "modelProvider": model_provider,
+            "modelName": model_name,
         }
+
+    if answer_images:
+        raise HTTPException(
+            status_code=503,
+            detail="图片批改服务暂时不可用。请稍后重试，或减少图片数量、改用文字作答后再提交。",
+        )
 
     # 如果没有可用的 Gemini，则走模拟逻辑：根据 answers 生成每题评分
     # 简单模拟：每题默认分值 100/题数，若有 maxScore 则按 maxScore 分配
@@ -987,16 +987,24 @@ def call_qianduoduo_gemini(
         return None
 
 
-def _build_openai_content_parts(prompt: str, image_data_list: List[str]) -> List[Dict[str, Any]]:
+def _build_openai_content_parts(
+    prompt: str,
+    image_data_list: List[str],
+    *,
+    image_detail: Optional[str] = None,
+) -> List[Dict[str, Any]]:
     """把 prompt 文本与 data URL 列表转成 OpenAI 多模态 content 数组。"""
     parts: List[Dict[str, Any]] = [{"type": "text", "text": prompt}]
     for data_url in image_data_list:
         mime, b64 = _parse_data_url(data_url)
         if not b64:
             continue
+        image_url: Dict[str, Any] = {"url": data_url}
+        if image_detail:
+            image_url["detail"] = image_detail
         parts.append({
             "type": "image_url",
-            "image_url": {"url": data_url},
+            "image_url": image_url,
         })
     return parts
 
@@ -1044,6 +1052,152 @@ def _parse_data_url(data_url: str) -> tuple:
         return (mime, payload)
     # 已是纯 base64
     return ("image/jpeg", s)
+
+
+def _env_int(name: str, default: int) -> int:
+    """读取正整数环境变量，非法配置时回退默认值。"""
+    raw = (os.getenv(name) or "").strip()
+    if not raw:
+        return default
+    try:
+        value = int(raw)
+    except ValueError:
+        print(f"[模型配置] {name}={raw!r} 不是整数，使用默认值 {default}")
+        return default
+    return value if value > 0 else default
+
+
+def _deepseek_model_name() -> str:
+    return (os.getenv("DEEPSEEK_MODEL") or "deepseek-flash").strip()
+
+
+def call_deepseek(
+    prompt: str,
+    image_data_list: Optional[List[str]] = None,
+    *,
+    temperature: float = 0.3,
+) -> Optional[str]:
+    """调用 DeepSeek 官方 OpenAI 兼容接口，支持文字和图片答案。"""
+    api_key = (os.getenv("DEEPSEEK_API_KEY") or "").strip()
+    if not api_key:
+        print("[DeepSeek] 未配置 DEEPSEEK_API_KEY，跳过主模型")
+        return None
+
+    endpoint = (
+        os.getenv("DEEPSEEK_CHAT_URL")
+        or "https://api.deepseek.com/chat/completions"
+    ).strip()
+    model_name = _deepseek_model_name()
+    thinking_enabled = (
+        (os.getenv("DEEPSEEK_THINKING") or "disabled").strip().lower()
+        == "enabled"
+    )
+
+    content: Any = prompt
+    if image_data_list:
+        content = _build_openai_content_parts(
+            prompt,
+            image_data_list,
+            image_detail="high",
+        )
+        image_count = sum(
+            1 for part in content if part.get("type") == "image_url"
+        )
+        print(f"[DeepSeek] 图片批改，解析成功 {image_count}/{len(image_data_list)} 张")
+        if image_count == 0:
+            print("[DeepSeek] 所有图片解析失败，放弃本次调用")
+            return None
+
+    payload: Dict[str, Any] = {
+        "model": model_name,
+        "messages": [
+            {
+                "role": "system",
+                "content": (
+                    "你是熟悉国考、省考、事业单位申论评分标准的资深阅卷老师。"
+                    "严格依据给定材料、题目要求和学生作答输出 Markdown 批改报告。"
+                ),
+            },
+            {"role": "user", "content": content},
+        ],
+        "max_tokens": _env_int("DEEPSEEK_MAX_TOKENS", 32768),
+        "thinking": {
+            "type": "enabled" if thinking_enabled else "disabled",
+        },
+        "stream": False,
+    }
+    if thinking_enabled:
+        payload["reasoning_effort"] = (
+            os.getenv("DEEPSEEK_REASONING_EFFORT") or "low"
+        ).strip()
+    else:
+        payload["temperature"] = temperature
+
+    request_data = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+    if len(request_data) > 48 * 1024 * 1024:
+        print("[DeepSeek] 请求体超过官方 48 MiB 限制")
+        return None
+
+    request = urllib.request.Request(
+        endpoint,
+        data=request_data,
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {api_key}",
+        },
+        method="POST",
+    )
+    timeout = _env_int("DEEPSEEK_TIMEOUT_SECONDS", 180)
+    try:
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            raw = response.read().decode("utf-8")
+        if not raw.strip():
+            print("[DeepSeek] 返回空 body")
+            return None
+
+        result = json.loads(raw)
+        error = result.get("error")
+        if error:
+            print("[DeepSeek] API 返回错误:", error)
+            return None
+
+        choices = result.get("choices") or []
+        if not choices:
+            print("[DeepSeek] 响应中没有 choices")
+            return None
+
+        first = choices[0] or {}
+        finish_reason = first.get("finish_reason")
+        message = first.get("message") or {}
+        content_text = (message.get("content") or "").strip()
+        usage = result.get("usage") or {}
+        print(
+            "[DeepSeek] 调用完成 model=%s finish_reason=%s "
+            "prompt_tokens=%s completion_tokens=%s content_length=%d"
+            % (
+                result.get("model") or model_name,
+                finish_reason,
+                usage.get("prompt_tokens"),
+                usage.get("completion_tokens"),
+                len(content_text),
+            )
+        )
+        if finish_reason == "length":
+            print("[DeepSeek] 输出被 max_tokens 截断")
+        return content_text or None
+    except urllib.error.HTTPError as error:
+        try:
+            detail = error.read().decode("utf-8", errors="replace")[:1000]
+        except Exception:
+            detail = ""
+        print("[DeepSeek] HTTPError:", error.code, detail)
+        return None
+    except json.JSONDecodeError as error:
+        print("[DeepSeek] 响应不是合法 JSON:", error)
+        return None
+    except Exception as error:
+        print("[DeepSeek] 调用失败:", error)
+        return None
 
 
 def call_gemini_system_with_images(
@@ -1230,6 +1384,123 @@ def call_gemini_system(
             print("call_gemini_system failed:", e)
             return None
     return None
+
+
+def call_grading_model(
+    prompt: str,
+    image_data_list: Optional[List[str]] = None,
+    *,
+    temperature: float = 0.3,
+    top_p: float = 0.9,
+) -> Tuple[Optional[str], str, str]:
+    """按配置调用主模型，并在失败时回退到现有模型供应商。"""
+    images = image_data_list or []
+    primary = (
+        os.getenv("GRADING_PRIMARY_PROVIDER") or "deepseek"
+    ).strip().lower()
+    fallback_enabled = (
+        (os.getenv("GRADING_FALLBACK_ENABLED") or "true").strip().lower()
+        not in {"0", "false", "no", "off"}
+    )
+
+    if primary not in {"deepseek", "gemini", "qianduoduo"}:
+        print(f"[批改模型] 未知主供应商 {primary!r}，回退到 DeepSeek")
+        primary = "deepseek"
+
+    print(
+        "[批改模型] primary=%s fallback=%s images=%d"
+        % (primary, fallback_enabled, len(images))
+    )
+
+    if primary == "deepseek":
+        result = call_deepseek(
+            prompt,
+            images or None,
+            temperature=temperature,
+        )
+        if result:
+            return result, "deepseek", _deepseek_model_name()
+
+    if primary == "gemini":
+        if images:
+            result = call_gemini_system_with_images(
+                prompt,
+                images,
+                temperature=temperature,
+                top_p=top_p,
+            )
+        else:
+            result = call_gemini_system(
+                prompt,
+                temperature=temperature,
+                top_p=top_p,
+            )
+        if result:
+            return result, "gemini", "gemini-3-flash-preview"
+
+    if primary == "qianduoduo":
+        if images:
+            result = call_qianduoduo_gemini_with_images(
+                prompt,
+                images,
+                temperature=temperature,
+                top_p=top_p,
+            )
+        else:
+            result = call_qianduoduo_gemini(
+                prompt,
+                temperature=temperature,
+                top_p=top_p,
+            )
+        if result:
+            model_name = (
+                os.getenv("QIANDUODUO_MODEL") or "gemini-2.5-flash"
+            ).strip()
+            return result, "qianduoduo", model_name
+
+    if not fallback_enabled:
+        return None, primary, ""
+
+    if primary == "deepseek":
+        print("[批改模型] DeepSeek 失败，回退 Gemini")
+        if images:
+            result = call_gemini_system_with_images(
+                prompt,
+                images,
+                temperature=temperature,
+                top_p=top_p,
+            )
+        else:
+            result = call_gemini_system(
+                prompt,
+                temperature=temperature,
+                top_p=top_p,
+            )
+        if result:
+            return result, "gemini", "gemini-3-flash-preview"
+
+    if primary != "qianduoduo":
+        print("[批改模型] 继续回退钱多多模型")
+        if images:
+            result = call_qianduoduo_gemini_with_images(
+                prompt,
+                images,
+                temperature=temperature,
+                top_p=top_p,
+            )
+        else:
+            result = call_qianduoduo_gemini(
+                prompt,
+                temperature=temperature,
+                top_p=top_p,
+            )
+        if result:
+            model_name = (
+                os.getenv("QIANDUODUO_MODEL") or "gemini-2.5-flash"
+            ).strip()
+            return result, "qianduoduo", model_name
+
+    return None, primary, ""
 
 
 # 题目 Markdown 中的图片路径为 /images/...，放在所有 API 路由之后挂载
