@@ -71,7 +71,8 @@
             "wordLimit": 400,
             "type": "SMALL",
             "materialIds": [
-                "m3"
+                "m3",
+                "m4"
             ]
         },
         {

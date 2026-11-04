@@ -55,7 +55,9 @@
             "wordLimit": 300,
             "type": "SMALL",
             "materialIds": [
-                "m2"
+                "m2",
+                "m3",
+                "m4"
             ]
         },
         {
@@ -66,7 +68,8 @@
             "wordLimit": 300,
             "type": "SMALL",
             "materialIds": [
-                "m5"
+                "m5",
+                "m6"
             ]
         },
         {
@@ -77,7 +80,8 @@
             "wordLimit": 450,
             "type": "SMALL",
             "materialIds": [
-                "m7"
+                "m7",
+                "m8"
             ]
         },
         {

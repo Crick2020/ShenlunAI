@@ -56,7 +56,8 @@
             "wordLimit": 450,
             "type": "SMALL",
             "materialIds": [
-                "m2"
+                "m2",
+                "m3"
             ]
         },
         {

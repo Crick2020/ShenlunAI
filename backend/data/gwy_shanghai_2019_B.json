@@ -60,7 +60,15 @@
             "wordLimit": 300,
             "type": "SMALL",
             "materialIds": [
-                "m1"
+                "m1",
+                "m2",
+                "m3",
+                "m4",
+                "m5",
+                "m6",
+                "m7",
+                "m8",
+                "m9"
             ]
         },
         {
@@ -71,7 +79,15 @@
             "wordLimit": 300,
             "type": "SMALL",
             "materialIds": [
-                "m1"
+                "m1",
+                "m2",
+                "m3",
+                "m4",
+                "m5",
+                "m6",
+                "m7",
+                "m8",
+                "m9"
             ]
         },
         {
@@ -82,7 +98,15 @@
             "wordLimit": 300,
             "type": "SMALL",
             "materialIds": [
-                "m1"
+                "m1",
+                "m2",
+                "m3",
+                "m4",
+                "m5",
+                "m6",
+                "m7",
+                "m8",
+                "m9"
             ]
         },
         {
