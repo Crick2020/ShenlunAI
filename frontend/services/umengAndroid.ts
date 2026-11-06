@@ -108,33 +108,46 @@ export function hasLocalPrivacyConsent(): boolean {
   }
 }
 
+/**
+ * 隐私授权弹窗只在 Android App 内展示（友盟 SDK 合规要求）。
+ * 网页端不弹窗：百度统计 / Umami 按网站原有方式上报，不需要用户点同意。
+ */
+export function requiresPrivacyConsent(): boolean {
+  return Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android';
+}
+
+/** 埋点是否放行：网页端直接放行；Android 需用户已同意 */
+export function analyticsAllowed(): boolean {
+  return !requiresPrivacyConsent() || hasLocalPrivacyConsent();
+}
+
 export async function getPrivacyConsentStatus(): Promise<boolean> {
-  if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android') {
-    try {
-      const result = await UmengAnalytics.getPrivacyConsent();
-      if (result.granted) {
-        localStorage.setItem(UMENG_PRIVACY_CONSENT_KEY, 'accepted');
-        return true;
-      }
-    } catch (error) {
-      console.warn('[umeng] unable to read privacy consent', error);
+  // 网页端不展示弹窗，也不需要写本地授权标记
+  if (!requiresPrivacyConsent()) return true;
+  try {
+    const result = await UmengAnalytics.getPrivacyConsent();
+    if (result.granted) {
+      localStorage.setItem(UMENG_PRIVACY_CONSENT_KEY, 'accepted');
+      return true;
     }
+  } catch (error) {
+    console.warn('[umeng] unable to read privacy consent', error);
   }
   return hasLocalPrivacyConsent();
 }
 
 export async function grantPrivacyConsent(): Promise<void> {
+  // 网页端不展示弹窗，也不写授权标记（避免误以为用户已同意）
+  if (!requiresPrivacyConsent()) return;
   localStorage.setItem(UMENG_PRIVACY_CONSENT_KEY, 'accepted');
-  if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android') {
-    await UmengAnalytics.grantPrivacyConsent();
-  }
+  await UmengAnalytics.grantPrivacyConsent();
 }
 
 export function trackUmengEvent(
   sourceEvent: string,
   rawParams: Record<string, unknown> = {}
 ): void {
-  if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== 'android') return;
+  if (!requiresPrivacyConsent()) return;
   if (!hasLocalPrivacyConsent()) return;
 
   const eventId = EVENT_IDS[sourceEvent];

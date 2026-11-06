@@ -15,7 +15,11 @@ import { track } from './services/analytics';
 import {
   getPrivacyConsentStatus,
   grantPrivacyConsent,
+  requiresPrivacyConsent,
 } from './services/umengAndroid';
+
+/** 隐私授权弹窗只在 Android App 内展示；网页端直接跳过，避免首次访问被弹窗拦住 */
+const NEEDS_PRIVACY_MODAL = requiresPrivacyConsent();
 
 /**
  * 试卷列表缓存按后端地址分键，避免「连本地后端」却仍读到上次缓存的线上列表（无事业单位）。
@@ -140,8 +144,8 @@ const App: React.FC = () => {
   const [isGrading, setIsGrading] = useState(false);
   const [isLoadingPaper, setIsLoadingPaper] = useState(false);
   const [history, setHistory] = useState<HistoryRecord[]>([]);
-  const [privacyReady, setPrivacyReady] = useState(false);
-  const [privacyAccepted, setPrivacyAccepted] = useState(false);
+  const [privacyReady, setPrivacyReady] = useState(!NEEDS_PRIVACY_MODAL);
+  const [privacyAccepted, setPrivacyAccepted] = useState(!NEEDS_PRIVACY_MODAL);
 
   const [papers, setPapers] = useState<Paper[]>(cachedList);
   const [isPapersLoading, setIsPapersLoading] = useState(cachedList.length === 0);
@@ -166,6 +170,8 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    // 网页端不展示隐私弹窗、不读取/写入授权状态，直接进入应用
+    if (!NEEDS_PRIVACY_MODAL) return;
     let cancelled = false;
 
     const loadPrivacyConsent = async () => {
