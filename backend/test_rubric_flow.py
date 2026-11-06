@@ -349,6 +349,25 @@ def main_test():
         print(f"[{'通过' if cond13 else '失败'}] 内部内容清洗：标尺复述与要点对应表均被移除（移除 {meta.get('removed')} 处）")
         ok &= cond13
 
+        # 14) 结构一致性约束已进入提示词与标尺注入块（指令常量在 grade_essay 内，从实际拼装的 prompt 检查）
+        for k in ("RUBRIC_VOTE_ACCUMULATE", "RUBRIC_PROMOTE_AFTER", "RUBRIC_SAMPLE_TIMES",
+                  "RUBRIC_VOTE_STORE", "UPSTASH_REDIS_REST_URL", "UPSTASH_REDIS_REST_TOKEN"):
+            os.environ.pop(k, None)
+        shutil.rmtree(tmp, ignore_errors=True)
+        os.makedirs(tmp, exist_ok=True)
+        fake14 = FakeModel([GOOD_RUBRIC])
+        run(fake14)
+        p14 = fake14.grade_calls()[0]["prompt"] if fake14.grade_calls() else ""
+        cond14 = (
+            "结构约定：分述数=N" in p14
+            and "结构一致性硬规则" in p14
+            and "不得另起一套并列序号" in p14
+            and "结构一致性" in p14
+            and "结构约定" in p14
+        )
+        print(f"[{'通过' if cond14 else '失败'}] 提示词含结构一致性约束（1.3 与 1.7 必须同一套结构）")
+        ok &= cond14
+
     finally:
         for k in ("RUBRIC_VOTE_ACCUMULATE", "RUBRIC_PROMOTE_AFTER", "RUBRIC_SAMPLE_TIMES",
                   "RUBRIC_VOTE_STORE", "UPSTASH_REDIS_REST_URL", "UPSTASH_REDIS_REST_TOKEN"):
