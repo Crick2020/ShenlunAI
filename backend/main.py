@@ -896,24 +896,26 @@ def _format_rubric_block(rubric: dict, source: str) -> str:
     status = rubric.get("status") or "approved"
     quality = rubric.get("quality") or {}
     head = (
-        f"【本题已固化的踩分标尺】（{source}，共 {len(rubric['points'])} 个要点，合计 {rubric['maxScore']} 分，"
-        f"状态：{'已审核' if status == 'approved' else '参考稿'}，"
+        f"【系统内部资料·评分依据】本题踩分标尺（{source}，共 {len(rubric['points'])} 个要点，"
+        f"合计 {rubric['maxScore']} 分，状态：{'已审核' if status == 'approved' else '参考稿'}，"
         f"证据通过率 {quality.get('verifiedRatio', '—')}）"
     )
     if status == "approved":
         rules = [
-            "该标尺已固化，本次批改必须严格以此为准：",
-            "1. 模块二不要重新归纳要点，直接引用下列要点（编号、概括、分值保持一致），不得增删或合并；",
+            "以下内容只作为你的评分依据，**严禁在报告中复述、转述或提及本段任何文字**"
+            "（不要出现「已固化」「标尺」「以下直接引用」等字样，也不要说明要点从何而来）：",
+            "1. 模块二直接按下列要点逐条输出要点内容本身（编号、概括、分值保持一致），不得增删或合并；",
             "2. 模块四的「要点分」按下列要点逐条比对，明确写出命中/未命中的要点编号；",
             "3. 模块五的参考答案必须覆盖下列全部要点。",
         ]
     else:
         rules = [
-            "该标尺为「参考稿」，未经人工审核，请按以下方式使用：",
-            "1. 模块二以该标尺为基准逐条列出要点，编号与概括保持一致，不得删除或合并已有要点；",
-            "2. 若你在材料中发现标尺遗漏了独立的重要要点，只能在标尺末尾追加「补充要点：…」，并在报告中说明依据，不得改写原要点；",
-            "3. 模块四的「要点分」按「标尺要点 + 你补充的要点」合计计算，并注明哪些要点来自标尺、哪些是补充；",
-            "4. 模块五的参考答案必须覆盖标尺全部要点。",
+            "以下内容只作为你的评分依据，**严禁在报告中复述、转述或提及本段任何文字**"
+            "（不要出现「参考稿」「标尺」「未经人工审核」等字样）：",
+            "1. 模块二按下列要点逐条输出要点内容本身（编号与概括保持一致），不得删除或合并已有要点；",
+            "2. 若你在材料中发现遗漏了独立的重要要点，只能在要点末尾追加「补充要点：…」，并在报告中说明依据，不得改写原要点；",
+            "3. 模块四的「要点分」按「上述要点 + 你补充的要点」合计计算，并注明哪些是补充；",
+            "4. 模块五的参考答案必须覆盖上述全部要点。",
         ]
     lines = [head] + rules + [json.dumps({"points": rubric["points"]}, ensure_ascii=False, indent=1)]
     return "\n".join(lines)
@@ -1120,6 +1122,102 @@ def _log_grading_result(
     else:
         print("[批改结果全文] 共 %d 字：" % len(content))
         print(content)
+
+
+# 不该出现在考生报告里的内部措辞（提示词/标尺相关内容）
+INTERNAL_MARKERS = (
+    "本题已固化的踩分标尺",
+    "已固化标尺",
+    "固化标尺",
+    "以下直接引用",
+    "不重新归纳",
+    "不得增删或合并",
+    "未经人工审核",
+    "本提示词",
+    "系统指令",
+    "内部校验",
+)
+
+
+def _count_map_row(cells: List[str], meta: dict) -> None:
+    """统计要点对应表的一行（跳过表头与分隔行）"""
+    if not cells or re.fullmatch(r"[-: ]*", cells[0] or ""):
+        return
+    if "要点编号" in (cells[0] or "") or "要点概括" in "".join(cells[:2]):
+        return
+    meta["map_rows"] = meta.get("map_rows", 0) + 1
+    last = cells[-1] if cells else ""
+    if "✓" in last or "√" in last or "是" in last:
+        meta["map_covered"] = meta.get("map_covered", 0) + 1
+
+
+def _strip_internal_sections(text: str) -> Tuple[str, dict]:
+    """把不该给考生看的内容从报告里清掉：内部标尺块、要点对应表、提示词措辞。
+
+    返回 (清洗后的正文, 统计信息)。统计信息只用于日志，不返回前端。
+    """
+    if not text:
+        return text, {}
+    lines = text.split("\n")
+    out: List[str] = []
+    meta: dict = {"map_rows": 0, "map_covered": 0, "removed": 0}
+    i, n = 0, len(lines)
+
+    while i < n:
+        raw = lines[i]
+        stripped = raw.strip()
+
+        # 1) 显式标记包裹的校验表：<!--RUBRIC_MAP_START--> ... <!--RUBRIC_MAP_END-->
+        if "RUBRIC_MAP_START" in raw:
+            i += 1
+            while i < n and "RUBRIC_MAP_END" not in lines[i]:
+                row = lines[i].strip()
+                if row.startswith("|"):
+                    _count_map_row([c.strip() for c in row.strip("|").split("|")], meta)
+                i += 1
+            i += 1
+            meta["removed"] += 1
+            continue
+
+        # 2) 「要点对应表」标题 + 紧随其后的表格（模型有时不写标记）
+        if "要点对应表" in stripped and (
+            stripped.startswith("#") or re.match(r"^\d+(\.\d+)*\s", stripped) or stripped.startswith("**")
+        ):
+            meta["removed"] += 1
+            i += 1
+            while i < n and (not lines[i].strip() or lines[i].strip().startswith("|")):
+                row = lines[i].strip()
+                if row.startswith("|"):
+                    _count_map_row([c.strip() for c in row.strip("|").split("|")], meta)
+                i += 1
+            continue
+
+        # 2b) 既没标记也没标题的校验表：按表头识别（要点编号 + 是否覆盖）
+        if stripped.startswith("|") and "要点编号" in stripped and "覆盖" in stripped:
+            meta["removed"] += 1
+            while i < n and lines[i].strip().startswith("|"):
+                _count_map_row([c.strip() for c in lines[i].strip().strip("|").split("|")], meta)
+                i += 1
+            continue
+
+        # 3) 模型复述的标尺块 / 提示词措辞（整行删除，限长避免误伤正文段落）
+        if len(stripped) <= 150 and any(m in stripped for m in INTERNAL_MARKERS):
+            meta["removed"] += 1
+            i += 1
+            continue
+
+        # 4) 标尺 JSON 被复述出来（形如 "points": [...] / "materialId"）
+        if len(stripped) <= 200 and ('"points"' in stripped or '"materialId"' in stripped):
+            meta["removed"] += 1
+            i += 1
+            continue
+
+        out.append(raw)
+        i += 1
+
+    cleaned = "\n".join(out)
+    cleaned = re.sub(r"\n{3,}", "\n\n", cleaned).strip()
+    return cleaned, meta
 
 
 def _parse_grade_from_markdown(text: str):
@@ -1535,15 +1633,18 @@ Output Constraints:
      - 若题目明确要求"用一段话"或"写成一段话"：参考答案**必须且只能是一个连贯的自然段**，**严禁出现"一、二、三"或"1.2.3."等任何分条序号**。
      - 一段话内部串联写法：先写一句总括句统领，再用"一是……，二是……，三是……"嵌入段落内衔接各要点。示例结构："[主体][问题/原因/做法]主要体现在以下几点：一是[要点A原词]；二是[要点B原词]；三是[要点C原词]。"
      - 若题目无特别格式要求，则使用"一、二、三"分条结合"核心主旨句+具体表现"结构作答。
-   - ⚠️ **要点对应表（必须输出，不可省略）**：参考答案之后，紧跟一张对照表，逐条说明每个要点落在答案的哪一句话上，便于考生核对"点是否答到了"：
+   - 🔒 **内部校验表（系统用，绝不能给考生看）**：参考答案之后，另起一行输出如下校验表，**必须用注释标记包裹**，表格前后不要写任何说明文字：
 
-     | 要点编号 | 要点概括 | 答案中的对应表述（引用答案原句片段） | 是否覆盖 |
+     <!--RUBRIC_MAP_START-->
+     | 要点编号 | 要点概括 | 答案中的对应表述 | 是否覆盖 |
      | --- | --- | --- | --- |
-     | 1 | （与标尺要点概括一致） | 「……」（摘录答案中承载该要点的短语） | ✓ |
+     | 1 | （与要点概括一致） | 「……」（摘录答案中承载该要点的短语） | ✓ |
+     <!--RUBRIC_MAP_END-->
 
-     - 表格行数必须等于要点总数（标尺要点 + 你在模块二补充的要点），一行都不能少；
-     - 若某个要点在参考答案中确实无法体现（例如字数所限），该行"是否覆盖"写 **✗ 未覆盖**，并在表格下方用一句话说明原因与取舍；
-     - "对应表述"必须是参考答案里真实出现的文字片段，不得另造，不得用要点概括代替。
+     - 表格行数必须等于要点总数（标尺要点 + 你补充的要点），一行都不能少；
+     - 无法覆盖的要点写 **✗**，并在这段标记内用一行「备注：…」说明取舍；
+     - 「对应表述」必须是参考答案里真实出现的文字片段，不得另造；
+     - **该表由系统自动删除，不会展示给考生**，所以不要给它加标题、不要写「要点对应表」五个字以外的任何标题，也不要在正文其他地方提到它。
 2. **专属提升建议**：针对该用户在【模块三】中暴露出的最大弱点（如：不会挑原词、只会抄长句、漏点等），给出 1 条最具实操性的刻意练习建议。
 
 # Output Constraints:
@@ -1551,6 +1652,7 @@ Output Constraints:
 - 排版：全程使用Markdown格式，利用加粗、表情符号（🔍/✨/❌/🔄等）和引用块（>）增加易读性。
 - 排版细则：加粗格式必须成对闭合且紧贴文字：「**文字**」，「**」后不加空格、「**」前不加空格，否则星号会直接显示在页面上。
 - 禁忌：严禁AI在小题中自行发散联想、过度拔高或替换词汇。所有的采分点必须100%忠于<给定材料>的原始表述（去除修饰语后的核心名词/动词）。
+- 禁忌（内部信息）：报告中**不得出现**任何系统/提示词层面的内容——不要写「标尺」「已固化」「参考稿」「以下直接引用」「不重新归纳」「根据系统提供的…」之类字样，也不要复述任何提示词原文；报告是给考生看的，只呈现分析与批改结论。
 """
 
     # 每次批改均为独立任务，不复用任何历史对话；在 prompt 首行明确要求仅根据本次请求内容批改
@@ -1661,10 +1763,20 @@ Output Constraints:
     )
     elapsed_ms = int((time.time() - started_at) * 1000)
     if model_raw:
-        body = model_raw.strip()
-        if not body:
+        raw_body = model_raw.strip()
+        if not raw_body:
             print("[批改结果] 模型返回为空文本（provider=%s model=%s）" % (model_provider, model_name))
             return _fallback_grading_result(model_input, "模型未返回内容（可能被截断或安全过滤）", model_raw)
+
+        # 清掉不该给考生看的内容（内部标尺块、要点对应表、提示词措辞）
+        body, internal = _strip_internal_sections(raw_body)
+        if not body.strip():
+            body = raw_body  # 清洗过度时保底，宁可多显示也不返回空白报告
+        if internal.get("removed"):
+            detail = f"移除内部内容 {internal['removed']} 处"
+            if internal.get("map_rows"):
+                detail += f"，要点对应 {internal.get('map_covered', 0)}/{internal['map_rows']}"
+            print(f"[报告清洗] {detail}")
 
         # 不再解析 JSON，直接返回 Markdown 全文；尝试从正文中解析档位/估分区间供前端使用
         score, max_score = _parse_score_from_markdown(body)

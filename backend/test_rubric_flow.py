@@ -119,7 +119,7 @@ def main_test():
             and rubric["status"] == "approved"
             and rubric["quality"]["verifiedRatio"] == 1.0
             and rubric["quality"]["coverageComplete"] is True
-            and "必须严格以此为准" in grade_prompt
+            and "严禁在报告中复述" in grade_prompt
             and "培育农村职业经理人队伍" in grade_prompt
             and fake.rubric_calls()[0]["temperature"] == 0.0
             and fake.grade_calls()[0]["temperature"] == 0.0
@@ -324,6 +324,30 @@ def main_test():
             cond12 = False
             print(f"[失败] 降级流程抛错：{e}")
         ok &= cond12
+
+        # 13) 内部内容清洗：标尺复述、要点对应表都不能出现在报告里
+        leaky = (
+            "## 模块二：官方踩分点标尺设定\n"
+            "**本题已固化的踩分标尺**，共5个要点，合计20分。以下直接引用，不重新归纳。\n\n"
+            "1. 要点一：坚持服务对象全覆盖\n\n"
+            "### 1.8 要点对应表\n\n"
+            "| 要点编号 | 要点概括 | 答案中的对应表述 | 是否覆盖 |\n"
+            "| --- | --- | --- | --- |\n"
+            "| 1 | 坚持服务对象全覆盖 | 「做到桩桩都要回应好」 | ✓ |\n\n"
+            "## 模块四\n档位：B档（良好）\n"
+        )
+        clean, meta = backend._strip_internal_sections(leaky)
+        cond13 = (
+            "已固化" not in clean
+            and "以下直接引用" not in clean
+            and "要点对应表" not in clean
+            and "| 要点编号" not in clean
+            and "要点一：坚持服务对象全覆盖" in clean
+            and "档位：B档" in clean
+            and meta.get("map_rows") == 1
+        )
+        print(f"[{'通过' if cond13 else '失败'}] 内部内容清洗：标尺复述与要点对应表均被移除（移除 {meta.get('removed')} 处）")
+        ok &= cond13
 
     finally:
         for k in ("RUBRIC_VOTE_ACCUMULATE", "RUBRIC_PROMOTE_AFTER", "RUBRIC_SAMPLE_TIMES",
