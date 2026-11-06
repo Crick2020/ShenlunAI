@@ -379,7 +379,7 @@ def main_test():
             and "结构约定" in p14
             and "STRUCTURE_CONVENTION_START" in p14
             and "一段话专项指导" in p14  # q1 题干含「用一段话」，应注入
-            and not any(t in p14 for t in ("{MAX_SCORE}", "{WORD_COUNT}", "{PROVINCE_LABEL}", "{WORD_RULE}", "{ONE_PARAGRAPH_GUIDE}"))
+            and not any(t in p14 for t in ("{MAX_SCORE}", "{WORD_COUNT}", "{PROVINCE_LABEL}", "{WORD_RULE}", "{ONE_PARAGRAPH_GUIDE}", "{OFFICIAL_DOC_GUIDE}"))
         )
         print(f"[{'通过' if cond14 else '失败'}] 提示词含结构一致性约束（1.3 与 1.7 必须同一套结构）")
         ok &= cond14
@@ -433,6 +433,32 @@ def main_test():
         )
         print(f"[{'通过' if cond16 else '失败'}] 结构约定兜底：5 种前缀/半角冒号均隐藏，长段落与自然语言保留")
         ok &= cond16
+
+        # 17) 公文格式专项：只在公文题注入，普通小题不增加 token
+        q3 = paper["questions"][2]
+        mats_q3 = [m for m in paper["materials"] if m["id"] == "m6"]
+        shutil.rmtree(tmp, ignore_errors=True)
+        os.makedirs(tmp, exist_ok=True)
+        fake17 = FakeModel([GOOD_RUBRIC])
+        backend.call_grading_model = fake17
+        backend.grade_essay(request=None, payload={
+            "paperId": "gwy_jiangsu_2025_C", "materials": mats_q3,
+            "question": {"id": q3["id"], "type": q3["type"], "title": q3["title"],
+                         "requirements": q3.get("requirements", "")},
+            "answers": {q3["id"]: "考生作答" * 20}, "question_id": q3["id"],
+        })
+        p17 = fake17.grade_calls()[0]["prompt"] if fake17.grade_calls() else ""
+        cond17 = (
+            backend._is_official_doc([q3]) is True
+            and backend._is_official_doc([paper["questions"][0]]) is False
+            and "公文格式专项" in p17
+            and "主送机关" in p17
+            and "除标题外禁止使用" in p17
+            and "{OFFICIAL_DOC_GUIDE}" not in p17
+            and "公文格式专项" not in p15  # 用例 15 的 q2 为普通分析题
+        )
+        print(f"[{'通过' if cond17 else '失败'}] 公文格式专项：仅公文题注入，普通小题无额外开销")
+        ok &= cond17
 
     finally:
         for k in ("RUBRIC_VOTE_ACCUMULATE", "RUBRIC_PROMOTE_AFTER", "RUBRIC_SAMPLE_TIMES",

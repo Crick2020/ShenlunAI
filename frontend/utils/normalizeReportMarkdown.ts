@@ -103,10 +103,10 @@ export function normalizeReportMarkdown(raw: string): string {
     }
 
     let processed = line
-      .replace(/如下：\s*\*\*/g, '如下：\n\n**')
-      .replace(/。\s*\*\*/g, '。\n\n**')
-      .replace(/\*\*\s*>\s+/g, '**\n\n> ')
-      .replace(SENTENCE_THEN_QUOTE, '$1\n\n> ');
+      .replace(/如下：\s*\*\*/g, '如下：\n**')
+      .replace(/。\s*\*\*/g, '。\n**')
+      .replace(/\*\*\s*>\s+/g, '**\n> ')
+      .replace(SENTENCE_THEN_QUOTE, '$1\n> ');
 
     if (/^\s*>/.test(processed) && INLINE_GT_SPLIT.test(processed)) {
       const parts = processed.split(INLINE_GT_SPLIT);
@@ -122,20 +122,27 @@ export function normalizeReportMarkdown(raw: string): string {
     // 长句里「1. 2. 3.」挤在一行时，拆成多行以便渲染为有序列表（2. 起且前接句号/分号）
     processed = processed.replace(
       /([\u3002\uff01\uff1f；。！？;])\s*([2-9]\.)(?=[\u4e00-\u9fff])/g,
-      '$1\n\n$2',
+      '$1\n$2',
     );
     // 兜底：2. 后面若是符号/emoji（如 ⚠️）而非中文，也要断行
     processed = processed.replace(
       /([\u3002\uff01\uff1f；。！？;])\s*([2-9]\.)(?=\S)/g,
-      '$1\n\n$2',
+      '$1\n$2',
     );
     // 「：1.xxx」且非小数（排除 1.5 这类）
-    processed = processed.replace(/([：:])\s*([1-9]\.)(?=[\u4e00-\u9fff])(?!\d)/g, '$1\n\n$2');
+    processed = processed.replace(/([：:])\s*([1-9]\.)(?=[\u4e00-\u9fff])(?!\d)/g, '$1\n$2');
     // 兜底：如「...） 2.材料...」这种前面不是句号也要断行
-    processed = processed.replace(/(\S)\s+([2-9]\.)(?=[\u4e00-\u9fff])(?!\d)/g, '$1\n\n$2');
+    processed = processed.replace(/(\S)\s+([2-9]\.)(?=[\u4e00-\u9fff])(?!\d)/g, '$1\n$2');
 
+    // 保留模型输出的空行：公文「标题 / 主送 / 正文 / 落款 / 日期」靠空行分段，
+    // 丢掉空行会把整篇公文压成一个 <p>。自动断行的结果只是软换行，不制造新段落。
     for (const sub of processed.split('\n')) {
-      if (sub.length > 0) expanded.push(fixEmphasisFlanking(sub));
+      if (sub.length === 0) {
+        // 连续空行压缩为一个，避免报告出现大片空白
+        if (expanded.length > 0 && expanded[expanded.length - 1] !== '') expanded.push('');
+        continue;
+      }
+      expanded.push(fixEmphasisFlanking(sub));
     }
   }
 
@@ -151,7 +158,8 @@ export function normalizeReportMarkdown(raw: string): string {
       out.push(line);
     }
   }
-  return out.join('\n');
+  // 去掉首尾多余空行，但保留行首缩进（列表/引用需要）
+  return out.join('\n').replace(/^\n+|\n+$/g, '');
 }
 
 /**

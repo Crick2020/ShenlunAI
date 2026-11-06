@@ -1,5 +1,5 @@
 /**
- * 回归测试：批改报告里的 **加粗** 是否都能被 react-markdown 正确识别。
+ * 回归测试：批改报告里的 **加粗** 与公文分段是否能被 react-markdown 正确识别。
  *
  * 背景：CommonMark 判定 `**` 能否开启加粗时，看它前后是否为「空白/标点」。
  * 模型常写 `核心原词是**“农村职业经理人”**`（** 前是汉字、后是中文引号），
@@ -64,6 +64,39 @@ for (const { name, src, expect } of CASES) {
   console.log(`   归一: ${normalized}`);
   console.log(`   加粗 ${strongs.length}/${expect} 段${literalStars.length ? `；残留字面量 ${JSON.stringify(literalStars)}` : ''}`);
 }
+
+// 公文排版回归：模型按「标题/主送/缘由/事项/结语/落款/日期」分段输出时，
+// 归一化曾把所有空行删掉，导致 react-markdown 把整篇公文压成一个 <p>。
+const officialDoc = [
+  '**关于召开村级治理经验现场交流会的请示**',
+  '',
+  '镇党委：',
+  '',
+  '我镇在办好民生实事中涌现出一批村级治理典型。为推广先进经验，拟于今年12月下旬召开现场交流会。',
+  '',
+  '会议拟请单圩村、中关村作经验交流，并组织18个村现场观摩。',
+  '',
+  '妥否，请批示。',
+  '',
+  '山阳镇社会治理和社会事业办公室',
+  '',
+  '×年×月×日',
+].join('\n');
+const docNorm = normalizeReportMarkdown(officialDoc);
+const docTree = unified().use(remarkParse).use(remarkGfm).parse(docNorm);
+const docParagraphs = [];
+(function walk(node) {
+  if (node.type === 'paragraph') docParagraphs.push(node.children.map((c) => c.value ?? c.type).join(''));
+  (node.children ?? []).forEach(walk);
+})(docTree);
+const docOk = docParagraphs.length === 7 && !docNorm.includes('\n\n\n');
+if (!docOk) failed += 1;
+console.log(`${docOk ? '✓' : '✗'} 公文分段：7 个段落独立渲染（实际 ${docParagraphs.length} 段）`);
+
+const collapsed = normalizeReportMarkdown('第一段。\n\n\n\n第二段。');
+const collapseOk = collapsed === '第一段。\n\n第二段。';
+if (!collapseOk) failed += 1;
+console.log(`${collapseOk ? '✓' : '✗'} 连续空行压缩为一个（${JSON.stringify(collapsed)}）`);
 
 console.log(failed === 0 ? '\n全部通过' : `\n失败 ${failed} 项`);
 process.exit(failed === 0 ? 0 : 1);

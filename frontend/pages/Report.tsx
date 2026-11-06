@@ -17,6 +17,27 @@ interface ReportProps {
   onBack: () => void;
 }
 
+/** 公文落款：整段只有单位名称（如「山阳镇社会治理和社会事业办公室」） */
+const OFFICIAL_SIGNATURE = /^[\u4e00-\u9fa5]{2,30}(办公室|委员会|人民政府|镇政府|县政府|市政府|省政府|局|厅|处|科|中心|学校|公司|街道|村委会|村委)$/;
+/** 公文日期：×年×月×日 / 2026年12月5日 等 */
+const OFFICIAL_DATE = /^[×xX○〇0-9一二三四五六七八九十]{2,6}\s*年[×xX○〇0-9一二三四五六七八九十]{1,3}\s*月[×xX○〇0-9一二三四五六七八九十]{1,3}\s*日$/;
+
+function nodeText(node: React.ReactNode): string {
+  if (typeof node === 'string' || typeof node === 'number') return String(node);
+  if (Array.isArray(node)) return node.map(nodeText).join('');
+  if (React.isValidElement(node)) return nodeText((node.props as { children?: React.ReactNode }).children);
+  return '';
+}
+
+/** 落款与日期在正式公文中靠右；仅整段严格匹配时才右对齐，避免误伤正文 */
+const markdownComponents = {
+  p: ({ children }: { children?: React.ReactNode }) => {
+    const text = nodeText(children).trim();
+    const alignRight = OFFICIAL_SIGNATURE.test(text) || OFFICIAL_DATE.test(text);
+    return <p className={alignRight ? 'text-right' : undefined}>{children}</p>;
+  },
+};
+
 const Report: React.FC<ReportProps> = ({ record, onBack }) => {
   const { result, paperName, questionTitle } = record;
   const [moreOpen, setMoreOpen] = useState(false);
@@ -137,7 +158,7 @@ const Report: React.FC<ReportProps> = ({ record, onBack }) => {
               prose-pre:overflow-x-auto prose-pre:max-w-full"
             >
               {content ? (
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+                <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>{content}</ReactMarkdown>
               ) : (
                 <p className="text-[#86868b]">暂无批改内容</p>
               )}
