@@ -325,15 +325,21 @@ def main_test():
             print(f"[失败] 降级流程抛错：{e}")
         ok &= cond12
 
-        # 13) 内部内容清洗：标尺复述、要点对应表都不能出现在报告里
+        # 13) 内部内容清洗：标尺复述、要点对应表、结构约定行都不能出现在报告里
         leaky = (
             "## 模块二：官方踩分点标尺设定\n"
             "**本题已固化的踩分标尺**，共5个要点，合计20分。以下直接引用，不重新归纳。\n\n"
             "1. 要点一：坚持服务对象全覆盖\n\n"
+            "## 模块一 1.3 作答思路构建\n"
+            "本题为公文写作，按「标题—主送机关—正文—署名日期」行文，缘由段、事项段、结语段依次衔接。\n"
+            "<!--STRUCTURE_CONVENTION_START-->结构约定：分述数=4；分组=要点1 / 要点2 / 要点3-4 / 要点5；顺序=要点1→要点5；序号形式=无序号；段落形式=标题+主送机关+正文+署名日期<!--STRUCTURE_CONVENTION_END-->\n\n"
             "### 1.8 要点对应表\n\n"
             "| 要点编号 | 要点概括 | 答案中的对应表述 | 是否覆盖 |\n"
             "| --- | --- | --- | --- |\n"
             "| 1 | 坚持服务对象全覆盖 | 「做到桩桩都要回应好」 | ✓ |\n\n"
+            "## 模块五 1.7 极致参考答案（总—分—总结构）\n"
+            "本答案严格沿用 1.3 的结构约定，按 4 个分述把全部踩分要点纳入对应分述内部串联，"
+            "既保证要点 100% 覆盖，又不另起一套并列序号，段落形式与标题保持一致，缘由段先总括再展开……\n\n"
             "## 模块四\n档位：B档（良好）\n"
         )
         clean, meta = backend._strip_internal_sections(leaky)
@@ -345,8 +351,15 @@ def main_test():
             and "要点一：坚持服务对象全覆盖" in clean
             and "档位：B档" in clean
             and meta.get("map_rows") == 1
+            and "结构约定：分述数=4" not in clean
+            and "STRUCTURE_CONVENTION" not in clean
+            and "本题为公文写作，按「标题—主送机关—正文—署名日期」行文" in clean
+            and "本答案严格沿用 1.3 的结构约定" in clean
+            and "极致参考答案（总—分—总结构）" in clean
+            and meta.get("structure_removed") == 1
+            and bool(meta.get("structure_summary"))
         )
-        print(f"[{'通过' if cond13 else '失败'}] 内部内容清洗：标尺复述与要点对应表均被移除（移除 {meta.get('removed')} 处）")
+        print(f"[{'通过' if cond13 else '失败'}] 内部内容清洗：标尺/表格/结构约定均隐藏，正文保留（移除 {meta.get('removed')} 处）")
         ok &= cond13
 
         # 14) 结构一致性约束已进入提示词与标尺注入块（指令常量在 grade_essay 内，从实际拼装的 prompt 检查）
@@ -364,6 +377,7 @@ def main_test():
             and "不得另起一套并列序号" in p14
             and "结构一致性" in p14
             and "结构约定" in p14
+            and "STRUCTURE_CONVENTION_START" in p14
             and "一段话专项指导" in p14  # q1 题干含「用一段话」，应注入
             and not any(t in p14 for t in ("{MAX_SCORE}", "{WORD_COUNT}", "{PROVINCE_LABEL}", "{WORD_RULE}", "{ONE_PARAGRAPH_GUIDE}"))
         )
@@ -393,6 +407,32 @@ def main_test():
         )
         print(f"[{'通过' if cond15 else '失败'}] token 精简：q2 跳过一段话指导、去掉重复固定文案（{len(p15)} 字符）")
         ok &= cond15
+
+        # 16) 结构约定兜底：无标记时的前缀变体与半角冒号，且不误删自然语言/1.7 长段落
+        variants = (
+            "本题为公文写作，按缘由段、事项段、结语段行文，层次分明即可。\n"
+            "> 结构约定：分述数=2；分组=要点1-2 / 要点3-5；段落形式=一段话\n"
+            "`结构约定: 分述数=3；分组=要点1 / 要点2 / 要点3；序号形式=一是、二是`\n"
+            "**结构约定：分述数=2；分组=要点1-2 / 要点3-5；序号形式=一、二**\n"
+            "- 结构约定：分述数=2；分组=要点1-2 / 要点3-5；段落形式=分条\n"
+            "1.3 结构约定：分述数=2；分组=要点1-2 / 要点3-5\n"
+            "本答案严格沿用 1.3 的结构约定，分述数、分组、顺序、序号形式与段落形式逐项对齐，"
+            "要点全部覆盖且不另起并列序号，标题括号里的结构名与正文一致，缘由段先总括再展开……\n"
+            "档位：B档（良好）\n"
+        )
+        c16, m16 = backend._strip_internal_sections(variants)
+        cond16 = (
+            "结构约定：" not in c16
+            and "结构约定: " not in c16
+            and "分组=" not in c16
+            and "本题为公文写作" in c16
+            and "本答案严格沿用 1.3 的结构约定" in c16
+            and "档位：B档" in c16
+            and m16.get("structure_removed") == 5
+            and m16.get("removed") >= 5
+        )
+        print(f"[{'通过' if cond16 else '失败'}] 结构约定兜底：5 种前缀/半角冒号均隐藏，长段落与自然语言保留")
+        ok &= cond16
 
     finally:
         for k in ("RUBRIC_VOTE_ACCUMULATE", "RUBRIC_PROMOTE_AFTER", "RUBRIC_SAMPLE_TIMES",

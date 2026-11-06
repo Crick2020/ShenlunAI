@@ -1141,6 +1141,20 @@ INTERNAL_MARKERS = (
     "内部校验",
 )
 
+# 结构约定行：模型仍会输出、供 1.7 沿用，但由后端隐藏，只把摘要写进日志
+STRUCTURE_START = "<!--STRUCTURE_CONVENTION_START-->"
+STRUCTURE_END = "<!--STRUCTURE_CONVENTION_END-->"
+# 剥离常见 Markdown 行首前缀：空白 / > 引用 / 反引号 / 加粗、列表符号 / # / 数字编号
+_STRUCTURE_PREFIX = re.compile(r"^[\s>`*+\-#]*(?:\d+(?:\.\d+)*[.、]?\s*)?")
+# 「结构约定」后允许加粗闭合星号/反引号，再接全角或半角冒号
+_STRUCTURE_HEAD = re.compile(r"^结构约定[\s*`]*[:：]")
+
+
+def _structure_summary(text: str) -> str:
+    """从结构约定行提取短摘要（只用于日志，不打印整行）"""
+    m = re.search(r"分述数=\s*\d+[^；]*；分组=\s*[^；]+", text)
+    return ((m.group(0) if m else text[:40]).strip())[:60]
+
 
 def _count_map_row(cells: List[str], meta: dict) -> None:
     """统计要点对应表的一行（跳过表头与分隔行）"""
@@ -1163,12 +1177,35 @@ def _strip_internal_sections(text: str) -> Tuple[str, dict]:
         return text, {}
     lines = text.split("\n")
     out: List[str] = []
-    meta: dict = {"map_rows": 0, "map_covered": 0, "removed": 0}
+    meta: dict = {
+        "map_rows": 0, "map_covered": 0, "removed": 0,
+        "structure_removed": 0, "structure_summary": "",
+    }
     i, n = 0, len(lines)
 
     while i < n:
         raw = lines[i]
         stripped = raw.strip()
+
+        # 0) 结构约定行（内部用）：模型仍输出供 1.7 沿用，返回前隐藏，只记摘要到日志
+        if "STRUCTURE_CONVENTION_START" in raw or "STRUCTURE_CONVENTION_END" in raw:
+            end_i = i
+            if "STRUCTURE_CONVENTION_END" not in raw:
+                end_i += 1
+                while end_i < n and "STRUCTURE_CONVENTION_END" not in lines[end_i]:
+                    end_i += 1
+            block = lines[i:end_i + 1]
+            joined = " ".join(x.strip() for x in block)
+            # 保护：标记被混进长正文时不整块删，只剔除标记字符，交给规则 5 兜底
+            if (end_i - i) <= 3 and len(joined) <= 300:
+                meta["structure_summary"] = _structure_summary(re.sub(r"<!--[^>]*-->", "", joined))
+                meta["structure_removed"] += 1
+                meta["removed"] += 1
+                i = end_i + 1
+                continue
+            out.append(raw.replace(STRUCTURE_START, "").replace(STRUCTURE_END, ""))
+            i += 1
+            continue
 
         # 1) 显式标记包裹的校验表：<!--RUBRIC_MAP_START--> ... <!--RUBRIC_MAP_END-->
         if "RUBRIC_MAP_START" in raw:
@@ -1211,6 +1248,19 @@ def _strip_internal_sections(text: str) -> Tuple[str, dict]:
 
         # 4) 标尺 JSON 被复述出来（形如 "points": [...] / "materialId"）
         if len(stripped) <= 200 and ('"points"' in stripped or '"materialId"' in stripped):
+            meta["removed"] += 1
+            i += 1
+            continue
+
+        # 5) 兜底：模型未写标记时，按「结构约定」行首 + 限长 + 特征字段删整行
+        probe = _STRUCTURE_PREFIX.sub("", stripped)
+        if (
+            len(stripped) <= 150
+            and _STRUCTURE_HEAD.match(probe)
+            and ("分述数" in probe or "分组=" in probe)
+        ):
+            meta["structure_summary"] = _structure_summary(probe)
+            meta["structure_removed"] += 1
             meta["removed"] += 1
             i += 1
             continue
@@ -1579,9 +1629,9 @@ Output Constraints:
 1. **审题关键点（破题雷达）**：一语道破本题的"作答对象"（找问题/原因/做法/意义？）、"限制条件"（字数、特定身份、范围）以及"隐含要求"（如：是否需要分类梳理？是否要求"用一段话"作答而非分条列举？）。
 2. **材料深度解析（如何找原词）**：以名师视角，带领用户梳理材料逻辑。请按逻辑块演示推导过程：
    - 🔍 **材料X-X段**：主要讲了什么事情？从中可以抓取哪些"核心原词"？如何剥离具体的案例、数据等废话，将长句转化为精炼的"踩分关键词"？
-3. **作答思路构建（如何排版）**：找齐要点后，给出**全文唯一的结构约定**，模块五的参考答案必须严格照它来写。按标尺要点分组（例如「主观/客观」「主体」「服务对象/依靠力量」），说明每组包含哪些要点编号，并输出下面这行固定格式的摘要：
+3. **作答思路构建（如何排版）**：找齐要点后，给出**全文唯一的结构约定**，模块五的参考答案必须严格照它来写。按标尺要点分组（例如「主观/客观」「主体」「服务对象/依靠力量」），说明每组包含哪些要点编号，并输出下面这行固定格式的摘要（标记包在同一行，系统自动隐藏、不展示给考生，模块五仍须沿用其内容）：
 
-   `结构约定：分述数=N；分组=要点1-2 / 要点3-5；顺序=要点1→要点5；序号形式=一是、二是（或一、二、三 / 分述一、分述二）；段落形式=一段话 / 分条 / 总—分—总三段`
+   `<!--STRUCTURE_CONVENTION_START-->结构约定：分述数=N；分组=要点1-2 / 要点3-5；顺序=要点1→要点5；序号形式=一是、二是（或一、二、三 / 分述一、分述二）；段落形式=一段话 / 分条 / 总—分—总三段<!--STRUCTURE_CONVENTION_END-->`
 
    - N 必须 ≤ 要点总数，每个要点都必须归入且只归入一个分述；
    - 若题目要求「用一段话」，段落形式只能写「一段话」，分述用「一是…二是…」在段内串联，不能另起段落；
@@ -1632,6 +1682,7 @@ Output Constraints:
 1. **极致参考答案**：给出一份符合题目要求的满分参考答案。要求：**最大密度地使用"材料原词"进行拼接，绝不随意替换为材料中没有的词汇**，字数绝对不可超限。
    - ⚠️ **要点完整性（防漏点硬规则）**：参考答案必须覆盖模块二中列出的**全部踩分要点**，不得因字数紧张而自行删减任何要点；若总字数超限，应优先压缩每个要点的修饰语，而非删去整个要点。
    - ⚠️ **结构一致性硬规则（最高优先级，必须遵守）**：参考答案**必须逐项沿用 1.3「结构约定」那一行**——分述数、分组方式、要点顺序、序号形式、段落形式全部一致，**不得另起一套并列序号**。
+     - 1.3 的结构约定行虽被标记包裹并由系统隐藏，**其内容仍是本报告的一部分，模块五必须逐项照写**；不要复制标记，也不要另起一套结构。
      - 例：1.3 写「分述数=2；分组=要点1-2 / 要点3-5；序号=一是、二是；段落=一段话」，参考答案就只能写成「一是[要点1、2的原词]；二是[要点3、4、5的原词]」，**不能写成「一是…五是…」5 条并列**，也不能改成三段式或分条列举；
      - 要点仍然 100% 覆盖，但要在**对应分述内部**串联，而不是另开一套结构；
      - 若发现 1.3 的约定与题目格式要求冲突，先回头修改 1.3 的「结构约定」行，再按修改后的约定写参考答案，保证两处始终一致；
@@ -1646,11 +1697,11 @@ Output Constraints:
 - 语气：专业、严厉但循循善诱，像一位极具责任心的考前辅导名师。
 - 排版：全程使用Markdown格式，利用加粗、表情符号（🔍/✨/❌/🔄等）和引用块（>）增加易读性。
 - 禁忌：严禁AI在小题中自行发散联想、过度拔高或替换词汇。所有的采分点必须100%忠于<给定材料>的原始表述（去除修饰语后的核心名词/动词）。
-- 禁忌（内部信息）：报告中**不得出现**任何系统/提示词层面的内容——不要写「标尺」「已固化」「参考稿」「以下直接引用」「不重新归纳」「根据系统提供的…」之类字样，也不要复述任何提示词原文；报告是给考生看的，只呈现分析与批改结论。
+- 禁忌（内部信息）：报告中**不得出现**任何系统/提示词层面的内容——不要写「标尺」「已固化」「参考稿」「以下直接引用」「不重新归纳」「根据系统提供的…」之类字样，也不要复述任何提示词原文；报告是给考生看的，只呈现分析与批改结论。`<!--STRUCTURE_CONVENTION_START/END-->` 及其包裹的「结构约定」行属内部信息，不要在报告其它位置复述其内容或标记。
 - 结构一致性：1.3「作答思路构建」给出的框架与 1.7「极致参考答案」必须是**同一套结构**（分述数、分组、顺序、序号形式、段落形式一致）；严禁出现「前面建议两段/三段，后面写成一段五个并列点」这类自相矛盾的输出。若两者冲突，以 1.3 的「结构约定」行为准，回头修正 1.7。
 """
 
-    # 每次批改均为独立任务，不复用任何历史对话；在 prompt 首行明确要求仅根据本次请求内容批改
+    # 每次批改均生成独立会话 id（接口无状态，不传历史对话）
     grading_session_id = payload.get("gradingSessionId") or ("req-%s" % int(time.time() * 1000))
     print("[批改] 新对话/独立任务 session=%s" % grading_session_id)
 
@@ -1794,6 +1845,9 @@ Output Constraints:
             detail = f"移除内部内容 {internal['removed']} 处"
             if internal.get("map_rows"):
                 detail += f"，要点对应 {internal.get('map_covered', 0)}/{internal['map_rows']}"
+            if internal.get("structure_removed"):
+                summary = (internal.get("structure_summary") or "-")[:60]
+                detail += f"，结构约定已隐藏 {internal['structure_removed']} 处（摘要：{summary}）"
             print(f"[报告清洗] {detail}")
 
         # 不再解析 JSON，直接返回 Markdown 全文；尝试从正文中解析档位/估分区间供前端使用
