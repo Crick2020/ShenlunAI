@@ -364,9 +364,35 @@ def main_test():
             and "不得另起一套并列序号" in p14
             and "结构一致性" in p14
             and "结构约定" in p14
+            and "一段话专项指导" in p14  # q1 题干含「用一段话」，应注入
+            and not any(t in p14 for t in ("{MAX_SCORE}", "{WORD_COUNT}", "{PROVINCE_LABEL}", "{WORD_RULE}", "{ONE_PARAGRAPH_GUIDE}"))
         )
         print(f"[{'通过' if cond14 else '失败'}] 提示词含结构一致性约束（1.3 与 1.7 必须同一套结构）")
         ok &= cond14
+
+        # 15) token 精简：非「一段话」题目不注入专项指导；固定文案已去重
+        q2 = paper["questions"][1]
+        mats_q2 = [m for m in paper["materials"] if m["id"] == "m5"]
+        shutil.rmtree(tmp, ignore_errors=True)
+        os.makedirs(tmp, exist_ok=True)
+        fake15 = FakeModel([GOOD_RUBRIC])
+        backend.call_grading_model = fake15
+        backend.grade_essay(request=None, payload={
+            "paperId": "gwy_jiangsu_2025_C", "materials": mats_q2,
+            "question": {"id": q2["id"], "type": q2["type"], "title": q2["title"],
+                         "requirements": q2.get("requirements", "")},
+            "answers": {q2["id"]: "考生作答" * 20}, "question_id": q2["id"],
+        })
+        p15 = fake15.grade_calls()[0]["prompt"] if fake15.grade_calls() else ""
+        cond15 = (
+            "一段话专项指导" not in p15
+            and "【重要】本次为全新" not in p15
+            and "请按上述要求，直接输出完整的 Markdown 分析报告。" not in p15
+            and "大作文评分特征" not in p15
+            and "档位：X档（描述）" in p15
+        )
+        print(f"[{'通过' if cond15 else '失败'}] token 精简：q2 跳过一段话指导、去掉重复固定文案（{len(p15)} 字符）")
+        ok &= cond15
 
     finally:
         for k in ("RUBRIC_VOTE_ACCUMULATE", "RUBRIC_PROMOTE_AFTER", "RUBRIC_SAMPLE_TIMES",

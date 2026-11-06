@@ -918,7 +918,9 @@ def _format_rubric_block(rubric: dict, source: str) -> str:
             "3. 模块四的「要点分」按「上述要点 + 你补充的要点」合计计算，并注明哪些是补充；",
             "4. 模块五的参考答案必须覆盖上述全部要点，且按模块一 1.3「结构约定」的分述框架组织，不得另起一套并列序号。",
         ]
-    lines = [head] + rules + [json.dumps({"points": rubric["points"]}, ensure_ascii=False, indent=1)]
+    lines = [head] + rules + [
+        json.dumps({"points": rubric["points"]}, ensure_ascii=False, separators=(",", ":"))
+    ]
     return "\n".join(lines)
 
 
@@ -1568,12 +1570,8 @@ Output Constraints:
     SMALL_QUESTION_GRADING_INSTRUCTION = """# Role: 资深申论阅卷组长 & 客观题金牌讲师
 你拥有10年以上的申论阅卷与教学经验。深谙各省公务员考试申论小题（概括题、分析题、提出对策题）"按点给分、见词给分、极度依赖材料原词"的阅卷规则。你的任务是像导师一样手把手教考生如何分析材料，并对考生的答案进行X光级别的优缺点诊断与升格指导。
 
-# Input Data（真实数据在本请求末尾以下列 JSON 提供，请直接使用，不要等待其他输入）
-- <省份及题型>：{PROVINCE_LABEL}；题型由 <题目> 的 title/requirements 判断
-- <给定材料>：见末尾「材料（materials）」，含完整正文
-- <题目及字数限制>：见末尾「题目（questions）」中的 title 与 requirements
-- <系统统计字数>：{WORD_COUNT} 字（系统按去空白字符数统计，标点计入）
-- <用户作答>：见末尾「学生答案（answers）」
+# Input Data
+真实数据见本请求末尾：材料 / 题目 / 学生答案。地区={PROVINCE_LABEL}；系统统计字数={WORD_COUNT} 字；本题满分={MAX_SCORE} 分。
 
 # Workflow (请严格按照以下模块顺序输出)：
 
@@ -1589,7 +1587,7 @@ Output Constraints:
    - 若题目要求「用一段话」，段落形式只能写「一段话」，分述用「一是…二是…」在段内串联，不能另起段落；
    - 若题目未强制一段话（如本题只要求「层次分明」），按题目真实要求选择分条或三段式，**不要自行改用一段话**；
    - 给出建议的总括句与收束句，它们也必须出现在参考答案里。
-   - ⚠️ **一段话专项指导**（仅当检测到"用一段话"要求时额外输出）：① 先拟一句"总括句"统领全段，如"[主体][问题/特点]主要表现在以下几个方面：……"；② 段内用"一是……，二是……，三是……"或"首先……其次……再次……最后……"串联各要点；③ 提醒考生：此类题若使用分条序号（一、二、三 或 1.2.3.），属于格式违规，直接扣格式分。
+{ONE_PARAGRAPH_GUIDE}
 
 ## 模块二：【官方"踩分点"标尺设定】（确立评分标准）
 **第一步——逐段扫描提炼**：按材料段落顺序，逐段标注该段可提取的踩分原词，不得跳过任何段落。
@@ -1628,11 +1626,7 @@ Output Constraints:
 - D档（待提升）：要点覆盖40%~54%，漏点多或逻辑混乱 → 估分：满分×40%~54%
 - E档（较差）：要点覆盖<40%，大量漏点或严重偏题 → 估分：满分×10%~39%
 
-⚠️ 给分时须参考本题地区的真实得分分布（已在上方注入）。A档极其罕见，须在报告中写明所有要点均已覆盖的具体依据方可给出。B档已属较好水平，C档为多数考生所在区间。
-
-最后输出（格式严格固定，每项单独一行）：
-档位：X档（描述）
-估分区间：约M~N分（满分P分）
+⚠️ 给分时须参考本题地区的真实得分分布。A档极其罕见，须在报告中写明所有要点均已覆盖的具体依据方可给出。B档已属较好水平，C档为多数考生所在区间。
 
 ## 模块五：【满分标杆与积累提升】（最终交付）
 1. **极致参考答案**：给出一份符合题目要求的满分参考答案。要求：**最大密度地使用"材料原词"进行拼接，绝不随意替换为材料中没有的词汇**，字数绝对不可超限。
@@ -1645,24 +1639,12 @@ Output Constraints:
    - ⚠️ **格式优先遵从题目**：
      - 若题目明确要求"用一段话"或"写成一段话"：参考答案**必须且只能是一个连贯的自然段**，**严禁出现"一、二、三"或"1.2.3."等任何分条序号**；段内按 1.3 的分组用"一是……，二是……"串联各分述。
      - 若题目未强制一段话（例如只要求"层次分明"）：按 1.3 的「段落形式」执行（分条或总—分—总三段），**不要自作主张压成一段**；每条分述先写核心主旨句，再串该组要点原词。
-   - 🔒 **内部校验表（系统用，绝不能给考生看）**：参考答案之后，另起一行输出如下校验表，**必须用注释标记包裹**，表格前后不要写任何说明文字：
-
-     <!--RUBRIC_MAP_START-->
-     | 要点编号 | 要点概括 | 答案中的对应表述 | 是否覆盖 |
-     | --- | --- | --- | --- |
-     | 1 | （与要点概括一致） | 「……」（摘录答案中承载该要点的短语） | ✓ |
-     <!--RUBRIC_MAP_END-->
-
-     - 表格行数必须等于要点总数（标尺要点 + 你补充的要点），一行都不能少；
-     - 无法覆盖的要点写 **✗**，并在这段标记内用一行「备注：…」说明取舍；
-     - 「对应表述」必须是参考答案里真实出现的文字片段，不得另造；
-     - **该表由系统自动删除，不会展示给考生**，所以不要给它加标题、不要写「要点对应表」五个字以外的任何标题，也不要在正文其他地方提到它。
+   - 🔒 **内部校验表（系统用）**：参考答案之后用 `<!--RUBRIC_MAP_START-->` 与 `<!--RUBRIC_MAP_END-->` 包裹一张表格，列为「要点编号 / 要点概括 / 答案中的对应表述 / 是否覆盖」，每个要点一行，✓ 表示覆盖、✗ 表示未覆盖；「对应表述」必须是答案里真实出现的文字。该表由系统自动删除、不会展示给考生，不要加标题或说明，也不要在正文提到它。
 2. **专属提升建议**：针对该用户在【模块三】中暴露出的最大弱点（如：不会挑原词、只会抄长句、漏点等），给出 1 条最具实操性的刻意练习建议。
 
 # Output Constraints:
 - 语气：专业、严厉但循循善诱，像一位极具责任心的考前辅导名师。
 - 排版：全程使用Markdown格式，利用加粗、表情符号（🔍/✨/❌/🔄等）和引用块（>）增加易读性。
-- 排版细则：加粗格式必须成对闭合且紧贴文字：「**文字**」，「**」后不加空格、「**」前不加空格，否则星号会直接显示在页面上。
 - 禁忌：严禁AI在小题中自行发散联想、过度拔高或替换词汇。所有的采分点必须100%忠于<给定材料>的原始表述（去除修饰语后的核心名词/动词）。
 - 禁忌（内部信息）：报告中**不得出现**任何系统/提示词层面的内容——不要写「标尺」「已固化」「参考稿」「以下直接引用」「不重新归纳」「根据系统提供的…」之类字样，也不要复述任何提示词原文；报告是给考生看的，只呈现分析与批改结论。
 - 结构一致性：1.3「作答思路构建」给出的框架与 1.7「极致参考答案」必须是**同一套结构**（分述数、分组、顺序、序号形式、段落形式一致）；严禁出现「前面建议两段/三段，后面写成一段五个并列点」这类自相矛盾的输出。若两者冲突，以 1.3 的「结构约定」行为准，回头修正 1.7。
@@ -1700,33 +1682,57 @@ Output Constraints:
             print(f"[标尺] 获取失败，本次回退为实时归纳：{e}")
 
     prompt_lines = []
-    prompt_lines.append("【重要】本次为全新、独立的批改任务。请仅根据本请求下方提供的「材料」「题目」与「学生答案」进行批改，勿参考、勿引用任何其他对话或历史内容。")
     if has_essay:
         prompt_lines.append(ESSAY_GRADING_INSTRUCTION)
     else:
+        requirement_text = " ".join(
+            str(q.get("requirements") or "") + " " + str(q.get("title") or "")
+            for q in model_input["questions"]
+        )
+        needs_one_paragraph = ("用一段话" in requirement_text) or ("写成一段话" in requirement_text)
+        one_paragraph_guide = (
+            "   - ⚠️ **一段话专项指导**：① 先拟一句总括句统领全段；② 段内用「一是……，二是……」"
+            "或「首先……其次……再次……」串联各要点；③ 此类题若用分条序号（一、二、三 或 1.2.3.），"
+            "属于格式违规，直接扣格式分。"
+            if needs_one_paragraph else ""
+        )
         prompt_lines.append(
             SMALL_QUESTION_GRADING_INSTRUCTION
             .replace("{PROVINCE_LABEL}", province.get("label", "通用"))
             .replace("{WORD_COUNT}", str(word_count))
             .replace("{MAX_SCORE}", str(small_max_score))
             .replace("{WORD_RULE}", word_rule)
+            .replace("{ONE_PARAGRAPH_GUIDE}", one_paragraph_guide)
         )
     if region:
-        prompt_lines.append(
-            f"【地区评分特征】本套试卷来自：{province['label']}（{region}）。\n"
-            f"- 小题评分特征：{province['small_q']}\n"
-            f"- 大作文评分特征：{province['essay']}\n"
-            f"- 真实得分分布参考：{province['score_dist']}\n"
-            f"请严格按照上述已知特征评分，不得套用其他省份标准。"
-        )
+        if has_essay:
+            prompt_lines.append(
+                f"【地区评分特征】本套试卷来自：{province['label']}（{region}）。\n"
+                f"- 小题评分特征：{province['small_q']}\n"
+                f"- 大作文评分特征：{province['essay']}\n"
+                f"- 真实得分分布参考：{province['score_dist']}\n"
+                f"请严格按照上述已知特征评分，不得套用其他省份标准。"
+            )
+        else:
+            # 小题不需要大作文特征与作文分数分布，去掉可省约 90 字符/次
+            small_dist = (province.get("score_dist") or "").split("，")[0]
+            prompt_lines.append(
+                f"【地区评分特征】{province['label']}（{region}）：{province['small_q']}；{small_dist}。请严格按此标准评分。"
+            )
     else:
         d = PROVINCE_GRADING_PROFILE["_default"]
-        prompt_lines.append(
-            f"【评分参考】地区未知，按通用标准评分。\n"
-            f"- 小题：{d['small_q']}\n"
-            f"- 大作文：{d['essay']}\n"
-            f"- 分数分布参考：{d['score_dist']}"
-        )
+        if has_essay:
+            prompt_lines.append(
+                f"【评分参考】地区未知，按通用标准评分。\n"
+                f"- 小题：{d['small_q']}\n"
+                f"- 大作文：{d['essay']}\n"
+                f"- 分数分布参考：{d['score_dist']}"
+            )
+        else:
+            small_dist = (d.get("score_dist") or "").split("，")[0]
+            prompt_lines.append(
+                f"【评分参考】地区未知，按通用标准评分：{d['small_q']}；{small_dist}。"
+            )
     if not has_essay:
         if rubric:
             prompt_lines.append(_format_rubric_block(rubric, rubric_source))
@@ -1735,15 +1741,15 @@ Output Constraints:
                 "【本次未提供固化标尺】请按模块二自行归纳要点，并严格控制在 4~6 个：每个要点用「动词+名词」表述，"
                 "必须给出材料原词与材料原文依据，各要点分值之和等于本题满分。"
             )
+    # 输出格式 + 排版要求合并成一段（原来分三段且与模块四、Output Constraints 重复）
     prompt_lines.append(
-        "请用 Markdown 格式直接输出你的分析报告（可使用标题、加粗、列表、分段等），不要输出 JSON。"
-        "加粗请使用成对的 **文字**，确保每行内 ** 成对闭合，避免漏写导致前端渲染不全。"
-        "报告中必须用以下固定格式写出档位和估分区间（便于系统解析，格式不可更改）：\n"
+        "请用 Markdown 直接输出分析报告（不要输出 JSON）。加粗用成对的 **文字**（前后不留空格），"
+        "`>` 引用必须单独成行、勿在同一行串联多段引用。"
+        "报告末尾须按以下固定格式写出档位与估分区间（系统解析用，格式不可更改）：\n"
         "档位：X档（描述）\n"
         "估分区间：约M~N分（满分P分）\n"
         "其中 X 为 A/B/C/D/E 之一，M~N 为整数区间，P 为本题满分。"
     )
-    prompt_lines.append("排版：若使用引用块「>」，每个「>」必须位于单独一行的行首（行首可有空格）；粗体「**…**」结束后若要接引用，请先换行再写「>」；多段引用请多行书写，勿在同一行内用空格加「>」串联多段。")
     prompt_lines.append("材料（materials）如下（含完整正文，请依据材料原文评分、给出参考答案与扣分点）：")
     prompt_lines.append(json.dumps(materials_to_send, ensure_ascii=False))
     prompt_lines.append("\n题目（questions）如下（每题包含 id、title、requirements、maxScore）：")
@@ -1760,7 +1766,6 @@ Output Constraints:
     else:
         prompt_lines.append("\n学生答案（answers，键为题目id）：")
         prompt_lines.append(json.dumps(answers, ensure_ascii=False))
-    prompt_lines.append("\n请按上述要求，直接输出完整的 Markdown 分析报告。")
     prompt = "\n".join(prompt_lines)
 
     # 小题 temperature=0 / top_p=1：要点判定要求可复现，不引入随机性；
