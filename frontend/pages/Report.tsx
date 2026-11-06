@@ -3,7 +3,13 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { HistoryRecord } from '../types';
 import { track } from '../services/analytics';
-import { openFeedback, CHANGELOG_URL } from '../constants';
+import {
+  openFeedback,
+  CHANGELOG_URL,
+  openExternalUrl,
+  PRIVACY_POLICY_URL,
+  USER_AGREEMENT_URL,
+} from '../constants';
 import { normalizeReportMarkdown, normalizeReportMarkdownForCopy } from '../utils/normalizeReportMarkdown';
 
 interface ReportProps {
@@ -60,6 +66,24 @@ const Report: React.FC<ReportProps> = ({ record, onBack }) => {
             </button>
             {moreOpen && (
               <div className="absolute right-0 top-full mt-2 w-40 rounded-2xl apple-more-menu py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                <button
+                  onClick={() => { setMoreOpen(false); openExternalUrl(USER_AGREEMENT_URL); }}
+                  className="apple-more-item flex items-center gap-3 w-full text-left px-4 py-3 text-[14px] text-[#1d1d1f]"
+                >
+                  <div className="apple-more-icon bg-[#0071e3]/10 shrink-0">
+                    <i className="far fa-file-lines text-[14px] text-[#0071e3]" />
+                  </div>
+                  <span>用户协议</span>
+                </button>
+                <button
+                  onClick={() => { setMoreOpen(false); openExternalUrl(PRIVACY_POLICY_URL); }}
+                  className="apple-more-item flex items-center gap-3 w-full text-left px-4 py-3 text-[14px] text-[#1d1d1f]"
+                >
+                  <div className="apple-more-icon bg-[#34c759]/10 shrink-0">
+                    <i className="fas fa-shield-halved text-[14px] text-[#34c759]" />
+                  </div>
+                  <span>隐私政策</span>
+                </button>
                 <button
                   onClick={() => { setMoreOpen(false); openFeedback({ name: paperName }); }}
                   className="apple-more-item flex items-center gap-3 w-full text-left px-4 py-3 text-[14px] text-[#1d1d1f]"

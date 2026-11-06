@@ -14,6 +14,7 @@
 
 import type { Paper, Question, HistoryRecord } from '../types';
 import { QuestionType } from '../types';
+import { hasLocalPrivacyConsent, trackUmengEvent } from './umengAndroid';
 
 declare global {
   interface Window {
@@ -67,6 +68,8 @@ function sendUmami(eventName: string, data?: Record<string, unknown>) {
  * 开发环境只打印日志，不发真实请求。
  */
 function send(eventName: string, action: string, label: string, value?: number) {
+  if (!hasLocalPrivacyConsent()) return;
+  trackUmengEvent(eventName, { action, label, value });
   if (isDev) {
     console.log('[analytics]', eventName, action, label, value ?? '');
     return;
@@ -76,6 +79,8 @@ function send(eventName: string, action: string, label: string, value?: number) 
 }
 
 function sendParams(eventName: string, params: Record<string, unknown>) {
+  if (!hasLocalPrivacyConsent()) return;
+  trackUmengEvent(eventName, params);
   if (isDev) {
     console.log('[analytics]', eventName, params);
     return;

@@ -1,14 +1,21 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { App as CapacitorApp } from '@capacitor/app';
+import { Capacitor } from '@capacitor/core';
 import Navbar from './components/Navbar';
 import Home from './pages/Home';
 import ExamDetail from './pages/ExamDetail';
 import Report from './pages/Report';
 import Profile from './pages/Profile';
 import PaymentModal from './components/PaymentModal';
+import PrivacyConsentModal from './components/PrivacyConsentModal';
 import { Paper, User, Question, HistoryRecord, GradingResult } from './types';
 import { API_BASE } from './constants';
 import { geminiService } from './services/geminiService';
 import { track } from './services/analytics';
+import {
+  getPrivacyConsentStatus,
+  grantPrivacyConsent,
+} from './services/umengAndroid';
 
 /**
  * 试卷列表缓存按后端地址分键，避免「连本地后端」却仍读到上次缓存的线上列表（无事业单位）。
@@ -19,7 +26,7 @@ const LS_PAPERS_LIST = `shenlun_papers_v6_${encodeURIComponent(API_BASE)}`;
  * 试卷详情 localStorage：须带版本号。仅改 backend JSON 时用户浏览器可能仍用旧缓存（含已删的 OCR 占位），
  * bump 版本号可全员失效旧缓存；启动时也会清掉旧前缀键。
  */
-const LS_PAPER_DETAIL_PREFIX = `shenlun_pd_v80_${encodeURIComponent(API_BASE)}_`;
+const LS_PAPER_DETAIL_PREFIX = `shenlun_pd_v81_${encodeURIComponent(API_BASE)}_`;
 const MAX_CACHED_DETAILS = 30;
 const USE_BUNDLED_PAPERS = import.meta.env.VITE_BUNDLED_PAPERS === 'true';
 const BUNDLED_PAPER_BASE = new URL('papers/', document.baseURI).toString();
@@ -133,6 +140,8 @@ const App: React.FC = () => {
   const [isGrading, setIsGrading] = useState(false);
   const [isLoadingPaper, setIsLoadingPaper] = useState(false);
   const [history, setHistory] = useState<HistoryRecord[]>([]);
+  const [privacyReady, setPrivacyReady] = useState(false);
+  const [privacyAccepted, setPrivacyAccepted] = useState(false);
 
   const [papers, setPapers] = useState<Paper[]>(cachedList);
   const [isPapersLoading, setIsPapersLoading] = useState(cachedList.length === 0);
@@ -154,6 +163,32 @@ const App: React.FC = () => {
   useEffect(() => {
     const savedHistory = localStorage.getItem('history');
     if (savedHistory) setHistory(JSON.parse(savedHistory));
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadPrivacyConsent = async () => {
+      let accepted = false;
+      try {
+        accepted = await getPrivacyConsentStatus();
+        if (accepted) {
+          await grantPrivacyConsent();
+        }
+      } catch (error) {
+        console.error('读取隐私授权状态失败:', error);
+      } finally {
+        if (!cancelled) {
+          setPrivacyAccepted(accepted);
+          setPrivacyReady(true);
+        }
+      }
+    };
+
+    void loadPrivacyConsent();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const getUrl = () => window.location.pathname + window.location.search;
@@ -185,6 +220,81 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+
+    let disposed = false;
+    let listener: { remove: () => Promise<void> } | undefined;
+
+    void CapacitorApp.addListener('backButton', ({ canGoBack }) => {
+      if (isPaymentModalOpen) {
+        setIsPaymentModalOpen(false);
+        return;
+      }
+      if (isGrading) return;
+
+      // 首页返回只把 App 放到后台，不在内容页直接结束应用。
+      if (currentPage === 'home') {
+        void CapacitorApp.minimizeApp();
+        return;
+      }
+
+      if (canGoBack) {
+        window.history.back();
+        return;
+      }
+
+      // fallback：极少数 WebView 未记录 pushState 时，按页面关系显式返回。
+      if (currentPage === 'report') {
+        if (window.history.state?.from === 'exam' && selectedPaper) {
+          setBackFromReportToExam(true);
+          setSelectedRecord(null);
+          setCurrentPage('exam');
+          window.history.replaceState({ page: 'exam' }, '', getUrl());
+        } else {
+          setSelectedRecord(null);
+          setCurrentPage('profile');
+          window.history.replaceState({ page: 'profile' }, '', getUrl());
+        }
+        return;
+      }
+
+      if (currentPage === 'exam') {
+        setSelectedPaper(null);
+        setBackFromReportToExam(false);
+        setCurrentPage('home');
+        window.history.replaceState({ page: 'home' }, '', getUrl());
+        return;
+      }
+
+      if (currentPage === 'profile') {
+        setCurrentPage('home');
+        window.history.replaceState({ page: 'home' }, '', getUrl());
+        return;
+      }
+
+      void CapacitorApp.minimizeApp();
+    }).then((handle) => {
+      if (disposed) {
+        void handle.remove();
+      } else {
+        listener = handle;
+      }
+    });
+
+    return () => {
+      disposed = true;
+      if (listener) void listener.remove();
+    };
+  }, [
+    currentPage,
+    isGrading,
+    isPaymentModalOpen,
+    selectedPaper,
+    backFromReportToExam,
+  ]);
+
+  useEffect(() => {
+    if (!privacyAccepted) return;
     let cancelled = false;
 
     const applyPapers = (data: unknown) => {
@@ -230,20 +340,39 @@ const App: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [privacyAccepted]);
 
   // 会话开始埋点（每次打开页面触发，用于 DAU / 留存统计）
   useEffect(() => {
+    if (!privacyAccepted) return;
     track.userSessionStart();
-  }, []);
+  }, [privacyAccepted]);
 
   // 页面浏览埋点
   useEffect(() => {
+    if (!privacyAccepted) return;
     const page = currentPage as 'home' | 'exam' | 'report' | 'profile';
     if (['home', 'exam', 'report', 'profile'].includes(currentPage)) {
       track.pageView(page);
     }
-  }, [currentPage]);
+  }, [currentPage, privacyAccepted]);
+
+  const handlePrivacyAgree = async () => {
+    try {
+      await grantPrivacyConsent();
+    } catch (error) {
+      console.error('初始化隐私授权失败:', error);
+    }
+    setPrivacyAccepted(true);
+  };
+
+  const handlePrivacyDisagree = () => {
+    if (Capacitor.isNativePlatform()) {
+      void CapacitorApp.exitApp();
+    } else {
+      alert('需要同意个人信息保护指引后才能使用爱学申论。');
+    }
+  };
 
   const handleLogout = () => {
     setUser(null);
@@ -498,7 +627,7 @@ const App: React.FC = () => {
             onViewRecord={(rec) => {
               setSelectedRecord(rec);
               setCurrentPage('report');
-              window.history.pushState({ page: 'report' }, '', getUrl());
+              window.history.pushState({ page: 'report', from: 'profile' }, '', getUrl());
             }} 
           />
         )}
@@ -548,6 +677,19 @@ const App: React.FC = () => {
             <p className="text-gray-700 font-bold">正在打开试卷...</p>
           </div>
         </div>
+      )}
+
+      {!privacyReady && (
+        <div className="fixed inset-0 z-[290] flex items-center justify-center bg-white">
+          <div className="w-9 h-9 rounded-full border-4 border-blue-100 border-t-[#0071e3] animate-spin" />
+        </div>
+      )}
+
+      {privacyReady && !privacyAccepted && (
+        <PrivacyConsentModal
+          onAgree={handlePrivacyAgree}
+          onDisagree={handlePrivacyDisagree}
+        />
       )}
     </div>
   );

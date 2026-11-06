@@ -7,6 +7,28 @@ export const API_BASE = (typeof import.meta !== 'undefined' && (import.meta as a
 export const FEEDBACK_URL = 'https://p1ygyyk2nl3.feishu.cn/share/base/form/shrcnRZ3RNCnzgJ0SeTm27MBX7e';
 /** 更新日志 */
 export const CHANGELOG_URL = 'https://txc.qq.com/products/799248/change-log';
+/** 隐私政策 */
+export const PRIVACY_POLICY_URL = 'https://s.jiaojuku.com/p/hyufek';
+/** 用户协议 */
+export const USER_AGREEMENT_URL = 'https://s.jiaojuku.com/p/dkldvr';
+
+/** 在系统浏览器或新窗口打开外部链接 */
+export function openExternalUrl(url: string): void {
+  try {
+    const link = document.createElement('a');
+    link.href = url;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    link.click();
+    setTimeout(() => {
+      link.parentNode?.removeChild(link);
+    }, 300);
+  } catch {
+    window.open(url, '_blank', 'noopener,noreferrer');
+  }
+}
 
 /** 打开意见反馈（新窗口），可选带上试卷信息。延迟执行并用 <a> 点击，减少手机/电脑上与下拉关闭冲突导致的崩溃 */
 export function openFeedback(paperInfo?: { id?: string; name: string } | null): void {

@@ -1,0 +1,2 @@
+cae188940fbf9c45f1f495bc66eff9c32b83350ff1b86b49a6b0c16f9bde318c  AixueShenlun-1.0.5-release.apk
+60136f59c2c0adbd67670e796a27fad8268e189f2fd5784bc708928631a3ddf4  AixueShenlun-1.0.5-release.aab

@@ -13,6 +13,7 @@ import time
 from zoneinfo import ZoneInfo
 import urllib.request
 import urllib.error
+import urllib.parse
 from typing import Optional, List, Dict, Any, Tuple
 from collections import Counter
 import sys
@@ -177,6 +178,758 @@ def _load_paper_by_id(paper_id: str):
     return None
 
 
+def _material_id(m: Any) -> str:
+    """取材料 id，兼容 id / materialId / mid 三种字段名"""
+    if not isinstance(m, dict):
+        return ""
+    return str(m.get("id") or m.get("materialId") or m.get("mid") or "")
+
+
+def _id_variants(value: Any) -> set:
+    """把材料/题目的 id 归一化，兼容 m1 / 1 / M1 等写法"""
+    s = str(value).strip()
+    if not s:
+        return set()
+    out = {s, s.lower()}
+    m_num = re.fullmatch(r"[a-zA-Z]*?(\d+)", s)
+    if m_num:
+        num = m_num.group(1)
+        out.update({num, f"m{num}"})
+    return out
+
+
+# ---------------------------------------------------------
+# 1.5 小题「踩分标尺（rubric）」：同一道题只生成一次，之后每次批改复用
+#     目的：避免每次批改都让模型重新归纳要点，导致同一题两次批改要点数量/粒度漂移
+# ---------------------------------------------------------
+RUBRIC_DIR = os.path.join(get_data_dir(), "rubrics")
+RUBRIC_VERSION = 1
+
+RUBRIC_EXTRACTION_INSTRUCTION = """# Role: 申论命题组 & 阅卷标准制定专家
+你的任务是为一道申论小题「制定踩分标尺」，不是批改考生答案。标尺一旦确定会被系统固化，后续所有批改都以它为准，所以必须严谨、可核验。
+
+# 输入
+- 题目：{TITLE}
+- 题目要求：{REQUIREMENTS}
+- 本题满分：{MAX_SCORE} 分
+- 本题相关材料（含完整正文）：{MATERIALS}
+
+# 制定规则（必须严格遵守）
+1. 逐段扫描：按材料顺序逐段提炼，不得跳过任何一段；每段要么归入某个要点，要么明确判定「该段无得分点」。
+2. 要点数量：4~6 个。材料确实只有一个层次时才可少于 4 个；禁止把一个要点拆成多条凑数，也禁止把两个独立要点合并。
+3. 每个要点必须是「动词 + 名词」的可得分表述（如「完善利益联结机制」「培育本土技术人才」），不能是案例细节、数据、背景描述或空泛口号。
+4. keywords：每个要点给 2~5 个材料原词，必须是材料原文中出现过的词，不得自造同义词。
+5. evidence：从材料中逐字摘录 15~40 字原文作为依据，必须与材料原文完全一致（不得改写、不得拼接、不得跨段拼）。
+6. 分值：各要点分值之和必须等于 {MAX_SCORE}，按要点重要程度分配整数分值。
+7. 覆盖度自查：输出前逐段核对，确认每段信息都已归入某个要点或标注为无得分点。
+
+# 输出
+只输出一个 JSON 对象，不要解释、不要额外文字：
+{
+  "points": [
+    {"no": 1, "summary": "要点概括（动词+名词）", "keywords": ["材料原词1", "材料原词2"], "score": 5, "evidence": "材料原文片段", "materialId": "m1"}
+  ],
+  "coverage": [
+    {"materialId": "m1", "covered": true, "note": "归入第 1 条"}
+  ]
+}
+"""
+
+
+def _rubric_material_hash(materials: List[Dict[str, Any]]) -> str:
+    """材料内容指纹：材料被修改后旧标尺自动失效"""
+    digest = hashlib.sha256()
+    digest.update(str(RUBRIC_VERSION).encode("utf-8"))
+    for m in materials or []:
+        if not isinstance(m, dict):
+            continue
+        digest.update(str(m.get("id") or "").encode("utf-8"))
+        digest.update(str(m.get("title") or "").encode("utf-8"))
+        digest.update(str(m.get("content") or "").encode("utf-8"))
+    return digest.hexdigest()[:16]
+
+
+def _rubric_path(paper_id: str, question_id: str) -> str:
+    safe = re.sub(r"[^0-9A-Za-z_.-]", "_", f"{paper_id}__{question_id}")
+    return os.path.join(RUBRIC_DIR, f"{safe}.json")
+
+
+def _extract_json_object(text: str) -> Optional[dict]:
+    """从模型输出中取出第一个完整 JSON 对象（兼容 ```json 包裹与前后废话）"""
+    if not text:
+        return None
+    cleaned = re.sub(r"^```(?:json)?\s*|\s*```$", "", text.strip(), flags=re.MULTILINE)
+    start = cleaned.find("{")
+    end = cleaned.rfind("}")
+    if start < 0 or end <= start:
+        return None
+    try:
+        return json.loads(cleaned[start:end + 1])
+    except Exception:
+        return None
+
+
+def _rescale_point_scores(points: List[Dict[str, Any]], max_score: int) -> None:
+    """把要点分值等比缩放到满分，保证 sum(score) == max_score（整数）"""
+    if not points or max_score <= 0:
+        return
+    scores = [max(0, int(p.get("score") or 0)) for p in points]
+    total = sum(scores)
+    if total <= 0:
+        base = max_score // len(points)
+        for idx, p in enumerate(points):
+            p["score"] = base if idx < len(points) - 1 else max_score - base * (len(points) - 1)
+        return
+    if total == max_score:
+        return
+    scaled = [max(1, round(s * max_score / total)) for s in scores]
+    diff = max_score - sum(scaled)
+    # 差额补到分值最大的要点上，避免出现 0 分要点
+    scaled[scaled.index(max(scaled))] += diff
+    for p, s in zip(points, scaled):
+        p["score"] = max(0, s)
+
+
+def _normalize_rubric(
+    data: dict,
+    paper_id: str,
+    question_id: str,
+    max_score: int,
+    material_hash: str,
+    material_ids: List[str],
+    source: str,
+) -> Optional[dict]:
+    """校验并规整标尺结构，不合格返回 None（调用方回退到实时归纳）"""
+    if not isinstance(data, dict):
+        return None
+    raw_points = data.get("points")
+    if not isinstance(raw_points, list) or not raw_points:
+        return None
+
+    points: List[Dict[str, Any]] = []
+    for idx, p in enumerate(raw_points, start=1):
+        if not isinstance(p, dict):
+            continue
+        summary = str(p.get("summary") or p.get("point") or "").strip()
+        if not summary:
+            continue
+        keywords = p.get("keywords") or p.get("words") or []
+        if isinstance(keywords, str):
+            keywords = [keywords]
+        keywords = [str(k).strip() for k in keywords if str(k).strip()]
+        points.append({
+            "no": idx,
+            "summary": summary,
+            "keywords": keywords,
+            "score": int(p.get("score") or 0),
+            "evidence": str(p.get("evidence") or "").strip(),
+            "materialId": str(p.get("materialId") or "").strip(),
+        })
+
+    if len(points) < 2:
+        return None
+    _rescale_point_scores(points, max_score)
+
+    return {
+        "version": RUBRIC_VERSION,
+        "paperId": paper_id,
+        "questionId": question_id,
+        "maxScore": max_score,
+        "materialIds": material_ids,
+        "materialHash": material_hash,
+        "points": points,
+        "coverage": data.get("coverage") if isinstance(data.get("coverage"), list) else [],
+        "source": source,
+        "createdAt": datetime.now(timezone.utc).astimezone().isoformat(timespec="seconds"),
+    }
+
+
+def _load_rubric(paper_id: str, question_id: str, material_hash: str) -> Optional[dict]:
+    path = _rubric_path(paper_id, question_id)
+    if not os.path.isfile(path):
+        return None
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            rubric = json.load(f)
+    except Exception as e:
+        print(f"[标尺] 读取失败 {path}: {e}")
+        return None
+    if rubric.get("version") != RUBRIC_VERSION:
+        print(f"[标尺] 版本过期，重新生成: {path}")
+        return None
+    if rubric.get("materialHash") != material_hash:
+        print(f"[标尺] 材料已变更，重新生成: {path}")
+        return None
+    # 结构自检：人工改坏或旧格式（缺 points/要点为空）时按「无标尺」处理，避免注入时报错
+    points = rubric.get("points")
+    if not isinstance(points, list) or not points or not all(
+        isinstance(p, dict) and str(p.get("summary") or "").strip() for p in points
+    ):
+        print(f"[标尺] 结构不完整，重新生成: {path}")
+        return None
+    return rubric
+
+
+def _save_rubric(rubric: dict) -> None:
+    path = _rubric_path(rubric["paperId"], rubric["questionId"])
+    try:
+        os.makedirs(RUBRIC_DIR, exist_ok=True)
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(rubric, f, ensure_ascii=False, indent=2)
+        print(f"[标尺] 已固化 {path}（{len(rubric['points'])} 个要点）")
+    except Exception as e:
+        print(f"[标尺] 写入失败 {path}: {e}")
+
+
+def _normalize_for_match(text: str) -> str:
+    """比对用的归一化：去掉空白与常见中英文标点，只留实义字符"""
+    return re.sub(r"[\s，。、；：？！“”‘’（）《》〈〉【】〔〕—…·,.;:?!\"'()\[\]<>/\\|~`-]+", "", text or "")
+
+
+def _evidence_hit(evidence: str, material_text: str) -> str:
+    """判断 evidence 是否来自材料原文。
+
+    返回 "exact"（整段命中）/ "partial"（连续 12 字片段命中）/ ""（编造）。
+    模型常会轻微改写或漏标点，所以留一个片段命中的口子，但整段编造的必须挡住。
+    """
+    ev = _normalize_for_match(evidence)
+    if not ev or len(ev) < 6:
+        return ""
+    if ev in material_text:
+        return "exact"
+    window = 12
+    if len(ev) >= window:
+        for i in range(0, len(ev) - window + 1):
+            if ev[i:i + window] in material_text:
+                return "partial"
+    return ""
+
+
+def _verify_rubric_quality(rubric: dict, materials: List[Dict[str, Any]]) -> dict:
+    """给标尺做证据校验与覆盖度校验，结果写入 rubric["quality"]。
+
+    - verifiedRatio：要点中「证据能在材料原文找到」的比例（防止模型编造要点）
+    - coverageComplete：每份材料是否都有要点归属（防止漏段）
+    - keywordRatio：要点关键词在材料中出现的比例
+    """
+    material_text = _normalize_for_match("".join(str(m.get("content") or "") for m in materials or []))
+    points = rubric.get("points") or []
+
+    verified = 0
+    keyword_hits = 0
+    for p in points:
+        match = _evidence_hit(str(p.get("evidence") or ""), material_text)
+        p["evidenceMatch"] = match
+        p["evidenceVerified"] = bool(match)
+        if match:
+            verified += 1
+        keywords = [str(k) for k in (p.get("keywords") or [])]
+        if keywords and any(_normalize_for_match(k) in material_text for k in keywords):
+            keyword_hits += 1
+
+    covered_ids = set()
+    for p in points:
+        mid = str(p.get("materialId") or "").strip()
+        if mid:
+            covered_ids.add(mid)
+    covered_variants = set()
+    for mid in covered_ids:
+        covered_variants |= _id_variants(mid)
+    all_ids = [str(m.get("id")) for m in materials or [] if isinstance(m, dict) and m.get("id")]
+    missing = [i for i in all_ids if not (_id_variants(i) & covered_variants)]
+
+    total = len(points) or 1
+    quality = {
+        "verifiedRatio": round(verified / total, 2),
+        "keywordRatio": round(keyword_hits / total, 2),
+        "coverageComplete": not missing,
+        "missingMaterialIds": missing,
+        "pointCount": len(points),
+    }
+    rubric["quality"] = quality
+    return quality
+
+
+def _rubric_env_float(name: str, default: float) -> float:
+    try:
+        return float((os.getenv(name) or "").strip() or default)
+    except ValueError:
+        return default
+
+
+def _rubric_env_int(name: str, default: int) -> int:
+    try:
+        return int((os.getenv(name) or "").strip() or default)
+    except ValueError:
+        return default
+
+
+def _rubric_status_by_quality(quality: dict) -> str:
+    """质量达标自动 approved，否则 draft（只作参考，允许模型补充）"""
+    if (os.getenv("RUBRIC_AUTO_APPROVE") or "1").strip().lower() in {"0", "false", "no", "off"}:
+        return "draft"
+    min_verified = _rubric_env_float("RUBRIC_MIN_VERIFIED", 0.8)
+    if quality.get("verifiedRatio", 0) >= min_verified and quality.get("coverageComplete"):
+        return "approved"
+    return "draft"
+
+
+def _build_rubric_once(
+    prompt: str,
+    paper_id: str,
+    question_id: str,
+    max_score: int,
+    material_hash: str,
+    material_ids: List[str],
+    materials: List[Dict[str, Any]],
+) -> Optional[dict]:
+    text, provider, _model = call_grading_model(prompt, None, temperature=0.0, top_p=1.0)
+    data = _extract_json_object(text or "")
+    rubric = _normalize_rubric(data or {}, paper_id, question_id, max_score, material_hash, material_ids, "auto")
+    if not rubric:
+        print(f"[标尺] 生成失败或格式不合格 paper={paper_id} q={question_id} provider={provider}")
+        return None
+    _verify_rubric_quality(rubric, materials)
+    return rubric
+
+
+def _rubric_score_for_ranking(rubric: dict) -> Tuple[float, float]:
+    """多采样取优的排序键：证据通过率 > 关键词命中率/覆盖完整/要点数合理"""
+    q = rubric.get("quality") or {}
+    point_count = q.get("pointCount", 0)
+    sane = 1 if 4 <= point_count <= 6 else 0
+    return (
+        float(q.get("verifiedRatio", 0)),
+        float(q.get("keywordRatio", 0)) + (0.5 if q.get("coverageComplete") else 0) + sane * 0.1,
+    )
+
+
+def _point_bigrams(text: str) -> set:
+    s = _normalize_for_match(text)
+    if not s:
+        return set()
+    return {s[i:i + 2] for i in range(len(s) - 1)} or {s}
+
+
+def _point_similarity(a: Dict[str, Any], b: Dict[str, Any]) -> float:
+    """两个要点的相似度：摘要字符二元组 Jaccard 与关键词重合度取较大值"""
+    ga, gb = _point_bigrams(str(a.get("summary") or "")), _point_bigrams(str(b.get("summary") or ""))
+    jac = len(ga & gb) / len(ga | gb) if (ga and gb) else 0.0
+    ka = {_normalize_for_match(k) for k in (a.get("keywords") or []) if str(k).strip()}
+    kb = {_normalize_for_match(k) for k in (b.get("keywords") or []) if str(k).strip()}
+    kw = len(ka & kb) / max(1, min(len(ka), len(kb))) if (ka and kb) else 0.0
+    return max(jac, kw)
+
+
+def _merge_candidate_rubrics(
+    pool: List[dict],
+    max_score: int,
+    material_hash: str,
+    material_ids: List[str],
+    paper_id: str,
+    question_id: str,
+) -> Optional[dict]:
+    """把多次采样/多次批改得到的候选要点聚类归并成一份标尺。
+
+    规则：同一要点被越多份候选提到，越可信；按「出现次数 > 证据命中 > 成员数」排序后取前 k 个。
+    k 取各候选要点数的中位数（夹在 3~6），避免归并后要点过少或过碎。
+    """
+    if not pool:
+        return None
+    if len(pool) == 1:
+        return pool[0]
+
+    clusters: List[Dict[str, Any]] = []
+    for idx, cand in enumerate(pool):
+        for p in cand.get("points") or []:
+            if not isinstance(p, dict):
+                continue
+            best, best_sim = None, 0.0
+            for cl in clusters:
+                sim = _point_similarity(p, cl["rep"])
+                if sim > best_sim:
+                    best, best_sim = cl, sim
+            if best is not None and best_sim >= 0.5:
+                best["members"].append(p)
+                best["candidates"].add(idx)
+            else:
+                clusters.append({"rep": p, "members": [p], "candidates": {idx}})
+
+    if len(clusters) < 2:
+        return None
+
+    def sort_key(cl: Dict[str, Any]) -> Tuple[int, int, int]:
+        hits = sum(1 for m in cl["members"] if m.get("evidenceVerified"))
+        return (len(cl["candidates"]), hits, len(cl["members"]))
+
+    clusters.sort(key=sort_key, reverse=True)
+
+    counts = sorted(len(c.get("points") or []) for c in pool)
+    target = counts[len(counts) // 2] if counts else 4
+    target = max(3, min(6, target))
+
+    points: List[Dict[str, Any]] = []
+    for no, cl in enumerate(clusters[:target], start=1):
+        members = cl["members"]
+        # 摘要：取出现次数最多的写法
+        summary_key = Counter(_normalize_for_match(str(m.get("summary") or "")) for m in members).most_common(1)[0][0]
+        summary = next(
+            str(m.get("summary")) for m in members if _normalize_for_match(str(m.get("summary") or "")) == summary_key
+        )
+        keywords: List[str] = []
+        for m in members:
+            for k in m.get("keywords") or []:
+                if k not in keywords:
+                    keywords.append(k)
+        evidence = next((str(m.get("evidence")) for m in members if m.get("evidenceVerified")), "")
+        if not evidence:
+            evidence = str(members[0].get("evidence") or "")
+        mids = Counter(str(m.get("materialId") or "") for m in members if m.get("materialId"))
+        scores = [int(m.get("score") or 0) for m in members]
+        points.append({
+            "no": no,
+            "summary": summary,
+            "keywords": keywords[:5],
+            "score": round(sum(scores) / len(scores)) if scores else 0,
+            "evidence": evidence,
+            "materialId": mids.most_common(1)[0][0] if mids else "",
+            "support": len(cl["candidates"]),
+        })
+
+    rubric = _normalize_rubric(
+        {"points": points}, paper_id, question_id, max_score, material_hash, material_ids, "auto"
+    )
+    if not rubric:
+        return None
+    rubric["mergeInfo"] = {
+        "candidates": len(pool),
+        "clusters": len(clusters),
+        "kept": len(points),
+        "support": [p.get("support") for p in points],
+    }
+    return rubric
+
+
+# ---------------------------------------------------------
+# 累积投票存储：只存「聚合状态」（每簇计数），不存历史明细，单题约 1~2KB
+#   RUBRIC_VOTE_STORE=file（默认，落本地盘）| redis（Upstash REST，免费额度足够）| none
+# ---------------------------------------------------------
+def _votes_dir() -> str:
+    """跟随 RUBRIC_DIR 动态计算，避免目录被改（如测试/多环境）后写到旧路径"""
+    return os.path.join(RUBRIC_DIR, "_votes")
+
+
+def _vote_key(paper_id: str, question_id: str) -> str:
+    safe = re.sub(r"[^0-9A-Za-z_.-]", "_", f"{paper_id}__{question_id}")
+    return f"rubric:votes:{safe}"
+
+
+def _vote_store_backend() -> str:
+    return (os.getenv("RUBRIC_VOTE_STORE") or "file").strip().lower()
+
+
+def _kv_get(key: str) -> Optional[dict]:
+    """读聚合状态。任何失败都返回 None（等同于「没有历史」），不阻断批改。"""
+    backend = _vote_store_backend()
+    if backend == "none":
+        return None
+    if backend == "redis":
+        url = (os.getenv("UPSTASH_REDIS_REST_URL") or "").rstrip("/")
+        token = os.getenv("UPSTASH_REDIS_REST_TOKEN") or ""
+        if not url or not token:
+            print("[标尺] 未配置 UPSTASH_REDIS_REST_URL/TOKEN，投票存储降级为跳过")
+            return None
+        try:
+            req = urllib.request.Request(
+                f"{url}/get/{urllib.parse.quote(key)}",
+                headers={"Authorization": f"Bearer {token}"},
+            )
+            with urllib.request.urlopen(req, timeout=3) as resp:
+                data = json.loads(resp.read().decode("utf-8") or "{}")
+            raw = data.get("result")
+            return json.loads(raw) if raw else None
+        except Exception as e:
+            print(f"[标尺] Redis 读取失败（跳过投票）: {e}")
+            return None
+
+    path = os.path.join(_votes_dir(), f"{key}.json")
+    if not os.path.isfile(path):
+        return None
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception as e:
+        print(f"[标尺] 投票文件读取失败 {path}: {e}")
+        return None
+
+
+def _kv_set(key: str, value: dict) -> None:
+    backend = _vote_store_backend()
+    if backend == "none":
+        return
+    payload = json.dumps(value, ensure_ascii=False)
+    if backend == "redis":
+        url = (os.getenv("UPSTASH_REDIS_REST_URL") or "").rstrip("/")
+        token = os.getenv("UPSTASH_REDIS_REST_TOKEN") or ""
+        if not url or not token:
+            return
+        try:
+            body = json.dumps(["SET", key, payload], ensure_ascii=False).encode("utf-8")
+            req = urllib.request.Request(
+                url,
+                data=body,
+                headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+                method="POST",
+            )
+            with urllib.request.urlopen(req, timeout=3) as resp:
+                resp.read()
+            print(f"[标尺] 投票状态已写入 Redis（{len(payload)} 字节）")
+        except Exception as e:
+            print(f"[标尺] Redis 写入失败（本次投票未保存）: {e}")
+        return
+
+    path = os.path.join(_votes_dir(), f"{key}.json")
+    try:
+        os.makedirs(_votes_dir(), exist_ok=True)
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(payload)
+    except Exception as e:
+        print(f"[标尺] 投票文件写入失败 {path}: {e}")
+
+
+def _empty_vote_state() -> dict:
+    return {"rounds": 0, "clusters": [], "updatedAt": None}
+
+
+def _merge_vote_state(state: Optional[dict], candidate_points: List[dict], keep_clusters: int = 12) -> dict:
+    """把一份候选要点并入聚合状态：同一要点累加计数，不做全量历史存储。"""
+    state = dict(state or _empty_vote_state())
+    clusters: List[dict] = [dict(c) for c in state.get("clusters") or []]
+    for cl in clusters:
+        cl.setdefault("count", 1)
+        cl.setdefault("keywords", [])
+        cl.setdefault("scores", [])
+
+    for p in candidate_points or []:
+        if not isinstance(p, dict):
+            continue
+        best, best_sim = None, 0.0
+        for cl in clusters:
+            sim = _point_similarity(p, cl)
+            if sim > best_sim:
+                best, best_sim = cl, sim
+        if best is not None and best_sim >= 0.5:
+            best["count"] += 1
+            best["scores"].append(int(p.get("score") or 0))
+            for k in p.get("keywords") or []:
+                if k not in best["keywords"]:
+                    best["keywords"].append(k)
+            if p.get("evidenceVerified") and not best.get("evidenceVerified"):
+                best["evidence"] = str(p.get("evidence") or "")
+                best["evidenceVerified"] = True
+            if not best.get("materialId") and p.get("materialId"):
+                best["materialId"] = str(p.get("materialId"))
+        else:
+            clusters.append({
+                "summary": str(p.get("summary") or ""),
+                "keywords": list(p.get("keywords") or [])[:5],
+                "count": 1,
+                "scores": [int(p.get("score") or 0)],
+                "evidence": str(p.get("evidence") or ""),
+                "evidenceVerified": bool(p.get("evidenceVerified")),
+                "materialId": str(p.get("materialId") or ""),
+            })
+
+    clusters.sort(key=lambda c: (c.get("count", 0), 1 if c.get("evidenceVerified") else 0), reverse=True)
+    state["clusters"] = clusters[:keep_clusters]
+    state["rounds"] = int(state.get("rounds", 0)) + 1
+    state["updatedAt"] = datetime.now(timezone.utc).astimezone().isoformat(timespec="seconds")
+    return state
+
+
+def _rubric_from_vote_state(
+    state: dict,
+    max_score: int,
+    material_hash: str,
+    material_ids: List[str],
+    paper_id: str,
+    question_id: str,
+) -> Optional[dict]:
+    """按票数把聚合状态还原成标尺：过半票的要点优先，不足 3 个时按票数补足。"""
+    clusters = state.get("clusters") or []
+    if not clusters:
+        return None
+    rounds = int(state.get("rounds") or 1)
+    threshold = max(2, -(-rounds // 2)) if rounds >= 2 else 1
+    kept = [c for c in clusters if int(c.get("count") or 0) >= threshold][:6]
+    if len(kept) < 3:
+        kept = clusters[:min(6, len(clusters))]
+
+    points: List[Dict[str, Any]] = []
+    for no, cl in enumerate(kept, start=1):
+        scores = [s for s in (cl.get("scores") or []) if isinstance(s, int)]
+        points.append({
+            "no": no,
+            "summary": cl.get("summary") or "",
+            "keywords": list(cl.get("keywords") or [])[:5],
+            "score": round(sum(scores) / len(scores)) if scores else 0,
+            "evidence": cl.get("evidence") or "",
+            "materialId": cl.get("materialId") or "",
+            "support": int(cl.get("count") or 0),
+        })
+
+    rubric = _normalize_rubric(
+        {"points": points}, paper_id, question_id, max_score, material_hash, material_ids, "auto"
+    )
+    if not rubric:
+        return None
+    rubric["voteState"] = {"rounds": rounds, "kept": len(points), "clusters": len(clusters)}
+    return rubric
+
+
+def _append_votes(paper_id: str, question_id: str, candidates: List[dict]) -> dict:
+    """把候选要点并入聚合状态并写回存储，返回最新状态"""
+    key = _vote_key(paper_id, question_id)
+    state = _kv_get(key)
+    for cand in candidates:
+        state = _merge_vote_state(state, cand.get("points") or [])
+    _kv_set(key, state)
+    return state
+
+
+def get_or_create_rubric(
+    paper_id: str,
+    question: Dict[str, Any],
+    materials: List[Dict[str, Any]],
+    max_score: int,
+    province_label: str = "",
+) -> Tuple[Optional[dict], str]:
+    """读取或生成小题标尺。返回 (rubric, 来源)，失败返回 (None, "")。"""
+    question_id = str(question.get("id") or question.get("qid") or "q1")
+    material_hash = _rubric_material_hash(materials)
+    material_ids = [str(m.get("id")) for m in materials or [] if isinstance(m, dict)]
+
+    cached = _load_rubric(paper_id, question_id, material_hash)
+    if cached:
+        status = cached.get("status") or "approved"
+        print(f"[标尺] 复用已固化标尺 paper={paper_id} q={question_id} status={status}")
+        return cached, "复用"
+
+    prompt = (
+        RUBRIC_EXTRACTION_INSTRUCTION
+        .replace("{TITLE}", str(question.get("title") or ""))
+        .replace("{REQUIREMENTS}", str(question.get("requirements") or ""))
+        .replace("{MAX_SCORE}", str(max_score))
+        .replace("{MATERIALS}", json.dumps(materials or [], ensure_ascii=False))
+    )
+    if province_label:
+        prompt += f"\n【地区特征参考】{province_label}：{PROVINCE_GRADING_PROFILE.get(province_label, {}) or ''}"
+
+    # 首次生成容易不准：跑多次并「对比归并」，而不是简单取一份（RUBRIC_SAMPLE_TIMES 可调）
+    sample_times = max(1, min(5, _rubric_env_int("RUBRIC_SAMPLE_TIMES", 2)))
+    candidates: List[dict] = []
+    for idx in range(sample_times):
+        candidate = _build_rubric_once(
+            prompt, paper_id, question_id, max_score, material_hash, material_ids, materials
+        )
+        if candidate:
+            candidates.append(candidate)
+            q = candidate.get("quality") or {}
+            print(
+                f"[标尺] 采样 {idx + 1}/{sample_times}：{q.get('pointCount')} 个要点，"
+                f"证据通过率 {q.get('verifiedRatio')}，覆盖完整={q.get('coverageComplete')}"
+            )
+            # 第一次就全部证据命中且覆盖完整，说明这次抽得很准，不必再采
+            if q.get("verifiedRatio", 0) >= 0.99 and q.get("coverageComplete"):
+                break
+
+    if not candidates:
+        return None, ""
+
+    # 可选：累积投票模式。存储里只保留「聚合状态」（每簇计数），不存历史明细
+    accumulate = (os.getenv("RUBRIC_VOTE_ACCUMULATE") or "0").strip().lower() in {"1", "true", "yes", "on"}
+    if accumulate:
+        state = _append_votes(paper_id, question_id, candidates)
+        rounds = int(state.get("rounds") or 0)
+        merged = _rubric_from_vote_state(state, max_score, material_hash, material_ids, paper_id, question_id)
+        if merged:
+            quality = _verify_rubric_quality(merged, materials)
+            merged["status"] = _rubric_status_by_quality(quality)
+            merged["sampleTimes"] = rounds
+            merged["voteCount"] = rounds
+            print(
+                f"[标尺] 投票归并：{len(merged['points'])} 个要点（累计 {rounds} 次），"
+                f"证据通过率 {quality.get('verifiedRatio')}，status={merged['status']}"
+            )
+            promote_after = max(2, _rubric_env_int("RUBRIC_PROMOTE_AFTER", 3))
+            if rounds < promote_after:
+                print(f"[标尺] 累积投票 {rounds}/{promote_after}，本次不固化，仅作临时标尺使用")
+                return merged, f"临时（{rounds}/{promote_after} 次投票）"
+            _save_rubric(merged)
+            return merged, "投票固化"
+        print("[标尺] 投票状态无法还原标尺，回退为本次采样结果")
+
+    merged = _merge_candidate_rubrics(candidates, max_score, material_hash, material_ids, paper_id, question_id)
+    if not merged:
+        merged = max(candidates, key=_rubric_score_for_ranking)
+        print("[标尺] 归并失败（要点无法对齐），回退为单次采样中最优的一份")
+
+    quality = _verify_rubric_quality(merged, materials)
+    merged["status"] = _rubric_status_by_quality(quality)
+    merged["sampleTimes"] = len(candidates)
+    print(
+        f"[标尺] 归并结果：{len(merged['points'])} 个要点（来自 {len(candidates)} 次采样），"
+        f"证据通过率 {quality.get('verifiedRatio')}，覆盖完整={quality.get('coverageComplete')}，"
+        f"status={merged['status']}"
+    )
+    if merged["status"] == "draft":
+        print(
+            f"[标尺] 质量未达标（证据通过率 {quality.get('verifiedRatio')}，覆盖完整={quality.get('coverageComplete')}），"
+            f"标记为 draft，仅作参考注入"
+        )
+
+    _save_rubric(merged)
+    return merged, "新生成"
+
+
+def _format_rubric_block(rubric: dict, source: str) -> str:
+    status = rubric.get("status") or "approved"
+    quality = rubric.get("quality") or {}
+    head = (
+        f"【本题已固化的踩分标尺】（{source}，共 {len(rubric['points'])} 个要点，合计 {rubric['maxScore']} 分，"
+        f"状态：{'已审核' if status == 'approved' else '参考稿'}，"
+        f"证据通过率 {quality.get('verifiedRatio', '—')}）"
+    )
+    if status == "approved":
+        rules = [
+            "该标尺已固化，本次批改必须严格以此为准：",
+            "1. 模块二不要重新归纳要点，直接引用下列要点（编号、概括、分值保持一致），不得增删或合并；",
+            "2. 模块四的「要点分」按下列要点逐条比对，明确写出命中/未命中的要点编号；",
+            "3. 模块五的参考答案必须覆盖下列全部要点。",
+        ]
+    else:
+        rules = [
+            "该标尺为「参考稿」，未经人工审核，请按以下方式使用：",
+            "1. 模块二以该标尺为基准逐条列出要点，编号与概括保持一致，不得删除或合并已有要点；",
+            "2. 若你在材料中发现标尺遗漏了独立的重要要点，只能在标尺末尾追加「补充要点：…」，并在报告中说明依据，不得改写原要点；",
+            "3. 模块四的「要点分」按「标尺要点 + 你补充的要点」合计计算，并注明哪些要点来自标尺、哪些是补充；",
+            "4. 模块五的参考答案必须覆盖标尺全部要点。",
+        ]
+    lines = [head] + rules + [json.dumps({"points": rubric["points"]}, ensure_ascii=False, indent=1)]
+    return "\n".join(lines)
+
+
+def _count_answer_chars(answers: Dict[str, Any]) -> int:
+    """系统统计字数：去掉空白后的字符数（申论按格子计字，标点计入）"""
+    total = 0
+    for value in (answers or {}).values():
+        text = str(value or "")
+        if text.startswith("（考生上传了作答图片"):
+            continue
+        total += len(re.sub(r"\s+", "", text))
+    return total
+
+
 # ---------------------------------------------------------
 # 2. 接口：获取试卷列表 (用于首页展示卡片)
 # ---------------------------------------------------------
@@ -317,6 +1070,56 @@ def _parse_score_from_markdown(text: str) -> tuple:
     if m:
         return (int(m.group(1)), int(m.group(2)))
     return (None, None)
+
+
+def _log_grading_result(
+    paper_id: str,
+    question_ids: List[str],
+    body: str,
+    score: Optional[int],
+    max_score: Optional[int],
+    grade: Optional[str],
+    provider: str,
+    model_name: str,
+    elapsed_ms: int,
+    material_count: int,
+    rubric: Optional[dict],
+    rubric_source: str,
+) -> None:
+    """把批改结果打到服务端日志（Render 日志面板可直接看到），便于线上排查。"""
+    rubric_desc = "无标尺"
+    if rubric:
+        quality = rubric.get("quality") or {}
+        rubric_desc = "%s(%d点/证据%s/%s)" % (
+            rubric.get("status") or "approved",
+            len(rubric.get("points") or []),
+            quality.get("verifiedRatio", "-"),
+            rubric_source or "-",
+        )
+    print(
+        "[批改结果] paper=%s q=%s 得分=%s/%s 档位=%s 用时=%dms provider=%s model=%s 材料=%d份 标尺=%s"
+        % (
+            paper_id or "-",
+            ",".join(str(q) for q in question_ids) or "-",
+            score if score is not None else "-",
+            max_score if max_score is not None else "-",
+            grade or "-",
+            elapsed_ms,
+            provider or "-",
+            model_name or "-",
+            material_count,
+            rubric_desc,
+        )
+    )
+    content = body or ""
+    limit = _env_int("GRADE_LOG_CONTENT_MAX", 8000)
+    if limit > 0 and len(content) > limit:
+        print("[批改结果全文] 共 %d 字，按 GRADE_LOG_CONTENT_MAX=%d 截断：" % (len(content), limit))
+        print(content[:limit])
+        print("…（已截断，如需完整内容请调大 GRADE_LOG_CONTENT_MAX，设为 0 表示不截断）")
+    else:
+        print("[批改结果全文] 共 %d 字：" % len(content))
+        print(content)
 
 
 def _parse_grade_from_markdown(text: str):
@@ -467,10 +1270,32 @@ def grade_essay(request: Request, payload: dict):
                             questions_for_model.append(q)
                             break
 
-    # 取材料：优先用 payload 中的非空 materials，否则用试卷里的（避免前端传空数组覆盖试卷材料）
-    payload_materials = payload.get("materials")
-    materials = (payload_materials if payload_materials else (paper.get("materials") if paper else [])) or []
-    print(f"[批改] paper_id={paper_id}, paper_loaded={paper is not None}, materials_count={len(materials)}, questions_count={len(questions_for_model)}, answers_keys={list(answers.keys())}")
+    # 取材料：以「后端试卷文件」为权威来源。
+    # APP 端使用内置离线试卷（或本地缓存），版本较旧时可能只带部分材料，若直接用 payload 覆盖，
+    # 会出现「题目要求资料 1-4，却只发给模型 1 份材料」的问题。因此这里合并为：
+    # 试卷材料优先（顺序不变），payload 材料只补充试卷里没有的 id。
+    payload_materials = payload.get("materials") or []
+    paper_materials = (paper.get("materials") if paper else []) or []
+
+    materials: List[Dict[str, Any]] = [m for m in paper_materials if isinstance(m, dict)]
+    _seen_variants = set()
+    for m in materials:
+        _seen_variants |= _id_variants(_material_id(m))
+    for m in payload_materials:
+        if not isinstance(m, dict):
+            continue
+        _mid = _material_id(m)
+        if _mid and (_id_variants(_mid) & _seen_variants):
+            continue  # 试卷里已有同 id 材料，以试卷为准
+        materials.append(m)
+        if _mid:
+            _seen_variants |= _id_variants(_mid)
+
+    print(
+        f"[批改] paper_id={paper_id}, paper_loaded={paper is not None}, "
+        f"materials_count={len(materials)} (试卷文件 {len(paper_materials)} / payload {len(payload_materials)}), "
+        f"questions_count={len(questions_for_model)}, answers_keys={list(answers.keys())}"
+    )
     if not materials:
         print("警告：材料为空，请检查 data 目录是否有对应试卷 JSON 或前端是否传递 materials")
     # 若材料/题目/答案任一为空，不调用 Gemini，直接返回明确错误（避免模型回复「内容均为空」）
@@ -488,12 +1313,9 @@ def grade_essay(request: Request, payload: dict):
     # 根据题目类型与 materialIds 决定发给 Gemini 的材料：大作文发全卷材料，小题只发对应材料
     has_essay = any((q.get("type") or "").upper() == "ESSAY" for q in questions_for_model)
     if has_essay:
-        # 大作文必须发全卷材料：优先用后端试卷文件中的完整 materials，避免前端 payload 漏传或截断
-        paper_materials = (paper.get("materials") if paper else []) or []
-        materials_to_send = list(paper_materials) if paper_materials else list(materials)
-        if not materials_to_send and materials:
-            materials_to_send = list(materials)
-        print(f"[批改] 大作文题，发送材料数: {len(materials_to_send)} (试卷文件: {len(paper_materials)}, payload: {len(materials)})")
+        # 大作文必须发全卷材料：materials 已保证试卷文件优先，这里直接用合并后的全卷
+        materials_to_send = list(materials)
+        print(f"[批改] 大作文题，发送材料数: {len(materials_to_send)} (试卷文件: {len(paper_materials)}, payload: {len(payload_materials)})")
     else:
         # 小题：只发本题对应的材料。materialIds 从试卷题目 + 前端 payload 两处合并，避免试卷缺字段时误发全卷
         mid_set = set()
@@ -512,12 +1334,38 @@ def grade_essay(request: Request, payload: dict):
                 ids = q.get("materialIds") or q.get("material_ids")
                 if ids:
                     mid_set.update(ids if isinstance(ids, list) else [ids])
+        # 题目自报的 materialIds 可能与试卷不一致（例如 APP 内置离线包版本较旧只写了 ['m1']），
+        # 因此优先以「后端试卷文件」中该题目的 materialIds 为准，取不到时再用上面合并出的 mid_set
+        paper_mid_set = set()
+        for q in questions_for_model:
+            qid = q.get("id") or q.get("qid")
+            paper_q = find_question_by_id(str(qid)) if qid else None
+            ids = (paper_q or {}).get("materialIds") or (paper_q or {}).get("material_ids")
+            if not ids:
+                ids = q.get("materialIds") or q.get("material_ids")
+            if ids:
+                paper_mid_set.update(ids if isinstance(ids, list) else [ids])
+        if paper_mid_set:
+            mid_set = paper_mid_set
         if mid_set:
-            materials_to_send = [m for m in materials if m.get("id") in mid_set]
-            sent_ids = [m.get("id") for m in materials_to_send]
-            print(f"[批改] 小题，按 materialIds 筛选：题目指定 {sorted(mid_set)}，实际发送材料 id={sent_ids}，共 {len(materials_to_send)} 份")
+            # 用归一化 id 匹配，兼容 m1 / 1 等写法
+            mid_variants = set()
+            for v in mid_set:
+                mid_variants |= _id_variants(v)
+            materials_to_send = [m for m in materials if _id_variants(_material_id(m)) & mid_variants]
+            sent_ids = [_material_id(m) for m in materials_to_send]
+            sent_variants = set()
+            for m in materials_to_send:
+                sent_variants |= _id_variants(_material_id(m))
+            missing = sorted({str(v) for v in mid_set if not (_id_variants(v) & sent_variants)})
+            print(
+                f"[批改] 小题，按 materialIds 筛选：题目指定 {sorted(str(v) for v in mid_set)}，"
+                f"实际发送材料 id={sent_ids}，共 {len(materials_to_send)} 份"
+            )
+            if missing:
+                print(f"[批改] 警告：题目指定但材料库中缺失的 id={missing}；当前可用材料 id={[_material_id(m) for m in materials]}")
             if not materials_to_send and materials:
-                print(f"[批改] 警告：题目指定了 materialIds {sorted(mid_set)}，但当前材料列表的 id 为 {[m.get('id') for m in materials]}，无匹配项；将发送 0 份材料，可能影响批改")
+                print(f"[批改] 警告：题目指定了 materialIds {sorted(str(v) for v in mid_set)}，但当前材料列表无匹配项；将发送 0 份材料，可能影响批改")
         else:
             # 未找到任何 materialIds 时才回退为全卷（并打日志便于排查）
             materials_to_send = list(materials)
@@ -621,12 +1469,12 @@ Output Constraints:
     SMALL_QUESTION_GRADING_INSTRUCTION = """# Role: 资深申论阅卷组长 & 客观题金牌讲师
 你拥有10年以上的申论阅卷与教学经验。深谙各省公务员考试申论小题（概括题、分析题、提出对策题）"按点给分、见词给分、极度依赖材料原词"的阅卷规则。你的任务是像导师一样手把手教考生如何分析材料，并对考生的答案进行X光级别的优缺点诊断与升格指导。
 
-# Input Data
-- <省份及题型>：[传入数据，如：国考副省级-单一概括题]
-- <给定材料>：[传入材料文本]
-- <题目及字数限制>：[传入具体题目和字数要求，如：不超过200字]
-- <系统统计字数>：[传入系统计算的字数，如：185字]
-- <用户作答>：[传入用户的答案文本]
+# Input Data（真实数据在本请求末尾以下列 JSON 提供，请直接使用，不要等待其他输入）
+- <省份及题型>：{PROVINCE_LABEL}；题型由 <题目> 的 title/requirements 判断
+- <给定材料>：见末尾「材料（materials）」，含完整正文
+- <题目及字数限制>：见末尾「题目（questions）」中的 title 与 requirements
+- <系统统计字数>：{WORD_COUNT} 字（系统按去空白字符数统计，标点计入）
+- <用户作答>：见末尾「学生答案（answers）」
 
 # Workflow (请严格按照以下模块顺序输出)：
 
@@ -639,7 +1487,7 @@ Output Constraints:
 
 ## 模块二：【官方"踩分点"标尺设定】（确立评分标准）
 **第一步——逐段扫描提炼**：按材料段落顺序，逐段标注该段可提取的踩分原词，不得跳过任何段落。
-**第二步——归并列点**：将各段原词归并分类，生成标准踩分要点（假设本题总分为20分）：
+**第二步——归并列点**：将各段原词归并分类，生成标准踩分要点（本题满分 {MAX_SCORE} 分，各要点分值之和必须等于 {MAX_SCORE} 分）：
 - **要点一（占比X分）**：[主旨概括句]。踩分原词：[必须是材料中出现的关键词A]、[关键词B]、[可接受的同义词]。
 - **要点二（占比X分）**：[主旨概括句]。踩分原词：[必须是材料中出现的关键词C]、[关键词D]、[可接受的同义词]。
 *(注：必须展示合并分类后的要点结构，揭示阅卷人手里的真实标准)*
@@ -662,10 +1510,10 @@ Output Constraints:
    - 🟢 **名师去水存干版**：**[仅保留材料原词与核心主谓宾的极简短语]** (仅占XX字，点评说明删掉了哪些不给分的废话)
 
 ## 模块四：【多维度打分与卷面定级】
-结合<省份及题型>和<系统统计字数>，进行分项评估：
+结合{PROVINCE_LABEL}的评分特征和系统统计字数（{WORD_COUNT} 字），进行分项评估：
 - **要点分（75%）**：按"踩中要点数/总要点数"比例线性给分。每漏一个独立要点扣减该维度满分的（1/总要点数）；漏超过一半要点时该维度不超过35%满分。不允许"态度认真所以多给分"的宽松判断。（得分/总分）
 - **归纳逻辑分（15%）**：仅评价分类和条理，不作为加分项——条理清晰则正常得分，混乱则按比例扣减。（得分/总分）
-- **字数及格式（10%）**：超字数或明显不足（少于要求字数60%）扣50%该维度分；格式硬错（如要求一段话但分条列举）扣50%该维度分；两项同时出现则该维度得0分。（得分/总分）
+- **字数及格式（10%）**：{WORD_RULE}；格式硬错（如要求一段话但分条列举）扣50%该维度分；两项同时出现则该维度得0分。（得分/总分）
 
 【档位判定标准】
 - A档（优秀）：要点覆盖≥85%，原词精准，逻辑清晰，格式合规 → 估分：满分×85%~95%
@@ -687,6 +1535,15 @@ Output Constraints:
      - 若题目明确要求"用一段话"或"写成一段话"：参考答案**必须且只能是一个连贯的自然段**，**严禁出现"一、二、三"或"1.2.3."等任何分条序号**。
      - 一段话内部串联写法：先写一句总括句统领，再用"一是……，二是……，三是……"嵌入段落内衔接各要点。示例结构："[主体][问题/原因/做法]主要体现在以下几点：一是[要点A原词]；二是[要点B原词]；三是[要点C原词]。"
      - 若题目无特别格式要求，则使用"一、二、三"分条结合"核心主旨句+具体表现"结构作答。
+   - ⚠️ **要点对应表（必须输出，不可省略）**：参考答案之后，紧跟一张对照表，逐条说明每个要点落在答案的哪一句话上，便于考生核对"点是否答到了"：
+
+     | 要点编号 | 要点概括 | 答案中的对应表述（引用答案原句片段） | 是否覆盖 |
+     | --- | --- | --- | --- |
+     | 1 | （与标尺要点概括一致） | 「……」（摘录答案中承载该要点的短语） | ✓ |
+
+     - 表格行数必须等于要点总数（标尺要点 + 你在模块二补充的要点），一行都不能少；
+     - 若某个要点在参考答案中确实无法体现（例如字数所限），该行"是否覆盖"写 **✗ 未覆盖**，并在表格下方用一句话说明原因与取舍；
+     - "对应表述"必须是参考答案里真实出现的文字片段，不得另造，不得用要点概括代替。
 2. **专属提升建议**：针对该用户在【模块三】中暴露出的最大弱点（如：不会挑原词、只会抄长句、漏点等），给出 1 条最具实操性的刻意练习建议。
 
 # Output Constraints:
@@ -701,14 +1558,44 @@ Output Constraints:
     print("[批改] 新对话/独立任务 session=%s" % grading_session_id)
 
     # 构造 prompt：材料全文发给批改模型，要求以 Markdown 直接输出（不要求 JSON）
+    region = model_input.get("region")
+    province = PROVINCE_GRADING_PROFILE.get(region) or PROVINCE_GRADING_PROFILE["_default"]
+
+    # 小题：把真实数据（满分/字数/地区）填进提示词占位符，并取用「已固化的踩分标尺」
+    target_question = model_input["questions"][0] if model_input["questions"] else {}
+    small_max_score = int(target_question.get("maxScore") or 20)
+    word_count = _count_answer_chars(answers)
+    word_rule = (
+        "图片作答按每行 25 字估算，字数仅作参考、不因字数扣分"
+        if answer_images
+        else f"按系统统计字数（{word_count} 字）判定：超出题目上限或少于要求字数 60% 的，扣 50% 该维度分"
+    )
+    rubric: Optional[dict] = None
+    rubric_source = ""
+    if not has_essay and questions_for_model:
+        try:
+            rubric, rubric_source = get_or_create_rubric(
+                paper_id=model_input.get("paperId") or "unknown",
+                question=questions_for_model[0],
+                materials=materials_to_send,
+                max_score=small_max_score,
+                province_label=province.get("label", ""),
+            )
+        except Exception as e:
+            print(f"[标尺] 获取失败，本次回退为实时归纳：{e}")
+
     prompt_lines = []
     prompt_lines.append("【重要】本次为全新、独立的批改任务。请仅根据本请求下方提供的「材料」「题目」与「学生答案」进行批改，勿参考、勿引用任何其他对话或历史内容。")
     if has_essay:
         prompt_lines.append(ESSAY_GRADING_INSTRUCTION)
     else:
-        prompt_lines.append(SMALL_QUESTION_GRADING_INSTRUCTION)
-    region = model_input.get("region")
-    province = PROVINCE_GRADING_PROFILE.get(region) or PROVINCE_GRADING_PROFILE["_default"]
+        prompt_lines.append(
+            SMALL_QUESTION_GRADING_INSTRUCTION
+            .replace("{PROVINCE_LABEL}", province.get("label", "通用"))
+            .replace("{WORD_COUNT}", str(word_count))
+            .replace("{MAX_SCORE}", str(small_max_score))
+            .replace("{WORD_RULE}", word_rule)
+        )
     if region:
         prompt_lines.append(
             f"【地区评分特征】本套试卷来自：{province['label']}（{region}）。\n"
@@ -725,6 +1612,14 @@ Output Constraints:
             f"- 大作文：{d['essay']}\n"
             f"- 分数分布参考：{d['score_dist']}"
         )
+    if not has_essay:
+        if rubric:
+            prompt_lines.append(_format_rubric_block(rubric, rubric_source))
+        else:
+            prompt_lines.append(
+                "【本次未提供固化标尺】请按模块二自行归纳要点，并严格控制在 4~6 个：每个要点用「动词+名词」表述，"
+                "必须给出材料原词与材料原文依据，各要点分值之和等于本题满分。"
+            )
     prompt_lines.append(
         "请用 Markdown 格式直接输出你的分析报告（可使用标题、加粗、列表、分段等），不要输出 JSON。"
         "加粗请使用成对的 **文字**，确保每行内 ** 成对闭合，避免漏写导致前端渲染不全。"
@@ -753,23 +1648,22 @@ Output Constraints:
     prompt_lines.append("\n请按上述要求，直接输出完整的 Markdown 分析报告。")
     prompt = "\n".join(prompt_lines)
 
-    # 小题 temperature=0.15 / top_p=0.85，大作文 temperature=0.3 / top_p=0.90
-    temperature = 0.15 if not has_essay else 0.3
-    top_p = 0.85 if not has_essay else 0.90
+    # 小题 temperature=0 / top_p=1：要点判定要求可复现，不引入随机性；
+    # 大作文 temperature=0.3 / top_p=0.90：需要一定的表达多样性
+    temperature = 0.0 if not has_essay else 0.3
+    top_p = 1.0 if not has_essay else 0.90
+    started_at = time.time()
     model_raw, model_provider, model_name = call_grading_model(
         prompt,
         answer_images,
         temperature=temperature,
         top_p=top_p,
     )
+    elapsed_ms = int((time.time() - started_at) * 1000)
     if model_raw:
         body = model_raw.strip()
-        print(
-            "[AI批改输出] provider=%s model=%s length=%d"
-            % (model_provider, model_name, len(body))
-        )
         if not body:
-            print("模型返回为空文本")
+            print("[批改结果] 模型返回为空文本（provider=%s model=%s）" % (model_provider, model_name))
             return _fallback_grading_result(model_input, "模型未返回内容（可能被截断或安全过滤）", model_raw)
 
         # 不再解析 JSON，直接返回 Markdown 全文；尝试从正文中解析档位/估分区间供前端使用
@@ -778,6 +1672,21 @@ Output Constraints:
         if max_score is None:
             total_max = sum((q.get("maxScore") or 100) for q in (model_input.get("questions") or []))
             max_score = total_max if total_max else 100
+
+        _log_grading_result(
+            paper_id=model_input.get("paperId") or paper_id or "-",
+            question_ids=list(answers.keys()) or [str(q.get("id")) for q in model_input["questions"]],
+            body=body,
+            score=score,
+            max_score=max_score,
+            grade=grade,
+            provider=model_provider,
+            model_name=model_name,
+            elapsed_ms=elapsed_ms,
+            material_count=len(materials_to_send),
+            rubric=rubric,
+            rubric_source=rubric_source,
+        )
         return {
             "content": body,
             "modelRawOutput": body,
@@ -792,6 +1701,10 @@ Output Constraints:
             "modelName": model_name,
         }
 
+    print(
+        "[批改结果] 无模型输出（provider=%s model=%s 用时=%dms），按失败处理"
+        % (model_provider or "-", model_name or "-", elapsed_ms)
+    )
     if answer_images:
         raise HTTPException(
             status_code=503,

@@ -1,0 +1,3 @@
+# 该目录存放小题「踩分标尺」(rubric)，按 <paperId>__<questionId>.json 命名。
+# 由 scripts/build_rubrics.py 批量生成，或首次批改时自动生成；建议生成后提交到仓库，
+# 这样线上（Render 临时文件系统）重启也不会丢，所有用户拿到同一份标尺。

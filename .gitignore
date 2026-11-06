@@ -4,7 +4,19 @@ node_modules/
 .env
 .vscode/
 dist/
+.umeng-cli/
+frontend/android_backup_*/
+frontend/android_original_backup_*.zip
 
 *.db
 __pycache__/
 *.pyc
+
+# 标尺累积投票记录（运行期数据，不入库；正式标尺 data/rubrics/*.json 需要入库）
+backend/data/rubrics/_votes/
+
+# 本地测试虚拟环境 / 构建产物 / 工作区数据，不入库
+backend/.venv-test/
+artifacts/*.apk
+artifacts/*.aab
+.workbuddy-ai/

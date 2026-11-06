@@ -1,4 +1,4 @@
-import { access, copyFile, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import { access, copyFile, mkdir, readFile, readdir, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -25,8 +25,10 @@ const sourceDir = await findSourceDir();
 const entries = await readdir(sourceDir, { withFileTypes: true });
 const papers = [];
 
-await rm(outputDir, { recursive: true, force: true });
+// 不做整目录删除：一是删除 500+ 文件容易被安全策略拦截，二是覆盖写已经足够，
+// 只把「新数据里已经不存在的旧试卷」清理掉即可。
 await mkdir(outputDir, { recursive: true });
+const written = new Set(['index.json']);
 
 for (const entry of entries) {
   if (!entry.isFile() || !entry.name.endsWith('.json')) continue;
@@ -42,11 +44,19 @@ for (const entry of entries) {
       region: paper.region || '全国',
       examType: paper.examType || '公务员',
     });
-    await copyFile(sourcePath, path.join(outputDir, `${id}.json`));
+    const targetName = `${id}.json`;
+    written.add(targetName);
+    await copyFile(sourcePath, path.join(outputDir, targetName));
   } catch (error) {
     console.warn(`[papers] skipped ${entry.name}: ${error.message}`);
   }
 }
+
+const stale = (await readdir(outputDir)).filter((name) => name.endsWith('.json') && !written.has(name));
+for (const name of stale) {
+  await unlink(path.join(outputDir, name));
+}
+if (stale.length) console.log(`[papers] 清理已下线试卷 ${stale.length} 份`);
 
 papers.sort((a, b) => {
   const nationalA = a.region === '全国' ? 0 : 1;

@@ -19,12 +19,10 @@ export class GeminiService {
     const hasImages = !!(images && images.length > 0);
     const answerText = (userAnswer && userAnswer.trim()) || (hasImages ? "（考生上传了作答图片，请根据图片内容批改）" : "");
 
-    // 只提交当前题目关联的材料，避免把整卷材料都传给后端
-    const materialIds = question.materialIds;
-    const materialsToSend =
-      materialIds && materialIds.length > 0
-        ? materials.filter((m) => materialIds.includes(m.id))
-        : materials;
+    // 整卷材料一并提交，由后端按「试卷文件里该题目的 materialIds」精确筛选后发给模型。
+    // 不在前端按 materialIds 预筛：APP 内置离线包/本地缓存可能版本较旧（例如题目只写了 ['m1']），
+    // 前端预筛会把「资料1-4」截成 1 份材料，导致批改缺少材料依据。
+    const materialsToSend = materials;
 
     try {
       // 每次提交生成唯一会话 id，确保后端按「新对话」处理，仅批改本次上传的答案

@@ -14,6 +14,69 @@ const SENTENCE_THEN_QUOTE = new RegExp(
   'g',
 );
 
+/**
+ * CommonMark 的「标点」判定用：ASCII 标点 + 中文标点 + 常见符号。
+ * 这里不用 `\p{P}`（Unicode 属性转义需 Chrome 64+，老 WebView 会直接语法报错导致整页白屏）。
+ */
+const PUNCT_CHARS = new Set<string>([
+  '!', '"', '#', '$', '%', '&', "'", '(', ')', '*', '+', ',', '-', '.', '/',
+  ':', ';', '<', '=', '>', '?', '@', '[', '\\', ']', '^', '_', '`', '{', '|', '}', '~',
+  '，', '。', '、', '；', '：', '？', '！', '…', '—', '–', '·', '～', '﹏',
+  '「', '」', '『', '』', '《', '》', '〈', '〉', '【', '】', '〔', '〕', '〖', '〗',
+  '（', '）', '［', '］', '｛', '｝', '“', '”', '‘', '’', '＂', '＇', '､', '・',
+  '•', '◦', '※', '★', '☆', '✓', '✔', '✗', '✘', '⚠', '✅', '❌',
+  '➡', '⬅', '⬆', '⬇', '▪', '▫',
+]);
+const SPACE_CHAR = /\s/;
+
+const isPunct = (ch: string): boolean => !!ch && PUNCT_CHARS.has(ch);
+
+/**
+ * CommonMark 判定 `**` 能否开启加粗，用的是「左/右侧标点」规则：
+ * 若 `**` 前面紧邻汉字、后面紧邻中文引号等标点，它既不算「左侧合法」也不算右侧合法，
+ * 解析器会把 ** 当普通字符，页面上就直接显示 `**材料…**`。
+ * 例：`核心原词是**“农村职业经理人”**` → 不会加粗；`核心原词是“**农村职业经理人**”` → 正常加粗。
+ * 这里把夹在 `**` 与正文之间的首尾标点挪到 `**` 外侧，视觉一致，但解析器能认。
+ */
+function hoistEdgePunctuation(text: string): string {
+  return text.replace(
+    /\*\*([^\n]+?)\*\*/g,
+    (match: string, inner: string, offset: number, whole: string) => {
+      let core = inner;
+      const prev = offset > 0 ? whole[offset - 1] : '';
+      const next = offset + match.length < whole.length ? whole[offset + match.length] : '';
+      const openingBlocked =
+        !!prev && !SPACE_CHAR.test(prev) && !isPunct(prev) && isPunct(core[0]);
+      const closingBlocked =
+        !!next && !SPACE_CHAR.test(next) && !isPunct(next) && isPunct(core[core.length - 1]);
+      if (!openingBlocked && !closingBlocked) return match;
+
+      // 只要有一侧不成立，就对称地把首尾标点一起挪到 ** 外侧，避免引号一半在粗体内一半在外
+      let lead = '';
+      let trail = '';
+      while (core.length > 1 && isPunct(core[0])) {
+        lead += core[0];
+        core = core.slice(1);
+      }
+      while (core.length > 1 && isPunct(core[core.length - 1])) {
+        trail = core[core.length - 1] + trail;
+        core = core.slice(0, -1);
+      }
+      if (!core.trim()) return match;
+      return `${lead}**${core}**${trail}`;
+    },
+  );
+}
+
+/** 行内代码（`...`）里的 ** 不能动，按反引号切片后只处理非代码段 */
+function fixEmphasisFlanking(line: string): string {
+  if (!line.includes('**')) return line;
+  return line
+    .split(/(`[^`]*`)/)
+    .map((part) => (part.startsWith('`') && part.endsWith('`') ? part : hoistEdgePunctuation(part)))
+    .join('');
+}
+
 export function normalizeReportMarkdown(raw: string): string {
   if (!raw || !raw.trim()) return raw;
   // 模型偶发把 Markdown 标记转义成 \*\*...\*\*，会导致页面显示字面量 **。
@@ -72,7 +135,7 @@ export function normalizeReportMarkdown(raw: string): string {
     processed = processed.replace(/(\S)\s+([2-9]\.)(?=[\u4e00-\u9fff])(?!\d)/g, '$1\n\n$2');
 
     for (const sub of processed.split('\n')) {
-      if (sub.length > 0) expanded.push(sub);
+      if (sub.length > 0) expanded.push(fixEmphasisFlanking(sub));
     }
   }
 

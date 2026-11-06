@@ -3,7 +3,14 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Paper, Question, QuestionType } from '../types';
 import type { MaterialNotebookSection } from '../types';
 import { track } from '../services/analytics';
-import { API_BASE, openFeedback, CHANGELOG_URL } from '../constants';
+import {
+  API_BASE,
+  openFeedback,
+  CHANGELOG_URL,
+  openExternalUrl,
+  PRIVACY_POLICY_URL,
+  USER_AGREEMENT_URL,
+} from '../constants';
 
 /** 材料 HTML 中图片多为 /images/...，与后端 API 同主机挂载时需指到 API 根地址 */
 function rewriteDataImagesHtml(html: string): string {
@@ -325,6 +332,24 @@ const ExamDetail: React.FC<ExamDetailProps> = ({ paper, onGrade, onBack, fromRep
           </button>
           {moreOpen && (
             <div className="absolute right-0 top-full mt-2 w-40 rounded-2xl apple-more-menu py-2 z-[60] animate-in fade-in slide-in-from-top-2 duration-200">
+              <button
+                onClick={() => { setMoreOpen(false); openExternalUrl(USER_AGREEMENT_URL); }}
+                className="apple-more-item flex items-center gap-3 w-full text-left px-4 py-3 text-[14px] text-[#1d1d1f]"
+              >
+                <div className="apple-more-icon bg-[#0071e3]/10 shrink-0">
+                  <i className="far fa-file-lines text-[14px] text-[#0071e3]" />
+                </div>
+                <span>用户协议</span>
+              </button>
+              <button
+                onClick={() => { setMoreOpen(false); openExternalUrl(PRIVACY_POLICY_URL); }}
+                className="apple-more-item flex items-center gap-3 w-full text-left px-4 py-3 text-[14px] text-[#1d1d1f]"
+              >
+                <div className="apple-more-icon bg-[#34c759]/10 shrink-0">
+                  <i className="fas fa-shield-halved text-[14px] text-[#34c759]" />
+                </div>
+                <span>隐私政策</span>
+              </button>
               <button
                 onClick={() => { setMoreOpen(false); openFeedback({ id: paper.id, name: paper.name }); }}
                 className="apple-more-item flex items-center gap-3 w-full text-left px-4 py-3 text-[14px] text-[#1d1d1f]"
