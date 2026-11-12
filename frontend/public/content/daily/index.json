@@ -1,0 +1,74 @@
+[
+  {
+    "date": "2026-11-10",
+    "slug": "2026-11-10",
+    "edition": 1,
+    "title": "多几把尺子量创新",
+    "keywords": [
+      "科技评价改革",
+      "创新生态",
+      "破四唯",
+      "标准与话语权",
+      "辩证思维"
+    ],
+    "summary": "《多几把尺子量创新》选自《人民日报》2026-11-10 第 05 版「微观」，核心考点为科技评价改革、创新生态、破四唯。本讲义按「原文 + 老师逐段解析」拆解 11 个段落的段落功能、论证方式、金句标准表述与举一反三例句，并附框架速览、积累清单和迁移练习，供申论与面试备考使用。",
+    "source": {
+      "newspaper": "人民日报",
+      "paperDate": "2026-11-10",
+      "page": "第 05 版",
+      "column": "微观",
+      "author": "喻思南",
+      "charCount": 1197,
+      "originalUrl": "https://paper.people.com.cn/rmrb/pc/content/202611/10/content_30190477.html"
+    },
+    "segmentCount": 11,
+    "structure": {
+      "status": "standard",
+      "score": 100,
+      "subThesisCount": 3,
+      "hasThesis": true,
+      "hasConclusion": true,
+      "strictPass": true,
+      "pattern": "并列式"
+    },
+    "status": "published",
+    "generatedAt": "2026-11-12T17:38:38+08:00",
+    "contentHash": "sha256:cd2f44376d2636f7a5def3f6ab553f2cb37189b0f11fc67c01e798efbf20876a"
+  },
+  {
+    "date": "2026-11-10",
+    "slug": "2026-11-10-2",
+    "edition": 2,
+    "title": "烟火气也是竞争力",
+    "keywords": [
+      "城市治理",
+      "高质量发展",
+      "辩证思维",
+      "因地制宜",
+      "文旅消费"
+    ],
+    "summary": "《烟火气也是竞争力》选自《人民日报》2026-11-10 第 05 版「人民锐评」，核心考点为城市治理、高质量发展、辩证思维。本讲义按「原文 + 老师逐段解析」拆解 10 个段落的段落功能、论证方式、金句标准表述与举一反三例句，并附框架速览、积累清单和迁移练习，供申论与面试备考使用。",
+    "source": {
+      "newspaper": "人民日报",
+      "paperDate": "2026-11-10",
+      "page": "第 05 版",
+      "column": "人民锐评",
+      "author": "常言道",
+      "charCount": 994,
+      "originalUrl": "https://paper.people.com.cn/rmrb/pc/content/202611/10/content_30190480.html"
+    },
+    "segmentCount": 10,
+    "structure": {
+      "status": "acceptable",
+      "score": 100,
+      "subThesisCount": 2,
+      "hasThesis": true,
+      "hasConclusion": true,
+      "strictPass": true,
+      "pattern": "并列式（句式平行）"
+    },
+    "status": "published",
+    "generatedAt": "2026-11-12T17:38:38+08:00",
+    "contentHash": "sha256:bd15eaf6603f1131e5451f7b706616f03e58aa45def3669b0d30ad269dda86dd"
+  }
+]

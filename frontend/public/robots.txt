@@ -1,4 +1,7 @@
 User-agent: *
 Allow: /
+Allow: /daily/
 
 Sitemap: https://shenlun.zaoxin.fun/sitemap.xml
+# llms.txt: https://shenlun.zaoxin.fun/llms.txt
+# RSS: https://shenlun.zaoxin.fun/rss.xml

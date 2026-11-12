@@ -6,12 +6,14 @@ import Home from './pages/Home';
 import ExamDetail from './pages/ExamDetail';
 import Report from './pages/Report';
 import Profile from './pages/Profile';
+import DailyReader from './pages/DailyReader';
 import PaymentModal from './components/PaymentModal';
 import PrivacyConsentModal from './components/PrivacyConsentModal';
 import { Paper, User, Question, HistoryRecord, GradingResult } from './types';
 import { API_BASE } from './constants';
 import { geminiService } from './services/geminiService';
 import { track } from './services/analytics';
+import { getFeaturedEntry } from './services/dailyService';
 import {
   getPrivacyConsentStatus,
   grantPrivacyConsent,
@@ -128,8 +130,53 @@ if (import.meta.env.DEV) {
   }
 }
 
+/**
+ * 切换页面时强制回到顶部。
+ * SPA 不更换 document，Android WebView 会保留上一页的 scrollY；返回首页后
+ * 若不显式归零，页面会停在原来滑到的位置。用 rAF 再兜一次，确保新页面
+ * DOM 渲染完成（高度变化会 clamp 滚动值）之后仍是 0。
+ */
+function scrollToTop() {
+  const reset = () => {
+    try {
+      window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    } catch {
+      window.scrollTo(0, 0);
+    }
+    // 部分 Android WebView 对 scrollTo 的 options 形式支持不完整
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+  };
+  reset();
+  requestAnimationFrame(reset);
+}
+
+/**
+ * 从试卷详情返回列表时恢复到进入前的位置。
+ * 列表页重新挂载后高度可能略有变化（图片/筛选区），用两次 rAF 再校正一次。
+ */
+function restoreScrollTo(y: number) {
+  const apply = () => {
+    try {
+      window.scrollTo({ top: y, left: 0, behavior: 'auto' });
+    } catch {
+      window.scrollTo(0, y);
+    }
+    document.documentElement.scrollTop = y;
+    document.body.scrollTop = y;
+  };
+  apply();
+  requestAnimationFrame(() => {
+    apply();
+    requestAnimationFrame(apply);
+  });
+  // 列表图片 / 字体加载后高度可能再变一次，补一次延迟校正
+  window.setTimeout(apply, 160);
+}
+
 const App: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<string>('home');
+  const [selectedDaily, setSelectedDaily] = useState<string | null>(null);
   const [selectedPaper, setSelectedPaper] = useState<Paper | null>(null);
   const [selectedRecord, setSelectedRecord] = useState<HistoryRecord | null>(null);
   /** 从批改结果页返回到试卷详情页时置为 true，用于手机端默认显示「问题」tab */
@@ -151,6 +198,30 @@ const App: React.FC = () => {
   const [isPapersLoading, setIsPapersLoading] = useState(cachedList.length === 0);
 
   const paperDetailMemCache = useRef<Map<string, Paper>>(new Map());
+  /** 进入试卷详情前的列表滚动位置；返回列表时据此还原 */
+  const listScrollYRef = useRef<number | null>(null);
+  /** 上一次所在的页面，用于区分「从试卷详情返回」与其它切页 */
+  const prevPageRef = useRef<string>('home');
+
+  // 禁止浏览器在 popstate 时自动恢复旧滚动位置（否则返回后又跳回底部）
+  useEffect(() => {
+    if ('scrollRestoration' in window.history) {
+      window.history.scrollRestoration = 'manual';
+    }
+  }, []);
+
+  // 切页滚动策略：试卷详情返回列表 → 还原进入前的位置；其它切页 → 回到最顶部
+  useEffect(() => {
+    const from = prevPageRef.current;
+    prevPageRef.current = currentPage;
+    if (currentPage === 'home' && from === 'exam' && listScrollYRef.current != null) {
+      const y = listScrollYRef.current;
+      listScrollYRef.current = null;
+      restoreScrollTo(y);
+      return;
+    }
+    scrollToTop();
+  }, [currentPage, selectedDaily]);
 
   const [pendingGrading, setPendingGrading] = useState<{
     question: Question;
@@ -197,7 +268,33 @@ const App: React.FC = () => {
     };
   }, []);
 
-  const getUrl = () => window.location.pathname + window.location.search;
+  /** 常规 pushState 用的 URL：去掉 daily 参数，避免把阅读页状态带进其它页面 */
+  const getUrl = () => {
+    const u = new URL(window.location.href);
+    u.searchParams.delete('daily');
+    return u.pathname + u.search;
+  };
+
+  /** 阅读页 URL：保留 ?daily=<slug>，刷新与分享可恢复 */
+  const dailyUrl = (slug: string) => {
+    const u = new URL(window.location.href);
+    u.searchParams.set('daily', slug);
+    return u.pathname + u.search;
+  };
+
+  const openDaily = (slug: string, replace = false) => {
+    setSelectedDaily(slug);
+    setCurrentPage('daily');
+    const state = { page: 'daily', daily: slug };
+    if (replace) window.history.replaceState(state, '', dailyUrl(slug));
+    else window.history.pushState(state, '', dailyUrl(slug));
+  };
+
+  const closeDaily = () => {
+    setSelectedDaily(null);
+    setCurrentPage('home');
+    window.history.replaceState({ page: 'home' }, '', getUrl());
+  };
 
   // 同步地址栏与页面状态，并响应手机物理返回键/手势（保证每次进子页都 pushState，返回时回到上一页而非退出网站）
   useEffect(() => {
@@ -207,6 +304,19 @@ const App: React.FC = () => {
     }
   }, []);
 
+  /** 深链 ?daily=<slug>：照抄 ?paper= 的模式，但保留参数以便刷新/分享恢复 */
+  useEffect(() => {
+    const daily = new URLSearchParams(window.location.search).get('daily');
+    if (!daily) return;
+    setSelectedDaily(daily);
+    setCurrentPage('daily');
+    window.history.replaceState(
+      { page: 'daily', daily },
+      '',
+      window.location.pathname + window.location.search
+    );
+  }, []);
+
   useEffect(() => {
     const handlePopState = (e: PopStateEvent) => {
       const page = (e.state?.page as string) || 'home';
@@ -214,7 +324,14 @@ const App: React.FC = () => {
       if (page === 'home') {
         setSelectedPaper(null);
         setSelectedRecord(null);
+        setSelectedDaily(null);
         setBackFromReportToExam(false);
+      } else if (page === 'daily') {
+        const slug = (e.state?.daily as string) || new URLSearchParams(window.location.search).get('daily');
+        if (slug) {
+          setSelectedDaily(slug);
+          setCurrentPage('daily');
+        }
       } else if (page === 'exam') {
         setBackFromReportToExam(true);
       } else if (page === 'profile') {
@@ -241,6 +358,14 @@ const App: React.FC = () => {
       // 首页返回只把 App 放到后台，不在内容页直接结束应用。
       if (currentPage === 'home') {
         void CapacitorApp.minimizeApp();
+        return;
+      }
+
+      // 阅读页不依赖 WebView 历史，显式回首页
+      if (currentPage === 'daily') {
+        setSelectedDaily(null);
+        setCurrentPage('home');
+        window.history.replaceState({ page: 'home' }, '', getUrl());
         return;
       }
 
@@ -357,8 +482,8 @@ const App: React.FC = () => {
   // 页面浏览埋点
   useEffect(() => {
     if (!privacyAccepted) return;
-    const page = currentPage as 'home' | 'exam' | 'report' | 'profile';
-    if (['home', 'exam', 'report', 'profile'].includes(currentPage)) {
+    const page = currentPage as 'home' | 'exam' | 'report' | 'profile' | 'daily';
+    if (['home', 'exam', 'report', 'profile', 'daily'].includes(currentPage)) {
       track.pageView(page);
     }
   }, [currentPage, privacyAccepted]);
@@ -384,6 +509,7 @@ const App: React.FC = () => {
     setUser(null);
     setHistory([]);
     localStorage.removeItem('history');
+    setSelectedDaily(null);
     setCurrentPage('home');
   };
 
@@ -418,6 +544,8 @@ const App: React.FC = () => {
   };
 
   const handleSelectPaper = async (summaryPaper: Paper) => {
+    // 在点击瞬间记录列表位置，返回时还原（异步加载详情不会影响这个值）
+    listScrollYRef.current = window.scrollY;
     const memHit = paperDetailMemCache.current.get(summaryPaper.id);
     if (memHit) {
       setSelectedPaper(memHit);
@@ -599,6 +727,10 @@ const App: React.FC = () => {
             } else if (page === 'profile') {
               setCurrentPage('profile');
               window.history.pushState({ page: 'profile' }, '', url);
+            } else if (page === 'daily') {
+              void getFeaturedEntry().then(({ entry }) => {
+                if (entry) openDaily(entry.slug);
+              });
             } else {
               setCurrentPage(page);
             }
@@ -608,7 +740,15 @@ const App: React.FC = () => {
 
       <main>
         {currentPage === 'home' && (
-          <Home onSelectPaper={handleSelectPaper} onPrefetchPaper={USE_BUNDLED_PAPERS ? undefined : prefetchPaper} filters={filters} setFilters={setFilters} papers={papers} isLoading={isPapersLoading} />
+          <Home onSelectPaper={handleSelectPaper} onOpenDaily={(s) => openDaily(s)} onPrefetchPaper={USE_BUNDLED_PAPERS ? undefined : prefetchPaper} filters={filters} setFilters={setFilters} papers={papers} isLoading={isPapersLoading} />
+        )}
+
+        {currentPage === 'daily' && selectedDaily && (
+          <DailyReader
+            slug={selectedDaily}
+            onSelectSlug={(s) => openDaily(s, true)}
+            onBack={closeDaily}
+          />
         )}
         
         {currentPage === 'exam' && selectedPaper && (

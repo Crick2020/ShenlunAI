@@ -50,6 +50,7 @@ const Navbar: React.FC<NavbarProps> = ({ onNavigate }) => {
           </div>
 
           <div className="hidden md:flex items-center space-x-8 lg:space-x-10">
+            <button onClick={() => { track.navClick('daily'); onNavigate('daily'); }} className="text-sm font-medium text-[#1d1d1f]/70 hover:text-[#0071e3] transition-colors">每日精读</button>
             <button onClick={() => { track.navClick('list'); onNavigate('home'); }} className="text-sm font-medium text-[#1d1d1f]/70 hover:text-[#0071e3] transition-colors">题库列表</button>
             <button onClick={() => { track.navClick('history'); onNavigate('profile'); }} className="text-sm font-medium text-[#1d1d1f]/70 hover:text-[#0071e3] transition-colors">历史批改</button>
           </div>
@@ -70,6 +71,15 @@ const Navbar: React.FC<NavbarProps> = ({ onNavigate }) => {
 
             {moreOpen && (
               <div className="absolute right-0 top-full mt-2 w-44 rounded-2xl apple-more-menu py-2 z-[70] animate-in fade-in slide-in-from-top-2 duration-200">
+                <button
+                  onClick={() => { setMoreOpen(false); track.navClick('daily'); onNavigate('daily'); }}
+                  className="apple-more-item flex items-center gap-3 w-full text-left px-4 py-3 text-[14px] text-[#1d1d1f]"
+                >
+                  <div className="apple-more-icon bg-[#0071e3]/10 shrink-0">
+                    <i className="fas fa-book-open text-[14px] text-[#0071e3]" />
+                  </div>
+                  <span>每日精读</span>
+                </button>
                 <button
                   onClick={() => {
                     setMoreOpen(false);

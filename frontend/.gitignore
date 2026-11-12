@@ -1,6 +1,8 @@
 node_modules/
 dist/
 public/papers/
+# 抓稿候选原文（可由 --date 复现，不入 Git，避免仓库膨胀）
+public/content/raw/
 .env
 .env.local
 .env.development

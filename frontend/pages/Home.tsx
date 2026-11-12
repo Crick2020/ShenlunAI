@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { API_BASE, EXAM_TYPES, REGIONS } from '../constants';
 import { Paper } from '../types';
 import { track } from '../services/analytics';
+import DailyCard from '../components/DailyCard';
 
 /** 事业单位全国联考 JSON 多为 region「全国」；无数据时也要能选「全国」，避免只剩省市导致筛不到卷 */
 const REGIONS_SYDW_FALLBACK = ['全国', ...REGIONS.filter(r => r !== '国考')];
@@ -13,6 +14,7 @@ const PREFETCH_DELAYS_MS = [500, 1500, 3000];
 
 interface HomeProps {
   onSelectPaper: (paper: Paper) => void;
+  onOpenDaily: (slug: string) => void;
   onPrefetchPaper?: (paperId: string) => void;
   filters: { type: string; region: string };
   setFilters: React.Dispatch<React.SetStateAction<{ type: string; region: string }>>;
@@ -20,8 +22,23 @@ interface HomeProps {
   isLoading: boolean;
 }
 
-const Home: React.FC<HomeProps> = ({ onSelectPaper, onPrefetchPaper, filters, setFilters, papers, isLoading }) => {
-  const [regionExpanded, setRegionExpanded] = useState(false);
+const Home: React.FC<HomeProps> = ({ onSelectPaper, onOpenDaily, onPrefetchPaper, filters, setFilters, papers, isLoading }) => {
+  // 记忆展开状态：从试卷详情返回列表时保持原样，避免列表高度变化导致滚动位置偏移
+  const [regionExpanded, setRegionExpanded] = useState(() => {
+    try {
+      return sessionStorage.getItem('home_region_expanded') === '1';
+    } catch {
+      return false;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      sessionStorage.setItem('home_region_expanded', regionExpanded ? '1' : '0');
+    } catch {
+      /* 隐私模式下 sessionStorage 不可用，忽略 */
+    }
+  }, [regionExpanded]);
   const lastPrefetchedIndexRef = useRef(0);
   const sentinelRef = useRef<HTMLDivElement>(null);
 
@@ -185,6 +202,8 @@ const Home: React.FC<HomeProps> = ({ onSelectPaper, onPrefetchPaper, filters, se
           还原真实考试体验，为您提供多维度诊断、解析及范文参考。
         </p>
       </div>
+
+      <DailyCard onOpen={onOpenDaily} />
 
       {/* Filter Section */}
       <div className="max-w-4xl mx-auto mb-8 md:mb-12">

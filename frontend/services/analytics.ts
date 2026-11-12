@@ -157,8 +157,8 @@ export const track = {
     } catch {}
   },
 
-  /** 页面浏览：home | exam | report | profile */
-  pageView(page: 'home' | 'exam' | 'report' | 'profile') {
+  /** 页面浏览：home | exam | report | profile | daily */
+  pageView(page: 'home' | 'exam' | 'report' | 'profile' | 'daily') {
     send('page_view', 'view', page);
   },
 
@@ -287,8 +287,23 @@ export const track = {
   },
 
   /** 导航点击 */
-  navClick(target: 'home' | 'list' | 'history' | 'profile' | 'logout' | 'feedback' | 'changelog') {
+  navClick(target: 'home' | 'list' | 'history' | 'profile' | 'logout' | 'feedback' | 'changelog' | 'daily') {
     sendParams('nav_click', { target });
+  },
+
+  /** 打开某篇每日精读 */
+  dailyOpen(slug: string) {
+    sendParams('daily_open', { slug });
+  },
+
+  /** 阅读页内切换日期 */
+  dailySwitch(from: string, to: string) {
+    sendParams('daily_switch', { from, to });
+  },
+
+  /** 打开可引用的静态版页面 */
+  dailyStaticView(slug: string) {
+    sendParams('daily_static_view', { slug });
   },
 
   /** 历史记录点击某条 */

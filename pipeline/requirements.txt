@@ -1,0 +1,2 @@
+# 每日精读内容流水线只使用 Python 标准库（urllib / json / re / hashlib / argparse）。
+# GitHub Actions 无需 pip install；本地 Python 3.9+ 即可运行。

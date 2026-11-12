@@ -3,6 +3,14 @@ import { Paper, QuestionType } from './types';
 /** 后端 API 根地址。本地开发时在 frontend 目录创建 .env.development 并设置 VITE_API_BASE=http://localhost:8000 */
 export const API_BASE = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_BASE) || 'https://shenlun-backend.onrender.com';
 
+/** 站点正式域名（国内反代域名）：每日精读静态页 canonical / 外链统一用它，避免多域名重复内容 */
+export const SITE_URL = 'https://shenlun.zaoxin.fun';
+
+/** 每日精读静态页 URL（SEO/GEO 唯一权威版本） */
+export function dailyStaticUrl(slug: string): string {
+  return `${SITE_URL}/daily/${slug}.html`;
+}
+
 /** 意见反馈：飞书表单 */
 export const FEEDBACK_URL = 'https://p1ygyyk2nl3.feishu.cn/share/base/form/shrcnRZ3RNCnzgJ0SeTm27MBX7e';
 /** 更新日志 */

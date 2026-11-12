@@ -45,3 +45,12 @@ GRADING_PRIMARY_PROVIDER=gemini
 cd backend
 python3 -m unittest -v test_deepseek_provider.py
 ```
+
+
+---
+
+## 每日精读流水线（与批改后端独立）
+
+`pipeline/llm_client.py` 复用同一套环境变量命名（`DEEPSEEK_API_KEY` / `DEEPSEEK_MODEL` / `DEEPSEEK_CHAT_URL`，可选 `GEMINI_API_KEY` 回退），但它运行在 **GitHub Actions** 里，需要在仓库 Settings → Secrets and variables → Actions 中单独配置一份 Key。
+
+**Render 后端不做任何改动**：每日精读是静态内容（多官媒抓稿 → Git JSON → Vercel 构建期预渲染），不经过 `/api/grade`，也不需要数据库或定时任务。这样做是为了避免把模型 Key 暴露在公网可写端点上，同时绕开 Render 免费层无持久盘、无 cron 的限制。

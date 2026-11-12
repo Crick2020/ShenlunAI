@@ -81,3 +81,22 @@ curl -sS "https://shenlun-backend.onrender.com/api/list" | python3 -c "import sy
 | 启动前端 | `cd frontend && npm run dev` |
 
 测试没问题后，再部署到 Render；前端部署后仍会使用 Render 上的后端（未设置 `VITE_API_BASE` 时默认就是 Render 地址）。
+
+
+---
+
+## 申论每日精读（新增）
+
+每天 08:20（北京时间）由 GitHub Actions 自动从《人民日报》评论版选一篇申论范文，生成「原文 + 老师逐段解析」讲义，同时发布到网站与 APP：
+
+- 首页「今日精读」卡片 → 阅读页支持按日期切换历史，原文与老师解析用不同底色与竖线强区分。
+- 每篇另有独立静态页 `/daily/<日期>.html` 与纯文本 `.md` 版，含 Article / BreadcrumbList / FAQPage 结构化数据，供搜索引擎与大模型直接抓取；站点自动生成 sitemap 分片、RSS 与 llms.txt。
+- 内容以结构化 JSON 存于 `frontend/public/content/daily/`，一天一份、一次 commit；不占用后端、不使用数据库。
+- APP 在线拉取当天内容，内置最近 30 篇作离线兜底。
+
+开发、命令、数据契约与故障排查见 `docs/DAILY_READING.md`；生成范式见 `pipeline/lecture_prompt.md`。
+
+### 多官媒选文与严格分论点（2026-11 更新）
+
+每日精读的来源已扩展为**人民日报电子版、人民网观点、人民论坛网评、光明网地评线、中国经济网经点热评、共产党员网先锋文汇**六个官媒评论栏目，由 `pipeline/fetch_sources.py` 聚合。选文的唯一硬标准是**符合申论大作文格式**：明确总论点 + 若干**严格分论点**（段首主张句、段内展开论证、彼此语义不重复、位于首尾之间）+ 结尾，由 `pipeline/article_structure.py` 纯规则判定。只有 `strict.pass` 的文章才会被发布；来源与栏目只作次要权重。可用 `--sources` 或仓库 Variable `DAILY_SOURCES` 限定来源。详见 `docs/DAILY_READING.md`。
+

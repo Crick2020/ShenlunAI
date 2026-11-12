@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>每日精读 · 日期浏览交互原型</title>
+<style>
+/* ==================================================================
+ * 申论每日精读 · 唯一共享样式源
+ * - SPA：由 index.tsx import，作用于 .daily-* 组件
+ * - 静态页：由 scripts/daily-template.mjs 读取本文件内联进 <style>
+ * 两端使用同一组语义类名，视觉天然一致；不依赖 Tailwind / 外部字体。
+ * ================================================================== */
+
+.daily-page {
+  --daily-blue: #0071e3;
+  --daily-ink: #1d1d1f;
+  --daily-muted: #86868b;
+  --daily-bg: #f5f5f7;
+  --daily-line: rgba(0, 0, 0, .06);
+  min-height: 100vh;
+  margin: 0;
+  background: var(--daily-bg);
+  color: var(--daily-ink);
+  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+.daily-page, .daily-page * { box-sizing: border-box; }
+.daily-page a { color: var(--daily-blue); text-decoration: none; }
+.daily-page a:hover { text-decoration: underline; }
+
+.daily-serif {
+  font-family: 'Songti SC', STSong, 'Noto Serif CJK SC', 'Source Han Serif SC', SimSun, serif;
+}
+.daily-wrap { max-width: 860px; margin: 0 auto; padding: 28px 20px 72px; }
+.daily-muted { color: var(--daily-muted); }
+
+/* ---------- 静态页站点框架 ---------- */
+.daily-site-header {
+  position: sticky; top: 0; z-index: 20;
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  background: rgba(255, 255, 255, .78);
+  border-bottom: 1px solid var(--daily-line);
+}
+.daily-site-header__inner {
+  max-width: 860px; margin: 0 auto; padding: 12px 20px;
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+}
+.daily-brand { display: inline-flex; align-items: center; gap: 10px; font-weight: 700; font-size: 17px; color: var(--daily-ink); }
+.daily-brand:hover { text-decoration: none; }
+.daily-brand__mark {
+  width: 32px; height: 32px; border-radius: 10px; background: var(--daily-blue);
+  color: #fff; display: inline-flex; align-items: center; justify-content: center; font-size: 15px;
+}
+.daily-site-nav { display: flex; gap: 18px; font-size: 13px; font-weight: 600; }
+.daily-crumb { font-size: 12px; color: var(--daily-muted); margin: 0 0 18px; }
+.daily-crumb a { color: var(--daily-muted); }
+.daily-site-footer {
+  border-top: 1px solid var(--daily-line); background: #fff;
+  padding: 28px 20px; text-align: center; font-size: 12px; color: var(--daily-muted);
+}
+.daily-site-footer a { margin: 0 8px; }
+
+/* ---------- 首页「今日精读」卡片 ---------- */
+.daily-card {
+  background: rgba(255, 255, 255, .82);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  border: 1px solid rgba(0, 0, 0, .04);
+  border-radius: 28px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, .04);
+  padding: 22px 24px 18px;
+  margin-bottom: 32px;
+  cursor: pointer;
+  transition: transform .4s cubic-bezier(.4, 0, .2, 1), box-shadow .4s cubic-bezier(.4, 0, .2, 1);
+}
+.daily-card:hover { transform: translateY(-4px); box-shadow: 0 20px 40px rgba(0, 0, 0, .08); }
+.daily-card__top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+.daily-card__eyebrow {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: rgba(0, 113, 227, .10); color: var(--daily-blue);
+  font-size: 11px; font-weight: 700; letter-spacing: .04em;
+  padding: 5px 12px; border-radius: 999px;
+}
+.daily-card__dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--daily-blue); }
+.daily-card__flag { font-size: 11px; color: var(--daily-muted); font-weight: 600; }
+.daily-card__title {
+  font-size: 24px; line-height: 1.35; font-weight: 700; margin: 0 0 12px;
+  color: var(--daily-ink); letter-spacing: -.01em;
+}
+.daily-card:hover .daily-card__title { color: var(--daily-blue); }
+.daily-chips { display: flex; flex-wrap: wrap; gap: 7px; align-items: center; }
+.daily-chips dt, .daily-chips dd { margin: 0; }
+.daily-page a.daily-nav-btn:hover, .daily-page a.daily-cta:hover { text-decoration: none; }
+.daily-chip {
+  background: #f5f5f7; color: #4b4b50; border: 1px solid rgba(0, 0, 0, .03);
+  font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 999px;
+}
+.daily-chip--blue { background: rgba(0, 113, 227, .08); color: var(--daily-blue); border-color: rgba(0, 113, 227, .12); }
+.daily-card__chips { margin-bottom: 12px; }
+.daily-card__summary {
+  font-size: 13px; line-height: 1.75; color: var(--daily-muted); margin: 0 0 12px;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.daily-card__meta { font-size: 11px; color: var(--daily-muted); margin-bottom: 16px; }
+.daily-card__cta {
+  display: flex; align-items: center; justify-content: space-between;
+  background: #f5f5f7; border-radius: 16px; padding: 10px 12px 10px 16px;
+  font-size: 12px; font-weight: 700; color: var(--daily-muted);
+  transition: background .5s ease, color .5s ease;
+}
+.daily-card:hover .daily-card__cta { background: var(--daily-blue); color: #fff; }
+.daily-card__arrow {
+  width: 30px; height: 30px; border-radius: 50%; background: #fff; color: var(--daily-ink);
+  display: inline-flex; align-items: center; justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, .08);
+  transition: transform .5s cubic-bezier(.4, 0, .2, 1);
+}
+.daily-card:hover .daily-card__arrow { transform: rotate(-45deg); }
+.daily-card__skeleton { height: 168px; border-radius: 28px; background: rgba(255,255,255,.6); border: 1px solid var(--daily-line); margin-bottom: 32px; }
+.daily-card__structure { color: var(--daily-blue); font-weight: 700; }
+
+/* 申论大作文结构骨架 */
+.daily-structure {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  margin: 0 0 14px; padding: 12px 16px;
+  background: #fff; border: 1px solid var(--daily-line); border-radius: 16px;
+}
+.daily-structure__label { font-size: 11px; font-weight: 700; color: var(--daily-muted); letter-spacing: .06em; margin-right: 2px; }
+.daily-structure__item {
+  font-size: 11px; font-weight: 700; padding: 4px 11px; border-radius: 999px;
+  background: #eceae4; color: #6e6e73;
+}
+.daily-structure__item.is-ok { background: rgba(0,113,227,.10); color: var(--daily-blue); }
+.daily-structure__status { font-size: 11px; color: var(--daily-muted); margin-left: auto; }
+.daily-role {
+  font-size: 10px; font-weight: 700; padding: 3px 9px; border-radius: 999px;
+  background: #eceae4; color: #6e6e73;
+}
+.daily-role--sub { background: var(--daily-blue); color: #fff; }
+.daily-role--key { background: rgba(0,113,227,.12); color: var(--daily-blue); }
+.daily-selection-note {
+  margin: 0 0 14px; padding: 12px 16px; border-radius: 14px;
+  background: #fff8e6; border: 1px solid rgba(214, 158, 46, .22);
+  color: #7a5a12; font-size: 12px; line-height: 1.75;
+  border-left: 3px solid #d69e2e;
+}
+
+/* ---------- 阅读页头部 ---------- */
+.daily-header { margin-bottom: 26px; }
+.daily-eyebrow {
+  display: inline-flex; align-items: center; gap: 7px;
+  color: var(--daily-blue); font-size: 11px; font-weight: 700;
+  letter-spacing: .08em; text-transform: uppercase; margin-bottom: 12px;
+}
+.daily-title {
+  font-size: 34px; line-height: 1.32; font-weight: 700; margin: 0 0 16px;
+  letter-spacing: -.02em;
+}
+.daily-header .daily-chips { margin-bottom: 14px; }
+.daily-meta {
+  font-size: 12px; color: var(--daily-muted); line-height: 1.8;
+  display: flex; flex-wrap: wrap; gap: 4px 14px; margin-bottom: 16px;
+}
+.daily-meta a { font-weight: 600; }
+.daily-summary {
+  margin: 0; padding: 16px 20px; border-left: 3px solid var(--daily-blue);
+  background: rgba(0, 113, 227, .05); border-radius: 0 16px 16px 0;
+  font-size: 14px; line-height: 1.85; color: #3a3a3f;
+}
+
+/* ---------- 日期切换器 ---------- */
+.daily-switcher {
+  background: #fff; border: 1px solid var(--daily-line); border-radius: 20px;
+  padding: 14px 16px; margin-bottom: 26px;
+  display: flex; align-items: center; gap: 12px;
+}
+.daily-switcher__label { font-size: 11px; font-weight: 700; color: var(--daily-muted); flex-shrink: 0; letter-spacing: .06em; }
+.daily-switcher__scroll {
+  display: flex; gap: 8px; overflow-x: auto; flex: 1; padding-bottom: 2px;
+  scrollbar-width: thin;
+}
+.daily-switcher__scroll::-webkit-scrollbar { height: 4px; }
+.daily-switcher__scroll::-webkit-scrollbar-thumb { background: #d1d1d6; border-radius: 4px; }
+.daily-pill {
+  flex-shrink: 0; border: 1px solid rgba(0, 0, 0, .06); background: #f5f5f7;
+  color: #4b4b50; font-size: 12px; font-weight: 600; padding: 7px 13px;
+  border-radius: 999px; cursor: pointer; transition: all .2s ease;
+  font-family: inherit; white-space: nowrap;
+}
+.daily-pill:hover { border-color: rgba(0, 113, 227, .3); color: var(--daily-blue); }
+.daily-pill--active { background: var(--daily-blue); border-color: var(--daily-blue); color: #fff; }
+.daily-pill--active:hover { color: #fff; }
+.daily-nav-btn {
+  flex-shrink: 0; border: 1px solid rgba(0, 0, 0, .06); background: #fff;
+  color: var(--daily-muted); font-size: 12px; font-weight: 600;
+  padding: 7px 12px; border-radius: 999px; cursor: pointer; font-family: inherit;
+}
+.daily-nav-btn:hover:not(:disabled) { color: var(--daily-blue); border-color: rgba(0, 113, 227, .3); }
+.daily-nav-btn:disabled { opacity: .4; cursor: default; }
+.daily-more-btn {
+  border: none; background: none; color: var(--daily-blue); font-size: 12px;
+  font-weight: 600; cursor: pointer; padding: 6px 0; font-family: inherit;
+}
+
+/* ---------- 段落目录 ---------- */
+.daily-toc {
+  position: sticky; top: 76px; align-self: flex-start;
+  display: flex; flex-direction: column; gap: 5px;
+  background: #fff; border: 1px solid var(--daily-line); border-radius: 16px; padding: 12px;
+  max-height: calc(100vh - 100px); overflow-y: auto;
+}
+.daily-toc__title { font-size: 10px; color: var(--daily-muted); font-weight: 700; margin-bottom: 4px; letter-spacing: .08em; }
+.daily-toc a {
+  width: 28px; height: 28px; border-radius: 8px; background: #f5f5f7;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 600; color: #4b4b50;
+}
+.daily-toc a:hover { background: var(--daily-blue); color: #fff; text-decoration: none; }
+.daily-layout { display: grid; grid-template-columns: 1fr 56px; gap: 20px; align-items: start; }
+
+/* ---------- 逐段夹注：原文 / 老师解析强区分 ---------- */
+.daily-body { display: flex; flex-direction: column; gap: 18px; }
+.daily-segment { scroll-margin-top: 90px; }
+.daily-original, .daily-analysis {
+  border-radius: 0 20px 20px 0; padding: 20px 24px 18px;
+  border: 1px solid transparent;
+}
+.daily-original {
+  background: #fbfaf7;
+  border-left: 4px solid #d1d1d6;
+  border-top-color: rgba(0, 0, 0, .03);
+  border-right-color: rgba(0, 0, 0, .03);
+  border-bottom-color: rgba(0, 0, 0, .03);
+}
+.daily-analysis {
+  background: rgba(0, 113, 227, .055);
+  border-left: 4px solid var(--daily-blue);
+  border-top-color: rgba(0, 113, 227, .08);
+  border-right-color: rgba(0, 113, 227, .08);
+  border-bottom-color: rgba(0, 113, 227, .08);
+  margin-top: 10px;
+}
+.daily-block__head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+.daily-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 11px; font-weight: 700; padding: 4px 11px; border-radius: 999px;
+  letter-spacing: .02em;
+}
+.daily-badge--original { background: #eceae4; color: #6e6e73; }
+.daily-badge--analysis { background: var(--daily-blue); color: #fff; }
+.daily-block__fn { font-size: 11px; color: var(--daily-muted); font-weight: 600; }
+.daily-devices { display: flex; flex-wrap: wrap; gap: 6px; margin-left: auto; }
+.daily-device {
+  font-size: 10px; color: var(--daily-blue); background: rgba(0, 113, 227, .07);
+  border: 1px solid rgba(0, 113, 227, .12); padding: 3px 8px; border-radius: 6px;
+}
+.daily-block__body { font-size: 15px; }
+.daily-block__body p { margin: 0 0 10px; }
+.daily-block__body p:last-child { margin-bottom: 0; }
+.daily-original .daily-block__body {
+  font-family: 'Songti SC', STSong, 'Noto Serif CJK SC', 'Source Han Serif SC', SimSun, serif;
+  font-size: 17px; line-height: 1.95; color: #2b2b2e;
+}
+.daily-analysis .daily-block__body { line-height: 1.8; font-size: 14.5px; color: var(--daily-ink); }
+.daily-original strong {
+  font-weight: 700; color: #1d1d1f;
+  background: linear-gradient(transparent 62%, rgba(255, 214, 102, .55) 62%);
+  border-bottom: 1px solid rgba(0, 113, 227, .45);
+  padding: 0 1px;
+}
+.daily-analysis strong { font-weight: 700; color: var(--daily-blue); }
+
+/* ---------- 注 / 加餐 / 相关 ---------- */
+.daily-section-title { font-size: 19px; font-weight: 700; margin: 34px 0 14px; }
+.daily-note {
+  background: #f5f5f7; border-radius: 18px; padding: 18px 22px;
+  font-size: 12.5px; line-height: 1.85; color: #5a5a5f; margin-top: 30px;
+}
+.daily-note strong { color: var(--daily-ink); }
+.daily-extras {
+  background: #fff; border: 1px solid var(--daily-line); border-radius: 20px;
+  padding: 0 20px; margin-top: 16px;
+}
+.daily-extras > summary {
+  cursor: pointer; padding: 18px 0; font-size: 15px; font-weight: 700;
+  list-style: none; display: flex; align-items: center; justify-content: space-between;
+}
+.daily-extras > summary::-webkit-details-marker { display: none; }
+.daily-extras > summary::after { content: '＋'; color: var(--daily-blue); font-size: 18px; }
+.daily-extras[open] > summary::after { content: '－'; }
+.daily-extras__body { padding-bottom: 22px; font-size: 13.5px; line-height: 1.85; }
+.daily-extras h4 { font-size: 14px; margin: 20px 0 10px; }
+.daily-table { width: 100%; border-collapse: collapse; font-size: 12.5px; margin: 8px 0 18px; }
+.daily-table th, .daily-table td { border: 1px solid #e8e8ed; padding: 8px 10px; text-align: left; vertical-align: top; }
+.daily-table th { background: #f5f5f7; font-weight: 700; }
+.daily-extras ul { padding-left: 20px; margin: 8px 0 16px; }
+.daily-extras li { margin-bottom: 6px; }
+.daily-quote {
+  margin: 10px 0; padding: 10px 14px; border-left: 3px solid var(--daily-blue);
+  background: rgba(0, 113, 227, .05); border-radius: 0 10px 10px 0; font-size: 13px;
+}
+.daily-related { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+.daily-related a {
+  background: #fff; border: 1px solid var(--daily-line); border-radius: 14px;
+  padding: 10px 14px; font-size: 12.5px; font-weight: 600; color: var(--daily-ink);
+}
+.daily-related a:hover { border-color: var(--daily-blue); color: var(--daily-blue); text-decoration: none; }
+.daily-footer-nav {
+  display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  margin-top: 30px; padding-top: 22px; border-top: 1px solid var(--daily-line);
+  font-size: 13px;
+}
+.daily-cta {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--daily-blue); color: #fff !important; font-size: 13px; font-weight: 700;
+  padding: 11px 20px; border-radius: 999px; border: none; cursor: pointer;
+  font-family: inherit;
+}
+.daily-cta:hover { text-decoration: none; opacity: .9; }
+.daily-faq { margin-top: 30px; }
+.daily-faq details { background: #fff; border: 1px solid var(--daily-line); border-radius: 14px; padding: 14px 18px; margin-bottom: 10px; }
+.daily-faq summary { cursor: pointer; font-weight: 700; font-size: 14px; }
+.daily-faq p { font-size: 13px; line-height: 1.8; color: #4b4b50; margin: 10px 0 0; }
+.daily-error { text-align: center; padding: 60px 20px; color: var(--daily-muted); font-size: 14px; }
+
+/* ---------- 归档页 ---------- */
+.daily-archive-group { margin-bottom: 30px; }
+.daily-archive-group h2 { font-size: 20px; margin: 0 0 12px; }
+.daily-archive-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
+.daily-archive-list li {
+  background: #fff; border: 1px solid var(--daily-line); border-radius: 14px;
+  padding: 14px 18px; display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;
+}
+.daily-archive-list time { font-size: 12px; color: var(--daily-muted); font-variant-numeric: tabular-nums; }
+.daily-archive-list a { font-size: 15px; font-weight: 700; }
+.daily-archive-list .daily-chip { font-size: 10px; }
+
+/* ---------- 移动端 ---------- */
+@media (max-width: 720px) {
+  .daily-wrap { padding: 20px 14px 56px; }
+  .daily-site-header__inner { padding: 10px 14px; }
+  .daily-site-nav { gap: 12px; font-size: 12px; }
+  .daily-title { font-size: 26px; }
+  .daily-card { padding: 18px 18px 14px; border-radius: 24px; }
+  .daily-card__title { font-size: 20px; }
+  .daily-switcher { flex-wrap: wrap; padding: 12px; gap: 10px; }
+  .daily-switcher__label { width: 100%; }
+  .daily-switcher__scroll { order: 2; width: 100%; flex: none; }
+  .daily-layout { grid-template-columns: 1fr; }
+  .daily-toc { display: none; }
+  .daily-original, .daily-analysis { padding: 16px 16px 14px; border-radius: 0 16px 16px 0; }
+  .daily-original .daily-block__body { font-size: 16px; line-height: 1.9; }
+  .daily-analysis .daily-block__body { font-size: 14px; }
+  .daily-devices { margin-left: 0; width: 100%; }
+  .daily-footer-nav { flex-direction: column; }
+}
+
+/* ---- 原型专用 ---- */
+.proto-note{background:#fff8e6;border:1px solid rgba(214,158,46,.28);border-left:3px solid #d69e2e;border-radius:14px;padding:11px 16px;font-size:12px;line-height:1.7;color:#7a5a12;margin-bottom:16px}
+.proto-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.proto-tab{border:1px solid var(--daily-line);background:#fff;color:#4b4b50;font-size:13px;font-weight:700;padding:9px 18px;border-radius:999px;cursor:pointer;font-family:inherit}
+.proto-tab.is-active{background:var(--daily-blue);border-color:var(--daily-blue);color:#fff}
+.proto-modes{display:inline-flex;background:#eceaef;padding:3px;border-radius:999px;gap:2px}
+.proto-mode{border:0;background:transparent;color:#6e6e73;font-size:12px;font-weight:700;padding:6px 14px;border-radius:999px;cursor:pointer;font-family:inherit}
+.proto-mode.is-active{background:#fff;color:var(--daily-blue);box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.proto-datebox{background:#fff;border:1px solid var(--daily-line);border-radius:22px;padding:18px 20px;margin-bottom:22px;box-shadow:0 8px 30px rgba(0,0,0,.04)}
+.proto-datebox__head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.proto-datebox__title{font-size:13px;font-weight:700;color:var(--daily-ink)}
+.proto-datebox__hint{font-size:11px;color:var(--daily-muted)}
+.proto-strip{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;scrollbar-width:thin}
+.proto-day{flex:0 0 auto;min-width:74px;border:1px solid var(--daily-line);background:#f5f5f7;border-radius:14px;padding:9px 12px;text-align:left;cursor:pointer;font-family:inherit;color:#4b4b50}
+.proto-day b{display:block;font-size:13px}
+.proto-day small{display:block;font-size:10px;color:var(--daily-muted);margin-top:3px}
+.proto-day.is-active{background:var(--daily-blue);border-color:var(--daily-blue);color:#fff}
+.proto-day.is-active small{color:rgba(255,255,255,.8)}
+.proto-day.is-empty{opacity:.42;cursor:default}
+.proto-cal{width:100%;border-collapse:collapse;font-size:12px;max-width:420px}
+.proto-cal th{color:var(--daily-muted);font-weight:700;padding:7px 0;text-align:center}
+.proto-cal td{text-align:center;padding:3px}
+.proto-cal button{width:36px;height:36px;border:0;background:transparent;border-radius:10px;font-size:12px;font-weight:600;color:#4b4b50;cursor:pointer;font-family:inherit}
+.proto-cal button.has{background:rgba(0,113,227,.10);color:var(--daily-blue);font-weight:800}
+.proto-cal button.is-active{background:var(--daily-blue);color:#fff}
+.proto-cal button:disabled{color:#c7c7cc;cursor:default}
+.proto-cal__nav{display:flex;align-items:center;gap:10px;margin-bottom:8px;font-size:13px;font-weight:700}
+.proto-cal__nav button{border:1px solid var(--daily-line);background:#fff;border-radius:8px;width:28px;height:28px;cursor:pointer;font-family:inherit}
+.proto-weekgroup{margin-bottom:14px}
+.proto-weekgroup h4{font-size:12px;color:var(--daily-muted);margin:0 0 8px}
+.proto-list{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:7px}
+.proto-list li{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;background:#f5f5f7;border-radius:12px;padding:10px 14px;cursor:pointer;border:1px solid transparent}
+.proto-list li:hover{border-color:var(--daily-blue)}
+.proto-list li.is-active{border-color:var(--daily-blue);background:rgba(0,113,227,.06)}
+.proto-list time{font-size:11px;color:var(--daily-muted);font-variant-numeric:tabular-nums;min-width:78px}
+.proto-list b{font-size:13.5px}
+.proto-demo{display:inline-block;background:#fff0d6;color:#8a6414;font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px}
+.proto-hero{text-align:center;padding:18px 0 26px}
+.proto-hero h1{font-size:34px;font-weight:800;color:var(--daily-ink);margin:0 0 10px}
+.proto-hero p{font-size:14px;color:var(--daily-muted);margin:0}
+.proto-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+.proto-tile{background:#fff;border:1px solid var(--daily-line);border-radius:18px;padding:16px 18px;cursor:pointer;transition:transform .25s,box-shadow .25s}
+.proto-tile:hover{transform:translateY(-3px);box-shadow:0 14px 30px rgba(0,0,0,.07)}
+.proto-tile time{font-size:11px;color:var(--daily-muted)}
+.proto-tile h3{font-size:16px;margin:8px 0;color:var(--daily-ink)}
+.proto-tile p{font-size:11.5px;color:var(--daily-muted);line-height:1.6;margin:0 0 10px}
+.proto-view{display:none}
+.proto-view.is-active{display:block}
+.proto-back{font-size:12px;color:var(--daily-blue);cursor:pointer;display:inline-block;margin-bottom:14px}
+@media(max-width:720px){.proto-hero h1{font-size:25px}.proto-datebox{padding:14px}}
+</style>
+</head>
+<body class="daily-page">
+<header class="daily-site-header"><div class="daily-site-header__inner">
+  <span class="daily-brand"><span class="daily-brand__mark">✒</span>爱学申论</span>
+  <nav class="daily-site-nav"><span>题库批改</span><span style="color:var(--daily-blue);font-weight:700">每日精读</span><span>归档</span></nav>
+</div></header>
+
+<main class="daily-wrap">
+  <div class="proto-note"><b>交互原型</b> · 用于对比「其他日期」的展现方式。含 <b>2 篇真实讲义</b>（2026-11-10）与 <b>8 篇演示数据</b>（标「演示」），演示数据的正文为占位文本，不是人民日报原文。点击任意日期可切换内容；日期区可切换三种方案。此文件不参与正式构建。</div>
+
+  <div class="proto-tabs">
+    <button class="proto-tab is-active" data-view="home">① 首页 · 今日 + 往期</button>
+    <button class="proto-tab" data-view="reading">② 阅读页 · 日期切换</button>
+    <button class="proto-tab" data-view="archive">③ 归档页 · 按日期浏览</button>
+  </div>
+
+  <!-- 首页 -->
+  <section class="proto-view is-active" id="view-home">
+    <div class="proto-hero"><h1>专业的申论 <span style="color:var(--daily-blue)">智能批改</span> 平台</h1><p>还原真实考试体验，提供多维度诊断、解析及范文参考。</p></div>
+    <div class="max-w" style="max-width:820px;margin:0 auto">
+      <div id="home-card"></div>
+      <div class="daily-section-title" style="font-size:17px">往期精读 <span class="daily-muted" style="font-size:12px;font-weight:400">· 点日期直达</span></div>
+      <div class="proto-datebox" style="padding:14px 16px">
+        <div class="proto-strip" id="home-strip"></div>
+      </div>
+      <div style="text-align:center;margin:22px 0"><button class="daily-cta" data-go="archive">查看全部归档 →</button></div>
+    </div>
+  </section>
+
+  <!-- 阅读页 -->
+  <section class="proto-view" id="view-reading">
+    <span class="proto-back" data-go="home">← 返回首页</span>
+    <div class="proto-datebox">
+      <div class="proto-datebox__head">
+        <div><div class="proto-datebox__title">按日期切换 · 其他日期的精读</div><div class="proto-datebox__hint" id="date-hint"></div></div>
+        <div class="proto-modes">
+          <button class="proto-mode is-active" data-mode="strip">横向日期条</button>
+          <button class="proto-mode" data-mode="calendar">月历</button>
+          <button class="proto-mode" data-mode="list">归档列表</button>
+        </div>
+      </div>
+      <div id="date-strip"></div><div id="date-calendar" style="display:none"></div><div id="date-list" style="display:none"></div>
+    </div>
+    <div id="reading-body"></div>
+  </section>
+
+  <!-- 归档页 -->
+  <section class="proto-view" id="view-archive">
+    <span class="proto-back" data-go="home">← 返回首页</span>
+    <div class="daily-eyebrow">跟着人民日报学申论</div>
+    <h1 class="daily-title daily-serif">申论每日精读归档</h1>
+    <blockquote class="daily-summary">每天从《人民日报》评论版选一篇符合申论大作文结构的范文，按「原文 + 老师逐段解析」拆解。按月份浏览，点击卡片直接进入阅读页。</blockquote>
+    <div id="archive-groups"></div>
+  </section>
+</main>
+
+<footer class="daily-site-footer"><p>爱学申论 · 每日精读日期浏览交互原型（非正式页面）</p></footer>
+
+<script>
+const DATA = {"today": "2026-11-11", "entries": [{"date": "2026-11-10", "slug": "2026-11-10-2", "edition": 2, "title": "烟火气也是竞争力", "keywords": ["城市治理", "高质量发展", "辩证思维", "因地制宜", "文旅消费"], "summary": "《烟火气也是竞争力》选自《人民日报》2026-11-10 第 05 版「人民锐评」，核心考点为城市治理、高质量发展、辩证思维。本讲义按「原文 + 老师逐段解析」拆解 10 个段落的段落功能、论证方式、金句标准表述与举一反三例句，并附框架速览、积累清单和迁移练习，供申论与面试备考使用。", "source": {"page": "第 05 版", "column": "人民锐评", "author": "常言道", "charCount": 994, "paperDate": "2026-11-10", "originalUrl": "https://paper.people.com.cn/rmrb/pc/content/202611/10/content_30190480.html"}, "structure": {"status": "standard", "score": 100, "subThesisCount": 4, "outline": ["引子", "总论点", "过渡分析", "过渡分析", "过渡分析", "分论点一", "分论点二", "分论点三", "分论点四", "结尾"]}, "demo": false, "segments": [{"index": 1, "original": {"html": "近期公布的数据显示，湖南长沙2026年前三季度地区生产总值同比仅增长1.6%。网上很快冒出一类观点：网红城市长沙\u003cstrong>被流量绊住了\u003c/strong>，\u003cstrong>文娱做多了，科创就弱了\u003c/strong>，最终拖累增长。"}, "analysis": {"html": "\u003cp>今天我们学习一篇 2026 年 11 月 10 日《人民日报》第 05 版「人民锐评」的新范文，题目叫《烟火气也是竞争力》。大家先别急着往下读，这个主题在考试里分量不轻——城市发展、文旅消费、产业取舍，几乎是近几年申论和面试的「常驻嘉宾」；而且它政策理论性不算强，偏偏特别容易写偏，一不留神就写成给「网红城市」辩护的议论文。今天大家就辛苦一点，我们一起把「怎么辩证看发展」这个本事拿下来。\u003c/p>\u003cp>第一段，新闻由头段，同时是\u003cstrong>立靶子\u003c/strong>的段。先看写法：\u003cstrong>「先摆数据，再摆错误观点」\u003c/strong>的树靶式开头。评论没有一上来就讲大道理，而是先摆一件刚发生的事（近期公布的数据、长沙前三季度 1.6%），紧接着把网上流传的一种归因原样端出来——「文娱做多了，科创就弱了」。为什么先树靶？因为全文是\u003cstrong>驳论\u003c/strong>，后面每一段都在拆这个靶子。这个开头在考场上特别好用：申论作文、面试现象题里遇到「有人说……」的材料，先别急着表态，把争议摆清楚，文章立刻有了对话感和针对性。要留个印象的是「\u003cstrong>被流量绊住了\u003c/strong>」「\u003cstrong>文娱做多了，科创就弱了\u003c/strong>」这种把两件事强行做成因果的说法，后面要一句句驳；数据本身不用背，给定材料里有什么就用什么。这里提醒一个常见失分点：材料给「统计数字 + 网络舆情」让你回应网友观点，不少同学不复述争议就自说自话，答得再漂亮也少了针对性。这个开头结构，大家动笔抄进素材库，和前几天讲过的「从最新案例切入」对照着看。\u003c/p>", "function": "新闻由头 · 立靶子", "structureRole": "引子"}}, {"index": 2, "original": {"html": "一个地区经济增速快慢，\u003cstrong>是复杂因素综合作用的结果\u003c/strong>，应做\u003cstrong>深入调查研究、客观理性分析\u003c/strong>，将其简单归咎为“文娱产业畸重”“流量拖累”，\u003cstrong>经不起推敲\u003c/strong>。"}, "analysis": {"html": "\u003cp>第二段，第一层反驳，正面亮判断、先破对方的归因方式。这里用到的是\u003cstrong>「以理驳事」\u003c/strong>：先给一个一般性原理（增速是复杂因素综合作用的结果）→ 由此推出应有的方法（深入调查研究、客观理性分析）→ 最后一句轻轻落回靶子（简单归咎为……，经不起推敲）。比直接说「网友讲错了」高明得多，也稳得多。把这个句式记下来：\u003cstrong>「……是复杂因素综合作用的结果，应……，将其简单归咎为……，经不起推敲」\u003c/strong>，分析类段落几乎可以整段搬。\u003c/p>\u003cp>本段要划一划的可背表述有三处：\u003cstrong>「复杂因素综合作用的结果」\u003c/strong>、\u003cstrong>「深入调查研究、客观理性分析」\u003c/strong>、\u003cstrong>「经不起推敲」\u003c/strong>。前两个是分析问题的标准搭配，最后一个是驳论里最有分寸的收尾词——比「完全错误」「毫无道理」稳妥，正好体现公务员看问题的理性。另外，「调查研究」是这两年申论、面试的高频考点，答题时别只写「要调研」三个字，要像这段一样写出「面对复杂问题→不能单因归因→所以要调研辨析」的逻辑链，才不空、才不浮于表面。\u003c/p>\u003cp>给大家两个换主题的例句：写基层治理，可以说「一个地方矛盾纠纷的多寡，是人口结构、利益格局、服务供给等复杂因素综合作用的结果，应做深入调查研究，把它简单归咎为『干部不负责』，经不起推敲」；写营商环境，可以说「企业投资意愿是市场预期、要素成本、政策连续性综合作用的结果，简单归咎为『优惠给得不够』，经不起推敲」。是不是一下就能用上了？「深入调查研究、客观理性分析」这句推荐划一划、动笔抄一遍。\u003c/p>", "function": "反驳一：破归因", "structureRole": "总论点"}}, {"index": 3, "original": {"html": "一个城市既需要科技创新和现代化产业\u003cstrong>“壮筋骨”\u003c/strong>，也需要文化、娱乐等富有生活气息的产业来\u003cstrong>“活气血”\u003c/strong>。两者\u003cstrong>不是对立，而是互补\u003c/strong>。"}, "analysis": {"html": "\u003cp>第三段，全文的中心论点段，用一组比喻把主张立起来。先讲透这组比喻：作者把城市比作一个人——\u003cstrong>「壮筋骨」\u003c/strong>指科技创新和现代化产业，管的是骨架和硬实力；\u003cstrong>「活气血」\u003c/strong>指文化、娱乐这些带生活气息的产业，管的是气血和活力。这套「身体比喻」在政策文章里很常见，好处是把「产业结构」这种抽象词讲得可感、好记。\u003c/p>\u003cp>这里必须交代\u003cstrong>答题边界\u003c/strong>：说「活气血」重要，绝不等于可以不要科创、只搞文旅；反过来也一样。文章第 7 段还专门补了一句「重视硬科技创新，是高质量发展的必答题，这一点没有争议」，就是怕被读偏。大家写作文、答面试题，凡讲「不能只顾一头」，一定要把「另一头同样不能丢」补上，否则很容易被判成片面、跑偏——这是辩证类题目最常见的失分点。\u003c/p>\u003cp>再看写法：\u003cstrong>「既需要……也需要……。两者不是对立，而是互补」\u003c/strong>，是标准的「两面并提 + 点破关系」。特别提醒最后那半句：很多同学并列完两面就收笔了，这里偏偏多加一句把关系说破，观点才真正立得住。这个「补一句点关系」的动作，考场上很值钱。可背的有整段，尤其 \u003cstrong>「两者不是对立，而是互补」\u003c/strong>，以及 \u003cstrong>「不是……而是……」\u003c/strong> 这个先否定再肯定的句式——我们讲《多几把尺子量创新》时遇到过「并非一概否定，而是要……」，可以放到一起对照记。\u003c/p>\u003cp>换主题的例句给两个：写乡村全面振兴，「既需要特色产业壮筋骨，也需要乡风文明活气血，两者不是对立，而是互补」；写企业发展，「既需要核心技术壮筋骨，也需要品牌服务活气血」。面试里碰到「有人说搞文旅会影响搞实业，你怎么看」，开头用这一段定调，立场马上就清楚了。\u003c/p>", "function": "中心论点", "structureRole": "过渡分析"}}, {"index": 4, "original": {"html": "同为网红城市的四川成都，烟火气很足，前三季度经济增速跑赢全国平均水平；江苏常州\u003cstrong>一手深耕新能源产业，一手做活“演唱会经济”\u003c/strong>，以流量与活力吸引青年人才集聚。这些案例提醒我们：产业赛道之间可以形成\u003cstrong>正向循环\u003c/strong>，\u003cstrong>不是非此即彼的取舍\u003c/strong>。"}, "analysis": {"html": "\u003cp>第四段，举例论证段，用两个同类城市反证上一段的论点。写法上是\u003cstrong>「分说（事例排比）+ 总说（一句点题）」\u003c/strong>。更值得学的是\u003cstrong>举例要贴靶\u003c/strong>：两个例子都是「网红城市／流量城市」，正好对准第 1 段那个靶子，不是随便找两个漂亮案例。大家写作文举例最容易犯「例子和观点两张皮」的毛病，这一段就是范本。另外「\u003cstrong>一手……一手……\u003c/strong>」这个句式把「两者兼得」写得很利落，比「既发展 A 又发展 B」有画面感。\u003c/p>\u003cp>要摘的可背表述有三处：\u003cstrong>「以流量与活力吸引青年人才集聚」\u003c/strong>、\u003cstrong>「正向循环」\u003c/strong>、\u003cstrong>「不是非此即彼的取舍」\u003c/strong>。「正向循环」是分析产业关系、治理机制时的高级词；「以……吸引青年人才集聚」可以直接搬进人才类题目。给两个换主题的例句：写县域经济，「一手做强农产品加工，一手做活乡村旅游，以产业与生态吸引青年返乡集聚」；写城市更新，「一手补齐市政短板，一手做活街区业态，以便利与烟火气吸引人气回流」。\u003c/p>\u003cp>这里有个读材料的窍门要交代：申论给定材料常给两三个地方案例，让你概括「共同经验」，答案往往就藏在「\u003cstrong>这些案例提醒我们\u003c/strong>」后面那句总说里。凡是材料中出现「提醒我们」「这表明」「启示是」，后面基本就是命题人递给你的采分点，考场上一定要圈出来。至于成都、常州的名字和增速数字，不用背，给定材料里有什么就用什么；要抄的是「一手……一手……」和「正向循环」。\u003c/p>", "function": "事实论据", "structureRole": "过渡分析"}}, {"index": 5, "original": {"html": "\u003cstrong>问诊发展，贵在实事求是、精准辨症，最忌以偏概全、误开药方。\u003c/strong>"}, "analysis": {"html": "\u003cp>第五段，只有一句的短段，过渡兼提气，把文章从「摆案例」推到「讲思维方法」。我们在《多几把尺子量创新》里讲过「短段提气」，今天又遇上，可以对照着看：前面几段都是长句、实据，中间插一句短的、带点文言味的判断，节奏一下就亮了，阅卷时也更容易看出层次。句式是 \u003cstrong>「贵在……，最忌……」\u003c/strong>，一句话同时给出「该怎么做」和「最怕什么」，干净利落，特别适合放在分析段的开头或结尾。\u003c/p>\u003cp>接着把比喻讲透：\u003cstrong>「问诊」「辨症」「开药方」\u003c/strong>是一整套把「分析发展问题」比作「看病」的说法——问诊＝摸清情况（对应第 2 段的调查研究），辨症＝找准病因（对应不能单因归因），开药方＝提对策；\u003cstrong>「误开药方」\u003c/strong>就是没找准病根就下结论、乱出政策。这里补一条\u003cstrong>答题边界\u003c/strong>：这套比喻用在「分析问题—提出对策」的语境最贴切，别到处乱套；而且一旦写了「精准辨症」，后面对策就必须真能对应前面找出的病因，不能写着写着又去套万能模板，否则你自己就「误开药方」了。\u003c/p>\u003cp>可背的是整句 \u003cstrong>「问诊发展，贵在实事求是、精准辨症，最忌以偏概全、误开药方」\u003c/strong>，另有 \u003cstrong>「实事求是」「以偏概全」\u003c/strong> 两个词，几乎是申论分析题的标配。面试题若问「领导让你调研某地增速放缓的原因，你怎么开展」，用「先问诊、再辨症、后开方」三层来组织，比罗列「听汇报、看材料、开座谈」更有逻辑感。这句短、稳、能提分，推荐整句抄写、背下来。\u003c/p>", "function": "短段提气 · 过渡", "structureRole": "过渡分析"}}, {"index": 6, "original": {"html": "更值得警惕的，是一种\u003cstrong>非此即彼的二元对立思维\u003c/strong>。\u003cstrong>从把\u003c/strong>“硬核科技”与“城市烟火”对立起来，\u003cstrong>到将\u003c/strong>人工智能赋能影视制作与推进底层技术突破对立起来，\u003cstrong>再到把\u003c/strong>打造消费场景与科技研发投入对立起来……这些话题设置忽略了一个事实：\u003cstrong>科创的生长，从来不是隔绝城市生活、脱离消费场景的封闭实验\u003c/strong>。这种忽略，\u003cstrong>恰恰是很多争议的源头\u003c/strong>。"}, "analysis": {"html": "\u003cp>第六段，全文思辨最深的一段，从批一个具体说法，上升到批一种思维方式。写法是\u003cstrong>「观点句 + 三例排比 + 揭事实 + 点根源」\u003c/strong>四步：开头「更值得警惕的」又是一处\u003cstrong>接缝\u003c/strong>，用递进把层次往深里推一层；中间「从……到……再到……」把三组流行的对立话题一口气摆出来，气势足，也显得不是就事论事；然后「忽略了一个事实」猛地一转，点破争论双方共同无视的前提；最后「恰恰是很多争议的源头」收束到根源。大家写分析段总觉得浮于表面，缺的往往就是「从现象追到思维方式」这一步，今天这段就是最好的拆解样本。\u003c/p>\u003cp>来讲概念，也是本段最该弄懂的：\u003cstrong>「非此即彼的二元对立思维」\u003c/strong>，就是把本可共存、互补的两件事，硬做成「有你没我」的单选题，和第 10 段的\u003cstrong>「标签思维」\u003c/strong>是一回事。这类题在面试里出现频率极高，判分看的是你能不能跳出二选一、找到把两边统一起来的那个前提。\u003cstrong>答题边界要记牢：破「二元对立」不等于和稀泥、各打五十大板\u003c/strong>——文章并没有说「两边都有道理所以不用管了」，而是给出一个明确的事实判断（科创离不开消费场景），再据此讲统筹。所以辩证之后必须有「立」，不能停在「要全面看」就收尾，这是名言题、观点题最普遍的失分点。\u003c/p>\u003cp>可背的有 \u003cstrong>「非此即彼」\u003c/strong>、\u003cstrong>「恰恰是很多争议的源头」\u003c/strong>，还有 \u003cstrong>「科创的生长，从来不是……的封闭实验」\u003c/strong>（「从来不是……」是「不是……而是……」的加强版）。给一组举一反三的例句：写基层减负，「把留痕管理与真抓实干对立起来，忽略了一个事实：必要的台账本就是复盘与问责的依据」；写教育，「把减负与提质对立起来，忽略了一个事实：低效重复才是负担的源头」。给定材料里那种「甲方说……乙方说……」的争议型材料，采分点常常就落在「双方共同忽略的前提」上。「从……到……再到……」这个排比框架，动笔抄一遍，考场时间紧时特别能撑起一段。\u003c/p>", "function": "深层归因", "structureRole": "分论点一"}}, {"index": 7, "original": {"html": "重视硬科技创新，是高质量发展的\u003cstrong>必答题\u003c/strong>，\u003cstrong>这一点没有争议\u003c/strong>。但\u003cstrong>认可科创的分量，不等于将\u003c/strong>文化、娱乐等领域的发展一概视为“耽误正事”。文化、消费、民生领域的丰富场景，\u003cstrong>既是技术落地的土壤，也是创新迭代的需求来源，更是吸引人才的磁场\u003c/strong>。"}, "analysis": {"html": "\u003cp>第七段，辩证补位段，专门堵住别人可能扣过来的帽子，同时给出正面理由。写法是\u003cstrong>「先立共识 → 再划边界 → 后给理由」\u003c/strong>：第一句「重视硬科技创新，是必答题，这一点没有争议」主动把最不容易被反驳的共识认下来；第二句用 \u003cstrong>「但认可……不等于将……一概视为……」\u003c/strong> 划出边界，防止自己的主张被读成「轻视科创」；第三句连着「既是……也是……更是……」三层递进，把「场景对科创究竟有什么用」讲透。为什么这个顺序值得学？因为申论和面试里，凡你要为一个容易被误解的观点辩护，\u003cstrong>先把共识认下来，观点才站得稳\u003c/strong>；一上来就替文旅喊冤，很容易被判成片面。\u003c/p>\u003cp>再看三个比喻：\u003cstrong>「土壤」\u003c/strong>讲技术落地的条件，\u003cstrong>「需求来源」\u003c/strong>讲迭代的动力，\u003cstrong>「磁场」\u003c/strong>讲对人才的吸引，从「物」到「人」一层层抬高。写「某产业、某环境为什么重要」时，「条件—动力—主体」这三层最好套。\u003c/p>\u003cp>本段最该背的是整句 \u003cstrong>「既是技术落地的土壤，也是创新迭代的需求来源，更是吸引人才的磁场」\u003c/strong>，强烈推荐整句抄写；另外 \u003cstrong>「必答题」「这一点没有争议」\u003c/strong> 一并积累，前者在科技、改革、民生类题目里到处能用，后者是驳论中主动认共识的好搭配。换两个主题：写营商环境，「丰富的应用场景，既是技术落地的土壤，也是产品迭代的需求来源，更是吸引企业近悦远来的磁场」；写乡村人才，「完善的公共服务，既是产业落地的土壤，也是业态迭代的需求来源，更是吸引青年返乡的磁场」。面试题「有人说发展文旅会挤占科技投入」，答到这一层就能明显拉开差距：先认「科创是必答题」，再讲「场景反哺创新」，最后落到统筹兼顾。这段和前面讲过的「并非一概否定，而是要……」是同一路数，放一起对照背。\u003c/p>", "function": "辩证补位", "structureRole": "分论点二"}}, {"index": 8, "original": {"html": "\u003cstrong>同时，无论对一国还是一个地区来说\u003c/strong>，文旅、文娱等产业在\u003cstrong>满足群众精神需求、舒缓生活压力、吸纳就业、带动关联产业\u003c/strong>上，发挥着\u003cstrong>不可替代的作用\u003c/strong>。“文化很发达的地方，经济照样走在前面”，这是许多地区的实践给我们的\u003cstrong>深刻启示\u003c/strong>。"}, "analysis": {"html": "\u003cp>第八段，补上「文旅自身独立价值」这一层，把论证从「对科创有用」再往外扩一圈。写法是\u003cstrong>「无论……还是……放大适用范围 + 四项并列铺开功能 + 引语佐证 + 『这是……给我们的深刻启示』收束」\u003c/strong>。这里请大家注意层次：第 7 段讲的是文旅「对科创的工具价值」，这一段讲的是文旅「对群众和就业的本体价值」，两层不能混——这正是文章层次的细处，也提醒我们写分论点时先想清楚每一段到底在讲什么，别三段反复说同一句话。四项并列「满足精神需求、舒缓生活压力、吸纳就业、带动关联产业」是从「人」到「业」，很适合直接改造成申论概括题的采分点。\u003c/p>\u003cp>可背的表述：\u003cstrong>「在满足……、吸纳就业、带动关联产业上，发挥着不可替代的作用」\u003c/strong>（把四个短语换成任意产业的效益都能用）、\u003cstrong>「这是……实践给我们的深刻启示」\u003c/strong>（引语后的标准收束），以及那句朴素好记的引语 \u003cstrong>「文化很发达的地方，经济照样走在前面」\u003c/strong>——面试里用来回应「文化与发展二选一」特别顺口。\u003c/p>\u003cp>这里交代一个\u003cstrong>边界\u003c/strong>：这句引语属于\u003cstrong>实践经验式佐证\u003c/strong>，不是政策条文、也不是文件原话，答题时别当成权威表述去「引用」，用「不少地区的实践说明」带出来最稳妥。换主题套一下：写银发经济，「在满足老年群体照料需求、减轻家庭负担、吸纳就业、带动关联产业上，发挥着不可替代的作用」；写社区服务，同一句式照样成立。概括题问「发展文旅产业的意义」时，给定材料往往把这些点散着给，\u003cstrong>按「群众—就业—产业」归类作答，比照抄原句得分高\u003c/strong>。这四项并列划一划，放进素材库的「意义／作用」分类里。\u003c/p>", "function": "价值补充", "structureRole": "分论点三"}}, {"index": 9, "original": {"html": "因此对地方来说，\u003cstrong>不应轻易否定自己的特色，而要认清自身优势与劣势\u003c/strong>，\u003cstrong>把科技创新作为赋能手段\u003c/strong>，\u003cstrong>扬长板、补短板，因地制宜\u003c/strong>推进高质量发展。比如长沙，\u003cstrong>不仅要\u003c/strong>加快布局适合自己的新兴产业，\u003cstrong>也要\u003c/strong>推动工程机械等传统优势产业向数智化迈进，\u003cstrong>更要把\u003c/strong>“流量”的优势\u003cstrong>用足用好\u003c/strong>，让城市的人气、文化的吸引力\u003cstrong>转化为集聚人才、激发创意的源头活水\u003c/strong>。\u003cstrong>城市烟火气，也是城市竞争力。\u003c/strong>"}, "analysis": {"html": "\u003cp>第九段，全文对策段，从「怎么看」落到「怎么办」，并在段末回扣标题。写法是\u003cstrong>「总对策 + 案例展开 + 一句扣题」\u003c/strong>：总对策用「不应……而要……」先破后立；案例部分用「\u003cstrong>不仅要……也要……更要把……\u003c/strong>」三层递进，把长沙该做的三件事说清楚——布局新兴产业（补短）、传统产业数智化（扬长）、把流量用足（转化），正好和前面的「扬长板、补短板」一一对应。\u003cstrong>对策段最怕原则和例子对不上\u003c/strong>，这一段就是标准示范。最后「城市烟火气，也是城市竞争力」把标题稳稳落地，属于「回扣标题」，和《多几把尺子量创新》结尾把比喻再说一遍是同一个动作。\u003c/p>\u003cp>来讲一个高频概念：\u003cstrong>「因地制宜」\u003c/strong>是申论最爱考的对策词，但很多同学只写出「要根据本地实际」，等于没说。这里的示范是把它拆成三个可操作动作：\u003cstrong>认清优势与劣势（先分类）→ 扬长板、补短板（再定动作）→ 把科技创新作为赋能手段（找抓手）\u003c/strong>。\u003cstrong>答题边界更要记牢：「因地制宜」不等于「守住特色就不必补短板」\u003c/strong>，文章明明白白写了「加快布局适合自己的新兴产业」「向数智化迈进」；也不等于照抄网红城市，长沙学的是「把自己的流量用足」，不是去复制别人的演唱会经济。面试题答「因地制宜」，少答这两条，很容易被判「对策不具体、浮于表面」。\u003c/p>\u003cp>可背的一串：\u003cstrong>「扬长板、补短板，因地制宜推进高质量发展」\u003c/strong>、\u003cstrong>「把科技创新作为赋能手段」\u003c/strong>、\u003cstrong>「让……转化为集聚人才、激发创意的源头活水」\u003c/strong>、\u003cstrong>「用足用好」\u003c/strong>，以及整句 \u003cstrong>「城市烟火气，也是城市竞争力」\u003c/strong>。换两个主题：写县域，「不应轻易否定自己的农业底色，而要认清资源禀赋，把电商与冷链作为赋能手段，扬长板、补短板，因地制宜推进乡村全面振兴」；写老工业基地，「把数字化作为赋能手段，让厂房、技工、产业记忆转化为集聚人才、激发创意的源头活水」。申论对策题最常考「结合材料，就某地如何推进高质量发展提出建议」，这段几乎是可直接改造的模板，建议整段抄一遍。\u003c/p>", "function": "对策 + 回扣标题", "structureRole": "分论点四"}}, {"index": 10, "original": {"html": "看待一座城市，\u003cstrong>不能只看一时的增速起落\u003c/strong>；看待一种产业，也\u003cstrong>不能用标签思维代替全面分析\u003c/strong>。高质量发展需要\u003cstrong>统筹兼顾\u003c/strong>，\u003cstrong>既要有面向未来的科创雄心，也要实事求是、尊重规律\u003c/strong>，在\u003cstrong>敢拼敢闯、久久为功\u003c/strong>中\u003cstrong>一步一个脚印前行\u003c/strong>。"}, "analysis": {"html": "\u003cp>第十段，结尾点题段，用两个「看待」把具体争议拉回方法论，再落到高质量发展的总要求。写法是\u003cstrong>「对偶式否定开头 + 总要求 + 两结合 + 状态收束」\u003c/strong>：开头「看待一座城市……；看待一种产业……」是对称句，把全篇从长沙一个案例抬到普遍方法；中间「既要有……也要……」把「雄心」和「实事求是」配成一对，正好呼应第 3 段的「不是对立，而是互补」，这叫\u003cstrong>首尾呼应\u003c/strong>；结尾用「敢拼敢闯、久久为功」「一步一个脚印」两组四字词收住，稳而不喊口号。上次讲过「结尾扣题」，这篇没直接重复标题，而是用「统筹兼顾」「尊重规律」收拢立意，是另一种收法，两种都记一下。\u003c/p>\u003cp>再把概念补完整：\u003cstrong>「标签思维」\u003c/strong>就是拿一个现成标签（网红城市、资源型城市、传统产业）去替代对具体情况的分析，和第 6 段的「二元对立思维」正好是一对。这里交代一条考场边界：\u003cstrong>「不能只看一时的增速起落」不是「增速不重要、可以不看」\u003c/strong>，文章反对的是「以一时增速给城市定性、进而否定其产业选择」，不是否定考核本身。面试里谈「不唯 GDP」，若答成「GDP 无所谓」，就是典型的说过头；\u003cstrong>破的是「唯」，不是「不要」\u003c/strong>——这个分寸，和我们讲《多几把尺子量创新》时说的「破的是唯，不是取消指标」完全一样，两篇放一起对照记最省劲。\u003c/p>\u003cp>可背的一串：\u003cstrong>「统筹兼顾」「实事求是、尊重规律」「敢拼敢闯、久久为功」「一步一个脚印」「不能用标签思维代替全面分析」\u003c/strong>，还有开头那组 \u003cstrong>「看待……不能只看……；看待……也不能用……代替……」\u003c/strong>，作文结尾、面试收尾都能用。换主题收个尾：写干部考核，「看待一名干部，不能只看一时的排名起落；看待一项工作，也不能用留痕多少代替实绩分析」。面试题若给「高质量发展需要统筹兼顾」，可以用第 3 段定关系、第 6 段讲误区、第 9 段落对策、这一段收尾，四步就是完整框架。结尾两组四字词抄一抄、没事拿出来背一背，考场上时间紧，提前备好收束句再搭配给定材料现场发挥，最划算。今天这篇和《多几把尺子量创新》都是「破单一标准、讲统筹辩证」的路子，放进同一个素材夹，对照复习效率最高。\u003c/p>", "function": "结尾点题", "structureRole": "结尾"}}]}, {"date": "2026-11-10", "slug": "2026-11-10", "edition": 1, "title": "多几把尺子量创新", "keywords": ["科技评价改革", "创新生态", "破四唯", "标准与话语权", "辩证思维"], "summary": "《多几把尺子量创新》选自《人民日报》2026-11-10 第 05 版「微观」，核心考点为科技评价改革、创新生态、破四唯。本讲义按「原文 + 老师逐段解析」拆解 11 个段落的段落功能、论证方式、金句标准表述与举一反三例句，并附框架速览、积累清单和迁移练习，供申论与面试备考使用。", "source": {"page": "第 05 版", "column": "微观", "author": "喻思南", "charCount": 1197, "paperDate": "2026-11-10", "originalUrl": "https://paper.people.com.cn/rmrb/pc/content/202611/10/content_30190477.html"}, "structure": {"status": "standard", "score": 100, "subThesisCount": 4, "outline": ["总论点", "过渡分析", "过渡分析", "过渡分析", "论据", "分论点一", "分论点二", "过渡分析", "分论点三", "分论点四", "结尾"]}, "demo": false, "segments": [{"index": 1, "original": {"html": "科技期刊以什么标尺去量创新成果，关乎\u003cstrong>科研风向和生态\u003c/strong>。哪些成果被看见、哪些声音被放大、哪些路径被鼓励，对科研活动开展、创新资源流向有着\u003cstrong>直接而深远的影响\u003c/strong>。"}, "analysis": {"html": "\u003cp>今天我们学习一篇 2026 年 11 月 10 日《人民日报》第 05 版「微观」的新范文，题目叫《多几把尺子量创新》。大家先别急着往下读，先琢磨一下这个题目——「尺子」不是真的尺子，它比喻的是\u003cstrong>评价标准\u003c/strong>；「多几把」说的是\u003cstrong>评价要多元、不能只用一把尺\u003c/strong>。这类题目我们之前遇到过，比如《宽容的力量》《固底板才能行稳致远》，都是用一个生活里看得见的物件，去讲一个抽象的道理。这里就有一个很重要的考试提醒：\u003cstrong>申论给定材料和面试题里，特别喜欢拿这种带比喻的权威表述来出题\u003c/strong>，既考你对政策理论的把握，也考你能不能把比喻义拆明白。所以以后遇到这类标题，第一件事就是把比喻还原成政策语言，今天这篇文章正好可以用来练这个本事。\u003c/p>\u003cp>回到第一段，中心论点段。先注意开头的写法：\u003cstrong>用一个设问开篇\u003c/strong>——「科技期刊以什么标尺去量创新成果，关乎科研风向和生态」，不绕弯子，直接把「评价标准」这件事的重要性和盘托出。紧接着是三个「哪些」：「哪些成果被看见、哪些声音被放大、哪些路径被鼓励」，这是排比，但更值得我们学的是它的\u003cstrong>作用\u003c/strong>：把「评价很重要」这句抽象的话，拆成了看得见的三件具体事。大家写作文时最容易犯的毛病，恰恰是「写得不具体、浮于表面」，这里就提供了一个很好的改法。另外，本段还有两处标准表述要划一划，一是\u003cstrong>「科研风向和生态」\u003c/strong>，二是\u003cstrong>「直接而深远的影响」\u003c/strong>，两者都很好用，比如写到营商环境、考核导向、网络生态，都可以说「考核这根指挥棒，关乎干事创业的风向和生态」「评价导向对资源流向有着直接而深远的影响」。这两句先记下来，后面还会反复用到。\u003c/p>", "function": "中心论点", "structureRole": "总论点"}}, {"index": 2, "original": {"html": "前不久，中国科学技术信息研究所联合相关研究机构，遴选形成了 2025 年度世界一流科技期刊目录。评价逻辑有一个显著变化，\u003cstrong>在保留总被引频次、影响因子等国际通用指标的基础上，设计了发文指数、情感引用指数等新型指标\u003c/strong>。"}, "analysis": {"html": "\u003cp>第二段，新闻由头段。评论文章怎么开头？很多同学一上来就讲大道理，其实人民日报的短评更常用的办法是\u003cstrong>先摆一件刚发生的具体事\u003c/strong>：什么时间、谁、做了什么。这里「前不久」「中国科学技术信息研究所联合相关研究机构」「遴选形成了 2025 年度世界一流科技期刊目录」，三句话把事实交代清楚，不铺陈、不渲染。这个写法我们考试可以直接搬——申论作文开头与其空喊「改革很重要」，不如从给定材料里拎出一个最新案例切入，一下子就接地气了。\u003c/p>\u003cp>那本段最值钱的是哪一句？是后面这句：\u003cstrong>「在保留……等国际通用指标的基础上，设计了……等新型指标」\u003c/strong>。大家把它当成一个句式来记，它讲的是「继承 + 创新」：\u003cstrong>不是推倒重来，而是在原有基础上做增量\u003c/strong>。这个分寸感在答题里特别重要，因为很多同学一提改革就写成「彻底否定旧办法」，反而显得不成熟。给大家两个换主题的例句：写到基层治理，可以说「在保留网格化走访、群众议事等成熟做法的基础上，增设了线上诉求直报、办理满意度回访等新机制」；写到政务服务，可以说「在保留窗口办理、电话咨询等传统渠道的基础上，开发了智能导办、跨域通办等新功能」。是不是一下子就能用上了？另外，「显著变化」「新型指标」这类词看着普通，却是说明「改革举措」时最稳妥的搭配，可以一并积累。\u003c/p>", "function": "新闻由头", "structureRole": "过渡分析"}}, {"index": 3, "original": {"html": "\u003cstrong>这事值得展开说说。\u003c/strong> 当前，国际主流科技期刊评价体系，主要基于科睿唯安、爱思唯尔旗下的引文数据库搭建，以影响因子这一量化指标为核心。这些数据库\u003cstrong>收录期刊多、历史积淀深厚，有较强的国际公信力，但也存在一些亟待解决的弊端\u003c/strong>。"}, "analysis": {"html": "\u003cp>第三段，过渡兼背景段。先请大家注意开头那六个字：\u003cstrong>「这事值得展开说说」\u003c/strong>。是不是特别口语化？短评里用这样一句短句承上启下，既把上一段的新闻自然拽到下面的分析，又让节奏松了一口气，读起来不板。我们自己写文章不一定要照搬这句，但要学到这个意识：\u003cstrong>段落之间是需要「接缝」的\u003c/strong>，别让论点硬邦邦地一块块摞着。\u003c/p>\u003cp>接下来是本段真正要学的东西，看这句：\u003cstrong>「收录期刊多、历史积淀深厚，有较强的国际公信力，但也存在一些亟待解决的弊端」\u003c/strong>。注意它的顺序——\u003cstrong>先肯定合理性，再转折指出问题\u003c/strong>。这就是我们常说的辩证思维。为什么重要？因为在申论和面试里，凡是让你评价一项沿用多年的老制度、老标准，一上来就全盘否定，往往会被认为是看问题片面；先讲它「为什么曾经有效、现在还有哪些价值」，再讲「哪里不够用了」，层次立刻就出来了。这个句式可以直接套：评价传统考核，可以说「以量化指标考核干部，标准清晰、便于比较，有很强的操作性，但也存在重显绩轻潜绩、重留痕轻实效的弊端」；评价老办法管新业态，也可以说「这套规则在传统场景下运行多年、成效明显，但面对平台经济的新情况，也存在适用性不足的问题」。本段的「主要基于……搭建」「以……为核心」也是说明一项制度构成时的标准说法，抄写时可以顺手带上。\u003c/p>", "function": "过渡 + 背景", "structureRole": "过渡分析"}}, {"index": 4, "original": {"html": "影响因子\u003cstrong>能够反映\u003c/strong>期刊的整体引用热度，\u003cstrong>却无法辨识\u003c/strong>单篇论文的质量，\u003cstrong>也不区分\u003c/strong>一次引用是认可、批评还是\u003cstrong>例行公事的文献罗列\u003c/strong>。"}, "analysis": {"html": "\u003cp>第四段，分析问题段，只有一句话，但信息密度很高，大家别一眼扫过去就算了。先看结构：\u003cstrong>「能够……却无法……也不区分……」\u003c/strong>，这是一个非常好用的\u003cstrong>局限性分析句式\u003c/strong>——先承认这个指标能做到什么，再指出它做不到什么。我们答题时分析一项政策、一个工具的短板，用这个句式既准确又不得罪人，比直接说「这个指标不科学」高明得多。给大家两个例句：说到数字化考核，可以写「打卡留痕能够反映工作频次，却无法辨识解决问题的实际成效，也不区分是真走访还是补台账」；说到流量数据，可以写「点击量能够反映传播热度，却无法辨识内容质量，也不区分是认同、批评还是随手一划」。\u003c/p>\u003cp>再往下看，作者把「一次引用」拆成了三种情况：\u003cstrong>认可、批评、例行公事的文献罗列\u003c/strong>。这里请大家停一下——「不区分引用态度」本来是个挺专业的毛病，作者用三个并列的情形一摆，外行也立刻懂了。这就是我们反复强调的\u003cstrong>把抽象问题说具体\u003c/strong>：与其写「评价维度单一」，不如列出「唯分数、唯票数、唯流量」；与其写「考核不够精准」，不如列出「干多干少一个样、干好干坏一个样」。另外，「例行公事的文献罗列」这种略带画面感的表达，很能给文章添一点文采，学有余力的同学可以记下来。这段内容我在讲义里做了加粗，推荐重点抄一抄。\u003c/p>", "function": "分析问题一", "structureRole": "过渡分析"}}, {"index": 5, "original": {"html": "近年来，国际学术界对这一评价体系的反思不断深入。\u003cstrong>一方面\u003c/strong>，呼吁停止使用影响因子等指标来评价单篇研究论文或学者个体的贡献，或作为聘用、晋升、资助等方面的依据。\u003cstrong>另一方面\u003c/strong>，提出「\u003cstrong>量化的评估应当支持而非取代质化的专家评审\u003c/strong>」等原则，推动完善科技期刊评价体系。"}, "analysis": {"html": "\u003cp>第五段，外部经验段。结构很清楚，「一方面……另一方面……」，把国际上的反思分成「破」和「立」两层：一层是别再用单一指标去套个人，另一层是要确立新原则。\u003cstrong>并列式分述\u003c/strong>是我们在申论里最常用、也最稳的展开方式，尤其适合在一段里摆两条依据、两类做法，大家可以对照着练一练。\u003c/p>\u003cp>重点看这句金句：\u003cstrong>「量化的评估应当支持而非取代质化的专家评审」\u003c/strong>。它是「不是……而是……」的升级版，妙在「支持而非取代」五个字——不说不要量化，而是给量化\u003cstrong>划定了位置\u003c/strong>。这就把「度」讲清楚了，比简单站队更有水平。这句话本身来自科技评价，但道理是通的，换主题照样好使：写到人工智能辅助政务，可以说「智能审批应当支持而非取代人工复核」；写到基层减负中的数字台账，可以说「数据留痕应当支持而非取代实地走访」；写到干部考核，可以说「量化打分应当支持而非取代群众口碑」。大家可以把这几个例句和上一节的「能够……却无法……」放在一起抄，它们是一对。\u003c/p>\u003cp>还有个考试提醒：公务员面试里有一类题，专门拿一句名人名言或权威表述当题干，问你怎么看。平时遇到这类句子，别只顾着背，要像今天这样，顺着上下文想想「作者是怎么把它拆开论证的」——先摆问题、再讲分寸、最后落到完善体系。\u003cstrong>练的是分析的动作，不是背句子\u003c/strong>。时间久了，名言题的答题能力自然就上来了。\u003c/p>", "function": "外部经验", "structureRole": "论据"}}, {"index": 6, "original": {"html": "我国科技期刊在向国际拓展的路上，提出新的评价标准，\u003cstrong>既是\u003c/strong>提升自主话语权的需要，\u003cstrong>也是\u003c/strong>对国际科技评价体系转型的回应。比如，情感引用指数旨在区分引用态度，从而判断一篇论文是「被认可」「仅被提及」还是「被批评」。凸显创新质量、实际贡献，「\u003cstrong>立新标\u003c/strong>」和「\u003cstrong>破四唯\u003c/strong>」相辅相成，都是让评价体系更符合科研规律。"}, "analysis": {"html": "\u003cp>第六段，对策第一段，落到了我们自己该怎么做。先看这句：\u003cstrong>「既是提升自主话语权的需要，也是对国际科技评价体系转型的回应」\u003c/strong>。一个「既是……也是……」，把一件事的\u003cstrong>对内价值和对外意义\u003c/strong>同时说完了。这个双视角特别值得学，因为我们写对策时常常只讲「对我们有好处」，显得格局小了；补上「也是回应共同关切、参与全球治理」，文章的站位马上就不同。换主题也能用：写到绿色转型，可以说「既是美丽中国建设的需要，也是对应对气候变化全球共识的回应」；写到数据治理，可以说「既是保护群众权益的需要，也是对数字治理国际趋势的回应」。\u003c/p>\u003cp>接下来是本段必须弄懂的两个概念。第一个，\u003cstrong>「破四唯」\u003c/strong>：指的是破除「唯论文、唯职称、唯学历、唯奖项」（有的文件还加上「唯帽子」）的单一评价倾向，导向是看\u003cstrong>能力、质量、实效、贡献\u003c/strong>。这个词在人才、教育、科技、干部考核类题目里出现频率非常高，答题时一定要能说清它「破什么、立什么」。第二个，\u003cstrong>「立新标」\u003c/strong>：光破不立不行，还得有新的、可操作的评价标准，所以文中说两者「\u003cstrong>相辅相成\u003c/strong>」。这里就要提醒一个常见失分点：面试里问「怎么破除唯论文」，不少同学只答「不应唯论文」，却不答「用什么替代」，答案就悬在半空了。\u003cstrong>答题边界要记住：破的是「唯」，不是不要论文、不要指标；立的是多元、分类、以质量和贡献为导向的评价体系。\u003c/strong>\u003c/p>\u003cp>最后一句「都是让评价体系更符合\u003cstrong>科研规律\u003c/strong>」，看着平淡，其实给全篇的对策定了调子——改革不是随心所欲，要\u003cstrong>尊重规律\u003c/strong>。这个「尊重××规律」的落点，写到生态治理、城市发展、教育评价时都可以借。本段加粗的几处，大家动笔抄一抄。\u003c/p>", "function": "对策一：立新标", "structureRole": "分论点一"}}, {"index": 7, "original": {"html": "\u003cstrong>还有一层偏差需要纠正。\u003c/strong> 传统国际科技引文数据库长期有语种偏向，对非英文期刊和作者的评价存在偏差。非英文期刊往往在影响因子评价体系中被低估，这\u003cstrong>放大了\u003c/strong>全球科研资源的不均衡，\u003cstrong>也不利于\u003c/strong>多元知识体系的生长。"}, "analysis": {"html": "\u003cp>第七段，问题第二段。开头「还有一层偏差需要纠正」又是一处\u003cstrong>接缝\u003c/strong>，和上一段的「这事值得展开说说」可以放在一起对照学习：一篇短评里，作者用两处短句把「立新标」和「纠偏差」两个层次清清楚楚地分开，我们写分论点时，也不妨学着用一句简短的过渡把层次亮出来。\u003c/p>\u003cp>本段的论证方式，请大家重点把握，我叫它\u003cstrong>「危害链」\u003c/strong>：先说现象（长期有语种偏向）→ 再说直接后果（非英文期刊被低估）→ 最后说深层后果（放大了资源不均衡、不利于多元知识体系生长）。一层一层往深里推，比只写一句「这样不公平」有力得多。而且注意它用的是「\u003cstrong>放大了\u003c/strong>」「\u003cstrong>也不利于\u003c/strong>」，用词克制，没有夸张。给大家一个换主题的练习：写城乡公共服务差距，可以写成「长期以来优质资源向中心城区集聚，县域的公共服务能力被低估，这放大了城乡发展差距，也不利于县域承载力的提升」；写算法偏见，可以写成「训练数据长期偏向头部群体，长尾需求被系统性忽略，这放大了服务获取的不平等，也不利于产品生态的多元生长」。是不是很好套？\u003c/p>\u003cp>这里还藏着一个常考的知识点：\u003cstrong>公平与多元\u003c/strong>。评价体系的偏向不只是技术问题，它会实实在在影响资源流向，这正是第一段说的「直接而深远的影响」。前后这么一对照，大家就能体会什么叫\u003cstrong>首尾呼应\u003c/strong>——结尾点题前，中间的每一段其实都在回扣开头的判断。\u003c/p>", "function": "分析问题二", "structureRole": "分论点二"}}, {"index": 8, "original": {"html": "随着人工智能快速发展，跨语言沟通条件愈发成熟，学术评价的语言桎梏不断被打破。芬兰、挪威、俄罗斯、巴西等国家，纷纷推出了本国国际科技期刊目录。近些年，我国着力推动中外科技期刊「\u003cstrong>同质等效\u003c/strong>」。自 2020 年起，中国科协每年发布《科技期刊世界影响力指数（WJCI）报告》，重点加强对非英文优质期刊与新兴交叉学科的评价\u003cstrong>适配性\u003c/strong>。2025 年度世界一流科技期刊目录，着力\u003cstrong>突破语种、刊龄的限制\u003c/strong>，收录了 55 个国家和地区、覆盖 23 种语言的优质期刊。"}, "analysis": {"html": "\u003cp>第八段，事实论据段，也是全文最「实」的一段。先说一句让大家松口气的话：\u003cstrong>里面的数字、机构名、报告名，都不用背\u003c/strong>。考场上写不出「55 个国家和地区、23 种语言」很正常，给定材料里有什么就用什么。我们要学的是它\u003cstrong>举例的层次\u003c/strong>：先给条件（人工智能发展、跨语言沟通成熟）→ 再给旁证（多国纷纷推出本国目录）→ 再给我国动作（同质等效、WJCI 报告）→ 最后给最新成果和效果。四层推进，论据就不单薄了。很多同学举例只会写「比如某地做得很好」，一句话就完了，说服力自然不够，今天这一段就是最好的对照样本。\u003c/p>\u003cp>要划线的标准表述有三处：一是\u003cstrong>「同质等效」\u003c/strong>，意思是不同语种、不同平台的期刊，只要质量相当就应同等认定，用在标准互认、资格互认、区域一体化这类话题里都很贴切；二是\u003cstrong>「评价适配性」\u003c/strong>，讲的是评价标准要跟对象特点对得上，这个说法换到分类考核、精准施策里也成立；三是\u003cstrong>「着力突破语种、刊龄的限制」\u003c/strong>，「着力突破……的限制」是说明改革攻坚动作的好搭配，可以记成「着力突破户籍、地域、身份的限制」「着力突破部门壁垒和数据孤岛的限制」。\u003c/p>\u003cp>另外，「随着……快速发展，……不断被打破」是说明\u003cstrong>时代背景变化\u003c/strong>的常用句式，和第 3 段讲形势的写法可以一起积累。这些专业性强的表述，今天划一划、动笔抄一抄，以后遇到科技、人才、标准化方面的申论材料，反应速度会快不少，能省下宝贵的考试时间。\u003c/p>", "function": "事实论据", "structureRole": "过渡分析"}}, {"index": 9, "original": {"html": "中国科技期刊走向世界，\u003cstrong>不仅要\u003c/strong>扩大认同的圈层，\u003cstrong>还要\u003c/strong>展现兼容并包的气度。"}, "analysis": {"html": "\u003cp>第九段，只有一句话的短段，作用是把文章从「做事」提到「格局」，我把它叫\u003cstrong>「短段提气」\u003c/strong>。大家写作文习惯每段都写满，其实在两三个扎实的事实段之后，插一句短的、带点文采的判断，节奏会一下子亮起来，阅卷时也更容易看到你的层次。这个技巧不难，今天就可以试着用。\u003c/p>\u003cp>句式本身也要记：\u003cstrong>「不仅要……还要……」\u003c/strong>，从具体目标递进到价值追求。前半句「扩大认同的圈层」还是就事论事，后半句「兼容并包的气度」已经上升到文明姿态了。给大家两个举一反三的例句：写到文化出海，可以说「文化走出去，不仅要扩大作品的传播圈层，还要展现兼收并蓄的文明气度」；写到城市治理，可以说「建设宜居城市，不仅要补齐设施短板，还要涵养对各类人群的包容温度」。而「\u003cstrong>兼容并包\u003c/strong>」这个词本身，适用范围很广，文化、文明、开放、人才、生态多样性等话题都能用，前面我们学《宽容的力量》时讲过「海纳百川，有容乃大」，可以把这两处放在一起记忆，用到开放包容类主题时随手就能取。\u003c/p>", "function": "短段提气", "structureRole": "分论点三"}}, {"index": 10, "original": {"html": "不「唯影响因子」、不「唯外文期刊」，\u003cstrong>并非\u003c/strong>对这些评价体系一概否定，\u003cstrong>而是要\u003c/strong>吸收其有益成分，作出新探索，\u003cstrong>让\u003c/strong>学术评价回归本原，\u003cstrong>让\u003c/strong>知识生产更加多元，\u003cstrong>让\u003c/strong>创新活力充分释放。推动构建\u003cstrong>以质量、实效、贡献为导向\u003c/strong>的创新评价体系，是我国参与国际科技治理的\u003cstrong>应尽责任\u003c/strong>，也是促进全球科技创新交流合作的\u003cstrong>大国担当\u003c/strong>。"}, "analysis": {"html": "\u003cp>第十段，全文最需要精读的一段，辩证论述的示范。开头这句请一字一句地看：\u003cstrong>「不『唯影响因子』、不『唯外文期刊』，并非……一概否定，而是要吸收其有益成分，作出新探索」\u003c/strong>。这里有两个关键点。第一，作者否定的是「\u003cstrong>唯\u003c/strong>」，不是否定指标本身——影响因子、外文期刊仍然有用，问题出在「只用这一把尺」。这个分寸，和第六段讲的「破四唯」是完全对应的，大家把两处对照着看，就能明白为什么全文反复强调「多几把尺子」。第二，\u003cstrong>「并非……一概否定，而是要……」\u003c/strong>是标准的辩证句式，专门用来防止把自己的观点说绝。面试里谈「破除唯分数」「为基层减负」「整治形式主义」，最容易失分的就是一棍子打死，用上这个句式，立刻显得稳妥。\u003c/p>\u003cp>接着是三个「让」排比：「\u003cstrong>让学术评价回归本原，让知识生产更加多元，让创新活力充分释放\u003c/strong>」。三个短句一层比一层开阔，是\u003cstrong>对策 + 愿景\u003c/strong>连写的漂亮收束，读起来朗朗上口。这个「让……，让……，让……」我们写过很多次了，今天再攒一组例句：写到营商环境，可以说「让准入更透明，让竞争更公平，让企业敢投敢闯」；写到乡村全面振兴，可以说「让产业更兴旺，让人才留得住，让乡亲们的日子更有奔头」。\u003c/p>\u003cp>后半句还有两个必记的标准表述：\u003cstrong>「以质量、实效、贡献为导向」\u003c/strong>（可换主题成「以实绩、群众口碑、长远效益为导向」），以及\u003cstrong>「应尽责任」「大国担当」\u003c/strong>。结尾用「是……也是……」收束，和第 6 段的「既是……也是……」呼应，全文的家国视角到这里就立住了。这段我建议大家整段抄写一遍，它几乎可以直接改造成我们自己作文里的一段辩证分析。\u003c/p>", "function": "辩证 + 对策二", "structureRole": "分论点四"}}, {"index": 11, "original": {"html": "当前的国际竞争格局中，科技期刊\u003cstrong>是\u003c/strong>展示、交流和传播科研成果的平台，\u003cstrong>亦是\u003c/strong>彰显文化软实力的舞台。\u003cstrong>以尊重科研规律为前提\u003c/strong>，深化科技评价改革，\u003cstrong>多几把尺子量创新\u003c/strong>，定能持续优化研究环境，让更多有潜力的种子、有价值的成果\u003cstrong>脱颖而出\u003c/strong>。"}, "analysis": {"html": "\u003cp>第十一段，结尾点题。先看「\u003cstrong>是……亦是……\u003c/strong>」，把科技期刊从「平台」抬到「舞台」，一句之内完成一次价值提升，和第九段的「不仅要……还要……」是同一个路数，大家可以放在一起体会。\u003c/p>\u003cp>本段最该学的是\u003cstrong>结尾三件套\u003c/strong>：「以……为前提」（讲边界和原则）+「深化……改革，多几把尺子量创新」（讲做法，并\u003cstrong>原样回扣标题\u003c/strong>）+「定能……，让……脱颖而出」（讲愿景）。为什么强调回扣标题？因为题目是个比喻，结尾把这句比喻再稳稳地说一遍，全文就收得拢，这正是申论作文「结尾扣题」最标准的操作。前面我们讲《固底板才能行稳致远》时，结尾也是这么办的，同学们可以翻出来对比一下。\u003c/p>\u003cp>最后那个「\u003cstrong>让更多有潜力的种子、有价值的成果脱颖而出\u003c/strong>」，用「种子」呼应创新成果，收得有画面感，也不喊口号，这种收尾比「让我们共同努力、开创美好未来」高明不少。顺手给两个换主题的结尾句：写到人才工作，可以说「以人尽其才为前提，深化人才评价改革，多几把尺子量人才，定能让更多『潜质股』成长为『顶梁柱』」；写到基层治理，可以说「以尊重基层实际为前提，优化考核指挥棒，多听群众怎么说，定能让更多接地气的办法冒出来、用起来」。今天这篇文章，「尺子」这个比喻从标题贯穿到结尾，大家把它记进素材库，遇到「评价标准」「考核导向」「破除单一指标」类的申论材料和面试题，就有了现成的分析框架。\u003c/p>", "function": "结尾点题", "structureRole": "结尾"}}]}, {"date": "2026-11-09", "slug": "2026-11-09", "edition": 1, "title": "以制度之尺量发展之效", "keywords": ["制度改革", "高质量发展", "治理效能", "评价标准"], "summary": "《以制度之尺量发展之效》为原型演示条目，用于展示按日期浏览与切换的效果；主题落在制度改革、高质量发展等申论高频考点，结构含总论点、若干分论点与结尾。", "source": {"page": "第 05 版", "column": "人民时评", "author": "（演示）", "charCount": 1100, "paperDate": "2026-11-09", "originalUrl": ""}, "structure": {"status": "standard", "score": 88, "subThesisCount": 3, "outline": ["总论点", "分论点一", "分论点二", "分论点三", "结尾"]}, "demo": true, "segments": [{"index": 1, "original": {"html": "制度是管根本、管长远的。评价导向这根指挥棒往哪里指，干部群众的劲就往哪里使，这是治理中最朴素也最要紧的道理。"}, "analysis": {"html": "\u003cp>第一段，总论点段。先看写法：<strong>用一句判断开篇</strong>，不绕弯子直接把「制度」与「导向」的关系点破。申论作文开头最忌讳空喊口号，这里给了一个可直接套用的句式——「××是管根本、管长远的，××往哪里指，劲就往哪里使」。换到基层治理可以说「考核是管根本、管长远的，指挥棒往哪里指，干部的脚就往哪里迈」。大家把这句抄进素材库，遇到「制度建设」「评价导向」类材料可以直接用。\u003c/p>", "function": "总论点段", "structureRole": "总论点"}}, {"index": 2, "original": {"html": "把制度优势更好转化为治理效能，关键在落实，也关键在因地制宜。"}, "analysis": {"html": "\u003cp>第二段，分论点一。这里用的是<strong>「关键在……也关键在……」</strong>的并列句式，一句话给出两个着力点。写对策段时特别好用，既显层次又不啰嗦。换到科技创新可以说「关键在攻关，也关键在转化」。\u003c/p>", "function": "分论点一", "structureRole": "分论点一"}}, {"index": 3, "original": {"html": "面向未来，把制度定得准、执行得实、调整得及时，发展的步子自然更稳。"}, "analysis": {"html": "\u003cp>第三段，结尾段。<strong>三个「得」字短语排比 + 一句愿景收束</strong>，是标准的结尾回扣写法。大家写作文结尾时间紧，套这个句式最划算。\u003c/p>", "function": "结尾点题", "structureRole": "结尾"}}]}, {"date": "2026-11-08", "slug": "2026-11-08", "edition": 1, "title": "让基层治理更有温度", "keywords": ["基层治理", "民生服务", "干部作风", "共建共治"], "summary": "《让基层治理更有温度》为原型演示条目，用于展示按日期浏览与切换的效果；主题落在基层治理、民生服务等申论高频考点，结构含总论点、若干分论点与结尾。", "source": {"page": "第 05 版", "column": "人民论坛", "author": "（演示）", "charCount": 1117, "paperDate": "2026-11-08", "originalUrl": ""}, "structure": {"status": "standard", "score": 89, "subThesisCount": 4, "outline": ["总论点", "分论点一", "分论点二", "分论点三", "结尾"]}, "demo": true, "segments": [{"index": 1, "original": {"html": "制度是管根本、管长远的。评价导向这根指挥棒往哪里指，干部群众的劲就往哪里使，这是治理中最朴素也最要紧的道理。"}, "analysis": {"html": "\u003cp>第一段，总论点段。先看写法：<strong>用一句判断开篇</strong>，不绕弯子直接把「制度」与「导向」的关系点破。申论作文开头最忌讳空喊口号，这里给了一个可直接套用的句式——「××是管根本、管长远的，××往哪里指，劲就往哪里使」。换到基层治理可以说「考核是管根本、管长远的，指挥棒往哪里指，干部的脚就往哪里迈」。大家把这句抄进素材库，遇到「制度建设」「评价导向」类材料可以直接用。\u003c/p>", "function": "总论点段", "structureRole": "总论点"}}, {"index": 2, "original": {"html": "把制度优势更好转化为治理效能，关键在落实，也关键在因地制宜。"}, "analysis": {"html": "\u003cp>第二段，分论点一。这里用的是<strong>「关键在……也关键在……」</strong>的并列句式，一句话给出两个着力点。写对策段时特别好用，既显层次又不啰嗦。换到科技创新可以说「关键在攻关，也关键在转化」。\u003c/p>", "function": "分论点一", "structureRole": "分论点一"}}, {"index": 3, "original": {"html": "面向未来，把制度定得准、执行得实、调整得及时，发展的步子自然更稳。"}, "analysis": {"html": "\u003cp>第三段，结尾段。<strong>三个「得」字短语排比 + 一句愿景收束</strong>，是标准的结尾回扣写法。大家写作文结尾时间紧，套这个句式最划算。\u003c/p>", "function": "结尾点题", "structureRole": "结尾"}}]}, {"date": "2026-11-07", "slug": "2026-11-07", "edition": 1, "title": "把绿水青山转化为金山银山", "keywords": ["生态文明", "绿色转型", "乡村振兴", "两山理念"], "summary": "《把绿水青山转化为金山银山》为原型演示条目，用于展示按日期浏览与切换的效果；主题落在生态文明、绿色转型等申论高频考点，结构含总论点、若干分论点与结尾。", "source": {"page": "第 05 版", "column": "评论员观察", "author": "（演示）", "charCount": 1134, "paperDate": "2026-11-07", "originalUrl": ""}, "structure": {"status": "standard", "score": 90, "subThesisCount": 3, "outline": ["总论点", "分论点一", "分论点二", "分论点三", "结尾"]}, "demo": true, "segments": [{"index": 1, "original": {"html": "制度是管根本、管长远的。评价导向这根指挥棒往哪里指，干部群众的劲就往哪里使，这是治理中最朴素也最要紧的道理。"}, "analysis": {"html": "\u003cp>第一段，总论点段。先看写法：<strong>用一句判断开篇</strong>，不绕弯子直接把「制度」与「导向」的关系点破。申论作文开头最忌讳空喊口号，这里给了一个可直接套用的句式——「××是管根本、管长远的，××往哪里指，劲就往哪里使」。换到基层治理可以说「考核是管根本、管长远的，指挥棒往哪里指，干部的脚就往哪里迈」。大家把这句抄进素材库，遇到「制度建设」「评价导向」类材料可以直接用。\u003c/p>", "function": "总论点段", "structureRole": "总论点"}}, {"index": 2, "original": {"html": "把制度优势更好转化为治理效能，关键在落实，也关键在因地制宜。"}, "analysis": {"html": "\u003cp>第二段，分论点一。这里用的是<strong>「关键在……也关键在……」</strong>的并列句式，一句话给出两个着力点。写对策段时特别好用，既显层次又不啰嗦。换到科技创新可以说「关键在攻关，也关键在转化」。\u003c/p>", "function": "分论点一", "structureRole": "分论点一"}}, {"index": 3, "original": {"html": "面向未来，把制度定得准、执行得实、调整得及时，发展的步子自然更稳。"}, "analysis": {"html": "\u003cp>第三段，结尾段。<strong>三个「得」字短语排比 + 一句愿景收束</strong>，是标准的结尾回扣写法。大家写作文结尾时间紧，套这个句式最划算。\u003c/p>", "function": "结尾点题", "structureRole": "结尾"}}]}, {"date": "2026-11-06", "slug": "2026-11-06", "edition": 1, "title": "创新链与产业链如何双向奔赴", "keywords": ["科技创新", "成果转化", "新质生产力", "产学研"], "summary": "《创新链与产业链如何双向奔赴》为原型演示条目，用于展示按日期浏览与切换的效果；主题落在科技创新、成果转化等申论高频考点，结构含总论点、若干分论点与结尾。", "source": {"page": "第 05 版", "column": "人民时评", "author": "（演示）", "charCount": 1151, "paperDate": "2026-11-06", "originalUrl": ""}, "structure": {"status": "standard", "score": 91, "subThesisCount": 4, "outline": ["总论点", "分论点一", "分论点二", "分论点三", "结尾"]}, "demo": true, "segments": [{"index": 1, "original": {"html": "制度是管根本、管长远的。评价导向这根指挥棒往哪里指，干部群众的劲就往哪里使，这是治理中最朴素也最要紧的道理。"}, "analysis": {"html": "\u003cp>第一段，总论点段。先看写法：<strong>用一句判断开篇</strong>，不绕弯子直接把「制度」与「导向」的关系点破。申论作文开头最忌讳空喊口号，这里给了一个可直接套用的句式——「××是管根本、管长远的，××往哪里指，劲就往哪里使」。换到基层治理可以说「考核是管根本、管长远的，指挥棒往哪里指，干部的脚就往哪里迈」。大家把这句抄进素材库，遇到「制度建设」「评价导向」类材料可以直接用。\u003c/p>", "function": "总论点段", "structureRole": "总论点"}}, {"index": 2, "original": {"html": "把制度优势更好转化为治理效能，关键在落实，也关键在因地制宜。"}, "analysis": {"html": "\u003cp>第二段，分论点一。这里用的是<strong>「关键在……也关键在……」</strong>的并列句式，一句话给出两个着力点。写对策段时特别好用，既显层次又不啰嗦。换到科技创新可以说「关键在攻关，也关键在转化」。\u003c/p>", "function": "分论点一", "structureRole": "分论点一"}}, {"index": 3, "original": {"html": "面向未来，把制度定得准、执行得实、调整得及时，发展的步子自然更稳。"}, "analysis": {"html": "\u003cp>第三段，结尾段。<strong>三个「得」字短语排比 + 一句愿景收束</strong>，是标准的结尾回扣写法。大家写作文结尾时间紧，套这个句式最划算。\u003c/p>", "function": "结尾点题", "structureRole": "结尾"}}]}, {"date": "2026-11-05", "slug": "2026-11-05", "edition": 1, "title": "读懂民生清单里的获得感", "keywords": ["民生保障", "公共服务", "共同富裕", "政策落实"], "summary": "《读懂民生清单里的获得感》为原型演示条目，用于展示按日期浏览与切换的效果；主题落在民生保障、公共服务等申论高频考点，结构含总论点、若干分论点与结尾。", "source": {"page": "第 05 版", "column": "人民论坛", "author": "（演示）", "charCount": 1168, "paperDate": "2026-11-05", "originalUrl": ""}, "structure": {"status": "standard", "score": 92, "subThesisCount": 3, "outline": ["总论点", "分论点一", "分论点二", "分论点三", "结尾"]}, "demo": true, "segments": [{"index": 1, "original": {"html": "制度是管根本、管长远的。评价导向这根指挥棒往哪里指，干部群众的劲就往哪里使，这是治理中最朴素也最要紧的道理。"}, "analysis": {"html": "\u003cp>第一段，总论点段。先看写法：<strong>用一句判断开篇</strong>，不绕弯子直接把「制度」与「导向」的关系点破。申论作文开头最忌讳空喊口号，这里给了一个可直接套用的句式——「××是管根本、管长远的，××往哪里指，劲就往哪里使」。换到基层治理可以说「考核是管根本、管长远的，指挥棒往哪里指，干部的脚就往哪里迈」。大家把这句抄进素材库，遇到「制度建设」「评价导向」类材料可以直接用。\u003c/p>", "function": "总论点段", "structureRole": "总论点"}}, {"index": 2, "original": {"html": "把制度优势更好转化为治理效能，关键在落实，也关键在因地制宜。"}, "analysis": {"html": "\u003cp>第二段，分论点一。这里用的是<strong>「关键在……也关键在……」</strong>的并列句式，一句话给出两个着力点。写对策段时特别好用，既显层次又不啰嗦。换到科技创新可以说「关键在攻关，也关键在转化」。\u003c/p>", "function": "分论点一", "structureRole": "分论点一"}}, {"index": 3, "original": {"html": "面向未来，把制度定得准、执行得实、调整得及时，发展的步子自然更稳。"}, "analysis": {"html": "\u003cp>第三段，结尾段。<strong>三个「得」字短语排比 + 一句愿景收束</strong>，是标准的结尾回扣写法。大家写作文结尾时间紧，套这个句式最划算。\u003c/p>", "function": "结尾点题", "structureRole": "结尾"}}]}, {"date": "2026-11-04", "slug": "2026-11-04", "edition": 1, "title": "以文化人，更要以文兴城", "keywords": ["文化建设", "城市更新", "文明传承", "文旅融合"], "summary": "《以文化人，更要以文兴城》为原型演示条目，用于展示按日期浏览与切换的效果；主题落在文化建设、城市更新等申论高频考点，结构含总论点、若干分论点与结尾。", "source": {"page": "第 05 版", "column": "金台随笔", "author": "（演示）", "charCount": 1185, "paperDate": "2026-11-04", "originalUrl": ""}, "structure": {"status": "standard", "score": 93, "subThesisCount": 4, "outline": ["总论点", "分论点一", "分论点二", "分论点三", "结尾"]}, "demo": true, "segments": [{"index": 1, "original": {"html": "制度是管根本、管长远的。评价导向这根指挥棒往哪里指，干部群众的劲就往哪里使，这是治理中最朴素也最要紧的道理。"}, "analysis": {"html": "\u003cp>第一段，总论点段。先看写法：<strong>用一句判断开篇</strong>，不绕弯子直接把「制度」与「导向」的关系点破。申论作文开头最忌讳空喊口号，这里给了一个可直接套用的句式——「××是管根本、管长远的，××往哪里指，劲就往哪里使」。换到基层治理可以说「考核是管根本、管长远的，指挥棒往哪里指，干部的脚就往哪里迈」。大家把这句抄进素材库，遇到「制度建设」「评价导向」类材料可以直接用。\u003c/p>", "function": "总论点段", "structureRole": "总论点"}}, {"index": 2, "original": {"html": "把制度优势更好转化为治理效能，关键在落实，也关键在因地制宜。"}, "analysis": {"html": "\u003cp>第二段，分论点一。这里用的是<strong>「关键在……也关键在……」</strong>的并列句式，一句话给出两个着力点。写对策段时特别好用，既显层次又不啰嗦。换到科技创新可以说「关键在攻关，也关键在转化」。\u003c/p>", "function": "分论点一", "structureRole": "分论点一"}}, {"index": 3, "original": {"html": "面向未来，把制度定得准、执行得实、调整得及时，发展的步子自然更稳。"}, "analysis": {"html": "\u003cp>第三段，结尾段。<strong>三个「得」字短语排比 + 一句愿景收束</strong>，是标准的结尾回扣写法。大家写作文结尾时间紧，套这个句式最划算。\u003c/p>", "function": "结尾点题", "structureRole": "结尾"}}]}, {"date": "2026-11-03", "slug": "2026-11-03", "edition": 1, "title": "让人才评价回归能力本位", "keywords": ["人才评价", "破四唯", "教育科技人才", "体制机制"], "summary": "《让人才评价回归能力本位》为原型演示条目，用于展示按日期浏览与切换的效果；主题落在人才评价、破四唯等申论高频考点，结构含总论点、若干分论点与结尾。", "source": {"page": "第 05 版", "column": "人民时评", "author": "（演示）", "charCount": 1202, "paperDate": "2026-11-03", "originalUrl": ""}, "structure": {"status": "standard", "score": 94, "subThesisCount": 3, "outline": ["总论点", "分论点一", "分论点二", "分论点三", "结尾"]}, "demo": true, "segments": [{"index": 1, "original": {"html": "制度是管根本、管长远的。评价导向这根指挥棒往哪里指，干部群众的劲就往哪里使，这是治理中最朴素也最要紧的道理。"}, "analysis": {"html": "\u003cp>第一段，总论点段。先看写法：<strong>用一句判断开篇</strong>，不绕弯子直接把「制度」与「导向」的关系点破。申论作文开头最忌讳空喊口号，这里给了一个可直接套用的句式——「××是管根本、管长远的，××往哪里指，劲就往哪里使」。换到基层治理可以说「考核是管根本、管长远的，指挥棒往哪里指，干部的脚就往哪里迈」。大家把这句抄进素材库，遇到「制度建设」「评价导向」类材料可以直接用。\u003c/p>", "function": "总论点段", "structureRole": "总论点"}}, {"index": 2, "original": {"html": "把制度优势更好转化为治理效能，关键在落实，也关键在因地制宜。"}, "analysis": {"html": "\u003cp>第二段，分论点一。这里用的是<strong>「关键在……也关键在……」</strong>的并列句式，一句话给出两个着力点。写对策段时特别好用，既显层次又不啰嗦。换到科技创新可以说「关键在攻关，也关键在转化」。\u003c/p>", "function": "分论点一", "structureRole": "分论点一"}}, {"index": 3, "original": {"html": "面向未来，把制度定得准、执行得实、调整得及时，发展的步子自然更稳。"}, "analysis": {"html": "\u003cp>第三段，结尾段。<strong>三个「得」字短语排比 + 一句愿景收束</strong>，是标准的结尾回扣写法。大家写作文结尾时间紧，套这个句式最划算。\u003c/p>", "function": "结尾点题", "structureRole": "结尾"}}]}, {"date": "2026-10-31", "slug": "2026-10-31", "edition": 1, "title": "在统筹兼顾中把握发展主动", "keywords": ["统筹兼顾", "辩证思维", "系统观念", "政绩观"], "summary": "《在统筹兼顾中把握发展主动》为原型演示条目，用于展示按日期浏览与切换的效果；主题落在统筹兼顾、辩证思维等申论高频考点，结构含总论点、若干分论点与结尾。", "source": {"page": "第 05 版", "column": "评论员观察", "author": "（演示）", "charCount": 1219, "paperDate": "2026-10-31", "originalUrl": ""}, "structure": {"status": "standard", "score": 95, "subThesisCount": 4, "outline": ["总论点", "分论点一", "分论点二", "分论点三", "结尾"]}, "demo": true, "segments": [{"index": 1, "original": {"html": "制度是管根本、管长远的。评价导向这根指挥棒往哪里指，干部群众的劲就往哪里使，这是治理中最朴素也最要紧的道理。"}, "analysis": {"html": "\u003cp>第一段，总论点段。先看写法：<strong>用一句判断开篇</strong>，不绕弯子直接把「制度」与「导向」的关系点破。申论作文开头最忌讳空喊口号，这里给了一个可直接套用的句式——「××是管根本、管长远的，××往哪里指，劲就往哪里使」。换到基层治理可以说「考核是管根本、管长远的，指挥棒往哪里指，干部的脚就往哪里迈」。大家把这句抄进素材库，遇到「制度建设」「评价导向」类材料可以直接用。\u003c/p>", "function": "总论点段", "structureRole": "总论点"}}, {"index": 2, "original": {"html": "把制度优势更好转化为治理效能，关键在落实，也关键在因地制宜。"}, "analysis": {"html": "\u003cp>第二段，分论点一。这里用的是<strong>「关键在……也关键在……」</strong>的并列句式，一句话给出两个着力点。写对策段时特别好用，既显层次又不啰嗦。换到科技创新可以说「关键在攻关，也关键在转化」。\u003c/p>", "function": "分论点一", "structureRole": "分论点一"}}, {"index": 3, "original": {"html": "面向未来，把制度定得准、执行得实、调整得及时，发展的步子自然更稳。"}, "analysis": {"html": "\u003cp>第三段，结尾段。<strong>三个「得」字短语排比 + 一句愿景收束</strong>，是标准的结尾回扣写法。大家写作文结尾时间紧，套这个句式最划算。\u003c/p>", "function": "结尾点题", "structureRole": "结尾"}}]}]};
+const ENTRIES = DATA.entries;
+const bySlug = Object.fromEntries(ENTRIES.map(e => [e.slug, e]));
+let current = ENTRIES[0].slug;
+let mode = 'strip';
+let calMonth = '2026-11';
+const CN = ['一','二','三','四','五','六','七','八','九','十'];
+
+function fmt(d){const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(d);return m?`${+m[2]}月${+m[3]}日`:d}
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+function primaryOf(date){return ENTRIES.find(e=>e.date===date)}
+function prevNext(slug){
+  const i=ENTRIES.findIndex(e=>e.slug===slug);
+  return {prev:ENTRIES[i+1]||null,next:ENTRIES[i-1]||null};
+}
+function setView(v){
+  document.querySelectorAll('.proto-view').forEach(el=>el.classList.toggle('is-active',el.id==='view-'+v));
+  document.querySelectorAll('.proto-tab').forEach(el=>el.classList.toggle('is-active',el.dataset.view===v));
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function openReading(slug){ current=bySlug[slug]?slug:current; setView('reading'); renderAll(); }
+
+document.querySelectorAll('.proto-tab').forEach(b=>b.onclick=()=>setView(b.dataset.view));
+document.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>setView(b.dataset.go));
+document.querySelectorAll('.proto-mode').forEach(b=>b.onclick=()=>{
+  mode=b.dataset.mode;
+  document.querySelectorAll('.proto-mode').forEach(x=>x.classList.toggle('is-active',x===b));
+  ['strip','calendar','list'].forEach(m=>{
+    document.getElementById('date-'+m).style.display = (m===mode)?'block':'none';
+  });
+  document.getElementById('date-hint').textContent = ({
+    strip:'左右横滑选择日期；蓝色为当前篇目，带小圆点的日期有内容',
+    calendar:'有内容的日期以蓝色标注，点击直接跳转；可切换月份',
+    list:'按周分组，完整标题 + 关键词，适合回溯较早内容'})[mode];
+  renderDateNav();
+});
+
+function renderHome(){
+  const e=ENTRIES[0], isToday=e.date===DATA.today;
+  document.getElementById('home-card').innerHTML=`<section class="daily-card" data-open="${esc(e.slug)}">
+    <div class="daily-card__top"><span class="daily-card__eyebrow"><i class="daily-card__dot"></i>每日精读 · ${e.date.slice(0,4)}年${+e.date.slice(5,7)}月${+e.date.slice(8,10)}日</span>
+    <span class="daily-card__flag">${isToday?'今日上新':'最新一篇'}${e.demo?' · 演示':''}</span></div>
+    <h2 class="daily-card__title daily-serif">${esc(e.title)}</h2>
+    <div class="daily-chips daily-card__chips">${e.keywords.map(k=>`<span class="daily-chip">${esc(k)}</span>`).join('')}</div>
+    <p class="daily-card__summary">${esc(e.summary)}</p>
+    <div class="daily-card__meta">《人民日报》· ${esc(e.source.page)} · ${esc(e.source.column)} · 约 ${e.source.charCount} 字 · 总论点 + ${e.structure.subThesisCount} 个分论点 + 结尾</div>
+    <div class="daily-card__cta"><span>开始精读</span><span class="daily-card__arrow">→</span></div></section>`;
+  document.querySelector('#home-card .daily-card').onclick=()=>openReading(e.slug);
+  document.getElementById('home-strip').innerHTML=ENTRIES.map(e=>`<button class="proto-day ${e.slug===current?'is-active':''}" data-slug="${esc(e.slug)}"><b>${e.date.slice(5)}</b><small>${esc(e.title.slice(0,7))}…${e.demo?' 演示':''}</small></button>`).join('');
+  document.querySelectorAll('#home-strip .proto-day').forEach(b=>b.onclick=()=>openReading(b.dataset.slug));
+}
+
+function renderStrip(){
+  const box=document.getElementById('date-strip');
+  const {prev,next}=prevNext(current);
+  box.innerHTML=`<div style="display:flex;gap:8px;align-items:center;margin-bottom:10px">
+    <button class="daily-nav-btn" id="btn-prev" ${prev?'':'disabled'}>← 更早</button>
+    <button class="daily-nav-btn" id="btn-next" ${next?'':'disabled'}>更新 →</button>
+    <span class="daily-muted" style="font-size:11px">共 ${ENTRIES.length} 篇 · ${ENTRIES[ENTRIES.length-1].date} ~ ${ENTRIES[0].date}</span></div>
+    <div class="proto-strip">${ENTRIES.map(e=>`<button class="proto-day ${e.slug===current?'is-active':''}" data-slug="${esc(e.slug)}"><b>${e.date.slice(5)}${e.edition>1?' · 第'+e.edition+'篇':''}</b><small>${esc(e.title.slice(0,8))}…</small></button>`).join('')}</div>`;
+  box.querySelectorAll('.proto-day').forEach(b=>b.onclick=()=>openReading(b.dataset.slug));
+  const p=document.getElementById('btn-prev'),n=document.getElementById('btn-next');
+  if(p&&prev)p.onclick=()=>openReading(prev.slug);
+  if(n&&next)n.onclick=()=>openReading(next.slug);
+}
+
+function renderCalendar(){
+  const [y,m]=calMonth.split('-').map(Number);
+  const first=new Date(y,m-1,1).getDay();
+  const days=new Date(y,m,0).getDate();
+  const dates=new Set(ENTRIES.map(e=>e.date));
+  let cells='';
+  for(let i=0;i<first;i++)cells+='<td></td>';
+  for(let d=1;d<=days;d++){
+    const ds=`${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const entry=primaryOf(ds);
+    const active=ENTRY_CURRENT_DATE===ds;
+    cells+=`<td>${entry?`<button class="${active?'is-active':'has'}" data-date="${ds}" title="${esc(entry.title)}">${d}</button>`:`<button disabled>${d}</button>`}</td>`;
+    if((first+d)%7===0)cells+='</tr><tr>';
+  }
+  document.getElementById('date-calendar').innerHTML=`<div class="proto-cal__nav">
+    <button id="cal-prev">‹</button><span>${y} 年 ${m} 月</span><button id="cal-next">›</button>
+    <span class="daily-muted" style="font-size:11px;font-weight:400">蓝底=当前 · 浅蓝=有内容</span></div>
+    <table class="proto-cal"><thead><tr>${['日','一','二','三','四','五','六'].map(w=>`<th>${w}</th>`).join('')}</tr></thead><tbody><tr>${cells}</tr></tbody></table>`;
+  const shift=(delta)=>{const d=new Date(y,m-1+delta,1);calMonth=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;renderCalendar()};
+  document.getElementById('cal-prev').onclick=()=>shift(-1);
+  document.getElementById('cal-next').onclick=()=>shift(1);
+  document.querySelectorAll('#date-calendar button[data-date]').forEach(b=>b.onclick=()=>{const e=primaryOf(b.dataset.date);if(e)openReading(e.slug)});
+}
+
+function renderList(){
+  const groups={};
+  ENTRIES.forEach(e=>{const key=e.date.slice(0,7);(groups[key]=groups[key]||[]).push(e)});
+  document.getElementById('date-list').innerHTML=Object.entries(groups).map(([month,list])=>`
+    <div class="proto-weekgroup"><h4>${month.replace('-',' 年 ')} 月 · ${list.length} 篇</h4>
+    <ul class="proto-list">${list.map(e=>`<li class="${e.slug===current?'is-active':''}" data-slug="${esc(e.slug)}">
+      <time>${e.date}${e.edition>1?' · 第'+e.edition+'篇':''}</time><b>${esc(e.title)}</b>
+      <span class="daily-chip">${esc(e.source.column)}</span>
+      <span class="daily-muted" style="font-size:11px">${esc(e.keywords.slice(0,2).join(' / '))}</span>
+      ${e.demo?'<span class="proto-demo">演示</span>':''}</li>`).join('')}</ul></div>`).join('');
+  document.querySelectorAll('#date-list li').forEach(li=>li.onclick=()=>openReading(li.dataset.slug));
+}
+
+function renderArchive(){
+  const groups={};
+  ENTRIES.forEach(e=>{const key=e.date.slice(0,7);(groups[key]=groups[key]||[]).push(e)});
+  document.getElementById('archive-groups').innerHTML=Object.entries(groups).map(([month,list])=>`
+    <section class="daily-archive-group"><h2>${month.replace('-',' 年 ')} 月 <span class="daily-muted" style="font-size:12px;font-weight:400">· ${list.length} 篇</span></h2>
+    <div class="proto-grid">${list.map(e=>`<div class="proto-tile" data-slug="${esc(e.slug)}">
+      <time>${e.date}${e.edition>1?' · 第 '+e.edition+' 篇':''}</time>
+      <h3>${esc(e.title)}</h3><p>${esc(e.summary.slice(0,58))}…</p>
+      <div class="daily-chips">${e.keywords.slice(0,3).map(k=>`<span class="daily-chip">${esc(k)}</span>`).join('')}</div>
+      <div style="margin-top:10px;display:flex;justify-content:space-between;align-items:center">
+        <span class="daily-muted" style="font-size:11px">${esc(e.source.column)} · ${e.structure.subThesisCount} 个分论点</span>
+        ${e.demo?'<span class="proto-demo">演示</span>':''}</div></div>`).join('')}</div></section>`).join('');
+  document.querySelectorAll('.proto-tile').forEach(t=>t.onclick=()=>openReading(t.dataset.slug));
+}
+
+function renderReading(){
+  const e=bySlug[current], st=e.structure||{}, {prev,next}=prevNext(current);
+  const outline=st.outline||[];
+  document.getElementById('reading-body').innerHTML=`
+    ${e.demo?'<div class="proto-note">这是<b>演示数据</b>，正文为占位文本，仅用于展示按日期切换的效果；真实内容由每日流水线生成。</div>':''}
+    <header class="daily-header">
+      <div class="daily-eyebrow">跟着人民日报学申论 · 每日精读 · ${e.date}</div>
+      <h1 class="daily-title daily-serif">${esc(e.title)}</h1>
+      <div class="daily-chips">${e.keywords.map(k=>`<span class="daily-chip daily-chip--blue">${esc(k)}</span>`).join('')}</div>
+      <div class="daily-structure">
+        <span class="daily-structure__label">申论大作文结构</span>
+        <span class="daily-structure__item is-ok">总论点</span>
+        <span class="daily-structure__item is-ok">${st.subThesisCount||0} 个分论点</span>
+        <span class="daily-structure__item is-ok">结尾回扣</span>
+        <span class="daily-structure__status">${st.status==='standard'?'结构完整 · 可作大作文骨架范本':'结构参考'}</span>
+      </div>
+      <div class="daily-meta"><span>《人民日报》 ${e.source.paperDate}</span><span>${esc(e.source.page)}「${esc(e.source.column)}」</span>
+        <span>作者 ${esc(e.source.author)}</span><span>约 ${e.source.charCount} 字</span><span>${e.segments.length} 段逐段精讲</span></div>
+      <blockquote class="daily-summary">${esc(e.summary)}</blockquote>
+    </header>
+    <div class="daily-layout"><div class="daily-body">
+      ${e.segments.map(s=>`<section class="daily-segment" id="seg-${s.index}">
+        <div class="daily-original"><div class="daily-block__head">
+          <span class="daily-badge daily-badge--original">原文 · 第 ${s.index} 段</span>
+          ${s.analysis.structureRole?`<span class="daily-role ${s.analysis.structureRole.startsWith('分论点')?'daily-role--sub':'daily-role--key'}">${esc(s.analysis.structureRole)}</span>`:''}
+        </div><div class="daily-block__body">${s.original.html}</div></div>
+        <div class="daily-analysis"><div class="daily-block__head">
+          <span class="daily-badge daily-badge--analysis">✎ 老师解析</span>
+          <span class="daily-block__fn">${esc(s.analysis.function)}</span>
+        </div><div class="daily-block__body">${s.analysis.html}</div></div></section>`).join('')}
+    </div><nav class="daily-toc"><span class="daily-toc__title">段落</span>${e.segments.map(s=>`<a href="#seg-${s.index}">${s.index}</a>`).join('')}</nav></div>
+    <div class="daily-footer-nav"><div>
+      ${prev?`<button class="daily-nav-btn" data-slug="${esc(prev.slug)}">← 更早：${esc(prev.title)}</button>`:''}
+      ${next?`<button class="daily-nav-btn" data-slug="${esc(next.slug)}">更新：${esc(next.title)} →</button>`:''}
+    </div><div><button class="daily-nav-btn" data-go="archive">查看全部归档</button></div></div>`;
+  document.querySelectorAll('#reading-body [data-slug]').forEach(b=>b.onclick=()=>openReading(b.dataset.slug));
+  document.querySelectorAll('#reading-body [data-go]').forEach(b=>b.onclick=()=>setView(b.dataset.go));
+}
+
+let ENTRY_CURRENT_DATE='';
+function renderDateNav(){
+  ENTRY_CURRENT_DATE=bySlug[current].date;
+  document.getElementById('date-hint').textContent = ({
+    strip:'左右横滑选择日期；蓝色为当前篇目，带小圆点的日期有内容',
+    calendar:'有内容的日期以蓝色标注，点击直接跳转；可切换月份',
+    list:'按周分组，完整标题 + 关键词，适合回溯较早内容'})[mode];
+  ['strip','calendar','list'].forEach(m=>document.getElementById('date-'+m).style.display=(m===mode)?'block':'none');
+  renderStrip(); renderCalendar(); renderList();
+}
+function renderAll(){ renderHome(); renderDateNav(); renderReading(); renderArchive(); }
+renderAll();
+</script>
+</body></html>

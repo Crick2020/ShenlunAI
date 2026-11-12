@@ -198,3 +198,17 @@ sudo certbot --nginx -d 你的国内域名
 - 后端若也希望在国内快，可单独部署到国内/香港，并配置前端的 `VITE_API_BASE`。
 
 当前项目 Vercel 的配置（见 `DEPLOY_VERCEL.md`）可保持不变，国内访问按上面任选一种方案即可。
+
+
+---
+
+## 每日精读：静态页抓取与 APP 跨域（新增）
+
+新增的每日精读会产出 `/daily/*.html`、`/daily/*.md`、`/sitemap.xml`、`/sitemap-*.xml`、`/rss.xml`、`/llms*.txt` 和 `/content/daily/*.json` 等静态文件。
+
+- **静态页**：现有 `location / { proxy_pass ... }` 已覆盖 `/daily/*.html` 与 sitemap/RSS/llms，无需新增 location；但请确认没有 `try_files ... /index.html` 之类的 SPA 回退规则把真实的 `.html` 请求吞掉。
+- **canonical 一致性**：静态页的 canonical、OG、sitemap 统一写死 `https://shenlun.zaoxin.fun`。若国内改用别的域名，需同步修改 `frontend/scripts/daily-shared.mjs` 的 `SITE_URL` 或设置构建期环境变量 `SITE_URL`。
+- **APP 跨域读取内容**：Capacitor 打包时内置的 JSON 是发版快照，APP 每天要在线拉取新讲义，因此 `/content/` 需要允许跨域。Nginx 配置片段见 `给国内站点的反代说明.md`；若运维不便修改，可在前端设置 `VITE_DAILY_ONLINE_BASE` 指向 Vercel 原生域名。
+- **校验**：部署后访问 `/daily/2026-11-10.html` 应返回 200，`view-source` 能看到完整正文与 JSON-LD；`/sitemap.xml` 应为 sitemap 索引。
+
+详见 `docs/DAILY_READING.md`。

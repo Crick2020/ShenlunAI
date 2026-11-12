@@ -1,0 +1,1 @@
+122a2f7338b7453c04e7ce4a64b454b021a1de1cd2896fb5d2e96f33c697a776  artifacts/AixueShenlun-1.0.7-debug.apk

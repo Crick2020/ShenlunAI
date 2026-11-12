@@ -64,3 +64,29 @@
 - **接口请求失败**：确认后端（如 Render）已启动且 CORS 允许你的 Vercel 域名；或按上面第四步配置 **VITE_API_BASE** 指向你的后端。
 
 按以上步骤做完，朋友就可以通过你发的 Vercel 链接访问你的网站了。
+
+
+---
+
+## 每日精读：构建产物与配置（新增）
+
+`npm run build` 会在 `closeBundle` 阶段自动执行 `scripts/prerender-daily.mjs`，除原有 SPA 外额外产出：
+
+| 产物 | 说明 |
+| --- | --- |
+| `dist/daily/<date>.html` | 每篇独立静态页，正文完整直出、不依赖 JS，含 Article / BreadcrumbList / FAQPage JSON-LD |
+| `dist/daily/<date>.md` | 纯文本版，供大模型 / 阅读器抓取 |
+| `dist/daily/index.html`、`dist/daily/archive/<year>.html` | 归档总览与按年归档 |
+| `dist/sitemap.xml`（索引）、`sitemap-static.xml`、`sitemap-daily-<year>.xml` | 按年分片 |
+| `dist/rss.xml`、`dist/llms.txt`、`dist/llms-full.txt`、`dist/robots.txt` | 订阅与 GEO 产物 |
+| `dist/content/daily/*.json` | Vite 从 `public/` 原样复制，SPA / APP 运行时读取 |
+
+注意事项：
+
+- **不需要 `vercel.json`，也不要加 catch-all rewrite**：`/daily/*.html` 是真实静态文件，Vercel 会直接命中；SPA 阅读页用 `/?daily=<date>` 查询参数深链，天然不产生 404。
+- **可选环境变量 `SITE_URL`**：默认 `https://shenlun.zaoxin.fun`，用于 canonical / OG / sitemap 的绝对地址。若改用别的正式域名，在 Vercel 项目设置里加同名变量并重新构建。
+- **后端无改动**：内容由 GitHub Actions 生成 JSON 入 Git → push 触发 Vercel 构建，Render 只承担 `/api/grade` 批改。
+- 每天一次构建远低于免费额度；`lastmod` 取讲义的 `generatedAt` 而非构建时间，避免全站被误判为更新。
+- 本地单独重跑预渲染：`cd frontend && npm run daily:prerender`。
+
+详细内容模型与运维命令见 `docs/DAILY_READING.md`。

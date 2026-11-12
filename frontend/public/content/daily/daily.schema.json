@@ -1,0 +1,360 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://shenlun.zaoxin.fun/content/daily/daily.schema.json",
+  "title": "申论每日精读讲义",
+  "description": "每日精读的唯一数据源格式。原文段落逐字照录，老师解析逐段夹注。",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "date",
+    "slug",
+    "title",
+    "keywords",
+    "source",
+    "summary",
+    "segments",
+    "note",
+    "status",
+    "contentHash"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "type": "integer",
+      "const": 1
+    },
+    "date": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "slug": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}(-\\d+)?$"
+    },
+    "edition": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "title": {
+      "type": "string",
+      "minLength": 2
+    },
+    "keywords": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 5,
+      "items": {
+        "type": "string",
+        "minLength": 2,
+        "maxLength": 12
+      }
+    },
+    "source": {
+      "type": "object",
+      "required": [
+        "newspaper",
+        "paperDate",
+        "page",
+        "originalUrl",
+        "paragraphs"
+      ],
+      "properties": {
+        "newspaper": {
+          "type": "string"
+        },
+        "paperDate": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "page": {
+          "type": "string"
+        },
+        "column": {
+          "type": "string"
+        },
+        "author": {
+          "type": "string"
+        },
+        "originalTitle": {
+          "type": "string"
+        },
+        "originalUrl": {
+          "type": "string",
+          "format": "uri"
+        },
+        "charCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "paragraphs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "provenance": {
+          "type": "string",
+          "enum": [
+            "fetch_rmrb",
+            "migrated-lecture"
+          ]
+        },
+        "structure": {
+          "type": "object",
+          "description": "申论大作文结构骨架（总论点 + 分论点 + 结尾）",
+          "properties": {
+            "score": {
+              "type": "integer"
+            },
+            "essayLike": {
+              "type": "boolean"
+            },
+            "status": {
+              "type": "string"
+            },
+            "subThesisCount": {
+              "type": "integer"
+            },
+            "paragraphCount": {
+              "type": "integer"
+            },
+            "outline": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "missing": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "newsReport": {
+              "type": "boolean"
+            },
+            "pattern": {
+              "type": "string",
+              "description": "分论点之间的结构关系（并列式 / 递进式 / 辩证式 / 无）"
+            },
+            "strict": {
+              "type": "object",
+              "description": "严格分论点判定结果，pass 为选文硬门槛",
+              "properties": {
+                "pass": {
+                  "type": "boolean"
+                },
+                "score": {
+                  "type": "integer"
+                },
+                "subThesisCount": {
+                  "type": "integer"
+                },
+                "pattern": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "selectionNote": {
+          "type": "string",
+          "description": "回溯选文说明：当天无结构达标文章时，实际使用的报纸日期与栏目"
+        },
+        "sourceName": {
+          "type": "string",
+          "description": "媒体名"
+        },
+        "sourceLabel": {
+          "type": "string",
+          "description": "展示用来源标签"
+        },
+        "sourceId": {
+          "type": "string",
+          "description": "来源 id"
+        }
+      }
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 30
+    },
+    "segments": {
+      "type": "array",
+      "minItems": 3,
+      "items": {
+        "type": "object",
+        "required": [
+          "index",
+          "original",
+          "analysis"
+        ],
+        "properties": {
+          "index": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "original": {
+            "type": "object",
+            "required": [
+              "text",
+              "html"
+            ],
+            "properties": {
+              "text": {
+                "type": "string",
+                "minLength": 1
+              },
+              "html": {
+                "type": "string",
+                "minLength": 1
+              },
+              "highlights": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "analysis": {
+            "type": "object",
+            "required": [
+              "text",
+              "html",
+              "function"
+            ],
+            "properties": {
+              "text": {
+                "type": "string",
+                "minLength": 1
+              },
+              "html": {
+                "type": "string",
+                "minLength": 1
+              },
+              "function": {
+                "type": "string"
+              },
+              "devices": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "quotes": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "examples": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "concepts": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "term": {
+                      "type": "string"
+                    },
+                    "boundary": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "structureRole": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "extras": {
+      "type": "object",
+      "properties": {
+        "frameworkTable": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "index": {
+                "type": "integer"
+              },
+              "function": {
+                "type": "string"
+              },
+              "device": {
+                "type": "string"
+              },
+              "role": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "accumulation": {
+          "type": "object"
+        },
+        "exercise": {
+          "type": "object"
+        }
+      }
+    },
+    "note": {
+      "type": "string",
+      "minLength": 10
+    },
+    "faq": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "q",
+          "a"
+        ],
+        "properties": {
+          "q": {
+            "type": "string"
+          },
+          "a": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "relatedSlugs": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "published",
+        "draft"
+      ]
+    },
+    "contentHash": {
+      "type": "string"
+    },
+    "generatedAt": {
+      "type": "string"
+    },
+    "model": {
+      "type": "string"
+    },
+    "promptVersion": {
+      "type": "string"
+    },
+    "qualityReport": {
+      "type": "object"
+    }
+  }
+}

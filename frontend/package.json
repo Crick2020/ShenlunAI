@@ -11,7 +11,10 @@
     "preview": "vite preview",
     "android:sync": "npm run build:mobile && cap sync android",
     "android:open": "cap open android",
-    "deploy:gitee": "./deploy-gitee.sh"
+    "deploy:gitee": "./deploy-gitee.sh",
+    "daily:prerender": "node scripts/prerender-daily.mjs",
+    "daily:index": "python3 ../pipeline/content_index.py --dir public/content/daily",
+    "daily:validate": "python3 ../pipeline/validate_daily.py --dir public/content/daily"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.3",
