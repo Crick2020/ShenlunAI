@@ -88,17 +88,18 @@ def validate_doc(doc: dict) -> dict:
     teach = len(TEACH_WORDS.findall(all_analysis))
     check("tone", not banned and teach >= 3, f"禁用词 {len(banned)} 处，讲课称呼 {teach} 次")
 
-    # 7. 【注】含来源/日期/版次/原题/字数/免责
+    # 7. 【注】含来源/日期/版次(报纸)/原题/字数/免责（网站源无版次，不强制）
     note = doc.get("note") or ""
+    src_name = source.get("sourceName") or source.get("newspaper") or ""
     note_ok = all([
-        "《人民日报》" in note,
+        bool(src_name) and (src_name in note or "《" in note),
         bool(NOTE_YEAR.search(note)),
-        bool(NOTE_PAGE.search(note)),
+        bool(NOTE_PAGE.search(note)) or not source.get("page"),
         bool(re.search(r"《[^》]{2,40}》", note)),
         bool(NOTE_CHARS.search(note)),
         "仅供学习交流" in note,
     ])
-    check("note", note_ok, "来源/日期/版次/原题/字数/免责")
+    check("note", note_ok, "来源/日期/版次(报纸)/原题/字数/免责")
 
     # 8. 原文逐字准确、highlights 为子串、来源链接可信
     verbatim = True
@@ -114,7 +115,7 @@ def validate_doc(doc: dict) -> dict:
                 verbatim = False
                 bad_segments.append(s.get("index"))
     url = source.get("originalUrl") or ""
-    url_ok = (not url) or url.startswith("https://paper.people.com.cn/") or url.startswith("http://paper.people.com.cn/")
+    url_ok = (not url) or url.startswith("http://") or url.startswith("https://")
     check("verbatim", verbatim and url_ok,
           f"不一致段落 {sorted(set(bad_segments))}，来源域名={'ok' if url_ok else 'bad'}")
 

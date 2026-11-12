@@ -163,6 +163,16 @@ def normalize_title(title: str) -> tuple[str, str]:
         m2 = COLON_PREFIX_RE.match(t)
         if m2 and not re.search(r"[，。！？]", m2.group(1)):
             col, t = m2.group(1).strip(), t[m2.end():].strip()
+    # 去掉「青春华章｜中青网评：」「【好评中国】河声丨」等多段栏目前缀（需带分隔符，避免误伤正文标题）
+    t = re.sub(r"^\s*【[^】]{2,18}】\s*", "", t)
+    for _ in range(3):
+        new = re.sub(
+            r"^\s*(?:青春华章|好评中国|河声|中青网评|经点热评|人民时评|人民论坛网评|"
+            r"地评线|先锋文汇|光明网评论员|评论员观察|人民网评|壹时评|周\s*言)\s*[｜|：:丨]\s*",
+            "", t)
+        if new == t:
+            break
+        t = new
     return t.strip(" |｜"), col
 
 
@@ -339,14 +349,16 @@ def collect_rmrb(date: datetime, essay_only: bool) -> list[dict]:
 
 
 # ---------- 打分（严格结构是第一权重） ----------
+# 政论文风更强的栏目给正权重；时评/随笔/现场类给负权重（选文要「像申论大作文」）。
 ESSAY_COLUMN_BONUS = {
-    "人民论坛": 6, "人民时评": 6, "评论员观察": 6, "人民论坛网评": 6,
-    "中经评论": 6, "经点热评": 5, "地评线": 5, "先锋文汇": 5,
-    "大家谈": 4, "新知": 3, "本报评论员": 3, "社论": 3, "人民网观点": 3,
+    "先锋文汇": 8, "地评线": 7, "人民论坛": 7, "人民论坛网评": 7,
+    "经点热评": 6, "社论": 6, "本报评论员": 6, "评论版": 5,
+    "中经评论": 5, "大家谈": 4, "评论员观察": 3, "人民网观点": 2,
 }
 SHORT_COMMENT_PENALTY = {
-    "今日谈": -5, "微观": -3, "人民锐评": -3, "现场评论": -3, "人民网评": -2,
-    "光明微评": -3, "壹时评": -2,
+    "今日谈": -6, "微观": -6, "人民锐评": -6, "现场评论": -5, "人民网评": -3,
+    "光明微评": -5, "壹时评": -5, "金台随笔": -7, "周 言": -6, "周言": -6,
+    "普高学位扩容": -4, "驻村札记": -2, "人民论坛实评": -1,
 }
 
 
@@ -358,6 +370,9 @@ def score(article: dict) -> float:
 
     # 结构分是选文的核心，权重远高于来源与栏目
     s += st["score"] * 0.55
+    # 「申论味」第二核心权重：越像政论大作文，越优先于流畅时评
+    flavor = (st.get("essayFlavor") or {}).get("value", 0)
+    s += flavor * 0.25
     if st["essayLike"]:
         s += 12
     elif st["status"] == "weak":
@@ -381,10 +396,10 @@ def score(article: dict) -> float:
         s -= 10
 
     hits = [w for w in TOPIC_WORDS if w in article["title"] + article["body"]]
-    s += min(len(hits), 12) * 0.7
-    s += sum(1 for w in TITLE_BONUS_WORDS if w in article["title"]) * 1.1
+    s += min(len(hits), 12) * 0.6
+    # 标题文风交由 essayFlavor 统一衡量：不再单独奖励「何以/让/把/看/更」等时评式字眼
     if re.search(r"[“”\"']", article["title"]):
-        s += 2
+        s -= 3
     if [w for w in NARROW_WORDS if w in article["title"] + article["body"][:400]]:
         s -= 8
     if len(article["paragraphs"]) < 5:
@@ -479,9 +494,12 @@ def collect(date: datetime, essay_only: bool = False, lookback: int = 0,
         if qualified:
             arts = qualified
     # 当天达标文章优先；同日再按结构分与综合分排序
+    # 选文质量优先于「必须当天」：先看是否像申论大作文（essayLike + 申论味），
+    # 同等条件下再优先当天、再看结构分；回溯到前几天的文章会在讲义里如实标注。
     arts.sort(key=lambda a: (
-        a["date"] < wanted,
         -int(a["structure"]["essayLike"]),
+        -((a["structure"].get("essayFlavor") or {}).get("value", 0)),
+        a["date"] < wanted,
         -a["structure"]["score"],
         -a["score"],
     ))

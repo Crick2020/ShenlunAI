@@ -3,61 +3,25 @@
     "date": "2026-11-12",
     "slug": "2026-11-12",
     "edition": 1,
-    "title": "把丰收的底气攒得更足",
+    "title": "奔赴施展才干的热土，书写精彩的青春华章",
     "keywords": [
-      "粮食安全",
-      "底线思维",
-      "农业现代化",
-      "农民收益",
-      "丰收底气"
+      "大思政课",
+      "青年择业",
+      "基层奉献",
+      "实践育人",
+      "家国情怀"
     ],
-    "summary": "《把丰收的底气攒得更足》选自《人民日报》2026年11月12日第05版「人民时评」，围绕粮食安全、底线思维、农业现代化、农民收益展开。文章以秋粮丰收场景引入，提出“粮食连年丰收，为何还要年年抓紧”的总论点，从底线、发展、民生三个维度并列展开分论点，强调把产能基础夯得更实、发展空间拓得更宽、农民收益护得更好，结尾引用名言回扣标题，结构为并列式。",
+    "summary": "《奔赴施展才干的热土，书写精彩的青春华章》选自中国经济网·经点热评（2026年11月12日），围绕“大思政课”与青年成长、基层奉献展开。文章以习近平总书记“跟现实结合起来”的指引为总论点，提出善用“大思政课”须扎根实践、引导青年在体察家国中锚定坐标；下设四个并列式分论点：精神火种接续传递、选择去往何处便是选择人生、课堂边界由脚步和难题决定、善用大思政课要更新理念拓展格局；结尾回扣标题，发出奔赴边疆、书写青春华章的号召。全文结构清晰，是申论大作文“总—分—总”并列式结构的范本。",
     "source": {
-      "newspaper": "人民日报",
+      "newspaper": "中国经济网",
       "paperDate": "2026-11-12",
-      "page": "第 05 版",
-      "column": "人民时评",
-      "author": "常 钦",
-      "charCount": 1116,
-      "originalUrl": "https://paper.people.com.cn/rmrb/pc/content/202611/12/content_30190820.html"
+      "page": "",
+      "column": "经点热评",
+      "author": "",
+      "charCount": 1388,
+      "originalUrl": "http://views.ce.cn/view/ent/202611/t20261112_3292236.shtml"
     },
-    "segmentCount": 10,
-    "structure": {
-      "status": "standard",
-      "score": 100,
-      "subThesisCount": 6,
-      "hasThesis": true,
-      "hasConclusion": true,
-      "strictPass": true,
-      "pattern": "并列式"
-    },
-    "status": "published",
-    "generatedAt": "2026-11-13T01:08:07+08:00",
-    "contentHash": "sha256:0589bb15e3b804dd81ef0d5841b7e0c8388e0a731bfd1751055b7d5a91d10e93"
-  },
-  {
-    "date": "2026-11-11",
-    "slug": "2026-11-11",
-    "edition": 1,
-    "title": "一纸凭证何以激活“一池春水”",
-    "keywords": [
-      "数据产权",
-      "数据要素",
-      "确权登记",
-      "数字经济",
-      "法治保障"
-    ],
-    "summary": "《一纸凭证何以激活“一池春水”》选自《人民日报》2026年11月11日第05版「人民时评」，围绕数据产权登记制度展开。文章总论点：全国统一的数据产权登记制度是破解数据确权困局、激活数据要素价值的关键。分论点递进式展开：统一登记破解确权困局；确权才能护创新；确权之后重在运用；制度仍需完善。全文按“引子—总论点—分论点一—过渡—分论点二—分论点三—分论点四—结尾”结构推进，为申论大作文提供范本。",
-    "source": {
-      "newspaper": "人民日报",
-      "paperDate": "2026-11-11",
-      "page": "第 05 版",
-      "column": "人民时评",
-      "author": "黄尹旭",
-      "charCount": 1231,
-      "originalUrl": "https://paper.people.com.cn/rmrb/pc/content/202611/11/content_30190584.html"
-    },
-    "segmentCount": 8,
+    "segmentCount": 6,
     "structure": {
       "status": "standard",
       "score": 100,
@@ -65,35 +29,73 @@
       "hasThesis": true,
       "hasConclusion": true,
       "strictPass": true,
-      "pattern": "递进式"
+      "pattern": "并列式（句式平行）",
+      "essayFlavor": 72
     },
     "status": "published",
-    "generatedAt": "2026-11-13T01:17:04+08:00",
-    "contentHash": "sha256:9f9b3b47881aaf522fba98b52fd058e25f3169911faccc6f3f7885e0407450f1"
+    "generatedAt": "2026-11-13T01:34:26+08:00",
+    "contentHash": "sha256:b3da16731ca5d4053a5ad4a805ee508d4488863a88c8781114e1dbc197b4f96b"
+  },
+  {
+    "date": "2026-11-11",
+    "slug": "2026-11-11",
+    "edition": 1,
+    "title": "涵养浩然正气",
+    "keywords": [
+      "政德修养",
+      "浩然正气",
+      "明大德守公德严私德",
+      "传统文化",
+      "全面从严治党"
+    ],
+    "summary": "《涵养浩然正气》选自人民论坛网·人民论坛网评（2026年11月11日），围绕政德修养、浩然正气、明大德守公德严私德、传统文化等考点展开。文章以党的二十届五中全会《决定》为引，提出总论点：党员干部应养浩然之气、修为政之德，筑牢立身之本、从政之基。主体部分以并列式展开五个分论点：正气是民族精神脊梁、正气见于为民担当实践、明大德铸牢忠诚、守公德践行宗旨、严私德守住底线，并以读书学习为养气路径，结尾回扣标题发出号召。全文结构清晰，是申论大作文「总—分—总」的典型范本。",
+    "source": {
+      "newspaper": "人民论坛网",
+      "paperDate": "2026-11-11",
+      "page": "",
+      "column": "人民论坛网评",
+      "author": "",
+      "charCount": 1359,
+      "originalUrl": "https://www.rmlt.com.cn/2026/1111/758165.shtml"
+    },
+    "segmentCount": 9,
+    "structure": {
+      "status": "standard",
+      "score": 100,
+      "subThesisCount": 5,
+      "hasThesis": true,
+      "hasConclusion": true,
+      "strictPass": true,
+      "pattern": "并列式（句式平行）",
+      "essayFlavor": 69
+    },
+    "status": "published",
+    "generatedAt": "2026-11-13T01:33:41+08:00",
+    "contentHash": "sha256:b2fecd98f76a48d84782ce71aaad2380eb9e8f0063153d67891bd7dc2aae9073"
   },
   {
     "date": "2026-11-10",
     "slug": "2026-11-10",
     "edition": 1,
-    "title": "多几把尺子量创新",
+    "title": "赓续伟大长征精神 以青春担当答好时代考卷",
     "keywords": [
-      "科技评价改革",
-      "创新生态",
-      "破四唯",
-      "标准与话语权",
-      "辩证思维"
+      "长征精神",
+      "青年干部",
+      "基层历练",
+      "理想信念",
+      "担当作为"
     ],
-    "summary": "《多几把尺子量创新》选自《人民日报》2026-11-10 第 05 版「微观」，核心考点为科技评价改革、创新生态、破四唯。本讲义按「原文 + 老师逐段解析」拆解 11 个段落的段落功能、论证方式、金句标准表述与举一反三例句，并附框架速览、积累清单和迁移练习，供申论与面试备考使用。",
+    "summary": "《赓续伟大长征精神 以青春担当答好时代考卷》选自共产党员网·先锋文汇（2026年11月9日），围绕长征胜利90周年、青年干部基层历练、理想信念与担当作为展开。文章总论点为：把伟大长征精神内化于心、外化于行，转化为扎根基层、干事创业的实际行动，以青春担当答好时代考卷；下设三个并列式分论点——筑牢信仰之基、厚植为民之本、砥砺斗争之能，结尾回扣标题、落到走好新的长征路。全文约1557字，是标准的「总论点—三个分论点—结尾」申论大作文骨架。",
     "source": {
-      "newspaper": "人民日报",
-      "paperDate": "2026-11-10",
-      "page": "第 05 版",
-      "column": "微观",
-      "author": "喻思南",
-      "charCount": 1197,
-      "originalUrl": "https://paper.people.com.cn/rmrb/pc/content/202611/10/content_30190477.html"
+      "newspaper": "共产党员网",
+      "paperDate": "2026-11-09",
+      "page": "",
+      "column": "先锋文汇",
+      "author": "全部作品",
+      "charCount": 1557,
+      "originalUrl": "https://tougao.12371.cn/gaojian.php?tid=6800966"
     },
-    "segmentCount": 11,
+    "segmentCount": 5,
     "structure": {
       "status": "standard",
       "score": 100,
@@ -101,46 +103,48 @@
       "hasThesis": true,
       "hasConclusion": true,
       "strictPass": true,
-      "pattern": "并列式"
+      "pattern": "并列式（句式平行）",
+      "essayFlavor": 84
     },
     "status": "published",
-    "generatedAt": "2026-11-12T17:38:38+08:00",
-    "contentHash": "sha256:cd2f44376d2636f7a5def3f6ab553f2cb37189b0f11fc67c01e798efbf20876a"
+    "generatedAt": "2026-11-13T01:31:10+08:00",
+    "contentHash": "sha256:07961cc02703ef2a96c287ea1407f69dff4821eee17d1ea9dca95ce8ba6c9e4c"
   },
   {
     "date": "2026-11-10",
     "slug": "2026-11-10-2",
     "edition": 2,
-    "title": "烟火气也是竞争力",
+    "title": "新官理旧账 接力谋发展（贯彻五中全会精神一线见闻）",
     "keywords": [
-      "城市治理",
-      "高质量发展",
-      "辩证思维",
-      "因地制宜",
-      "文旅消费"
+      "干部交接制度",
+      "新官理旧账",
+      "政绩观",
+      "基层治理",
+      "责任担当"
     ],
-    "summary": "《烟火气也是竞争力》选自《人民日报》2026-11-10 第 05 版「人民锐评」，核心考点为城市治理、高质量发展、辩证思维。本讲义按「原文 + 老师逐段解析」拆解 10 个段落的段落功能、论证方式、金句标准表述与举一反三例句，并附框架速览、积累清单和迁移练习，供申论与面试备考使用。",
+    "summary": "《新官理旧账 接力谋发展（贯彻五中全会精神一线见闻）》选自《人民日报》2026年11月9日第04版，围绕干部变动交接制度、新官理旧账、政绩观与责任担当展开。文章以普洱市“双交接”制度为样本，总论点为“新官理旧账，接力谋发展”，下设三个并列式分论点：制度交接确保工作无缝衔接、交接不清倒逼责任落实、清单即权责与奖惩靠机制闭环。全文按“引子—总论点—过渡分析—分论点一—过渡分析—分论点二—分论点三—过渡分析—结尾”的骨架展开，是申论大作文“制度+事例+机制”结构的典型范本。",
     "source": {
       "newspaper": "人民日报",
-      "paperDate": "2026-11-10",
-      "page": "第 05 版",
-      "column": "人民锐评",
-      "author": "常言道",
-      "charCount": 994,
-      "originalUrl": "https://paper.people.com.cn/rmrb/pc/content/202611/10/content_30190480.html"
+      "paperDate": "2026-11-09",
+      "page": "第 04 版",
+      "column": "",
+      "author": "本报记者 杨文明 张 驰",
+      "charCount": 1064,
+      "originalUrl": "https://paper.people.com.cn/rmrb/pc/content/202611/09/content_30190193.html"
     },
-    "segmentCount": 10,
+    "segmentCount": 13,
     "structure": {
-      "status": "acceptable",
+      "status": "standard",
       "score": 100,
-      "subThesisCount": 2,
+      "subThesisCount": 3,
       "hasThesis": true,
       "hasConclusion": true,
       "strictPass": true,
-      "pattern": "并列式（句式平行）"
+      "pattern": "并列式（句式平行）",
+      "essayFlavor": 72
     },
     "status": "published",
-    "generatedAt": "2026-11-12T17:38:38+08:00",
-    "contentHash": "sha256:bd15eaf6603f1131e5451f7b706616f03e58aa45def3669b0d30ad269dda86dd"
+    "generatedAt": "2026-11-13T01:32:39+08:00",
+    "contentHash": "sha256:3235238a54f19def43d3847f621db24cf9ce4bf0642aecfc7471322a07336350"
   }
 ]

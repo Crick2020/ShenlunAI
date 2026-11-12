@@ -64,10 +64,11 @@ SHORT_JUDGE_RE = re.compile(r"是|要|需|应|必须|在于|决定|关系|离不
 # ---------- 严格分论点判定 ----------
 # 分论点句必须「亮观点」，以下开头说明这段在讲事实/举例/背景，不是分论点
 NARRATIVE_HEAD_RE = re.compile(
-    r"^(?:近日|日前|最近|今年以来|近年来|当前|眼下|如今|曾经|过去|记者|据报道|"
+    r"^(?:近日|日前|最近|今年以来|近年来|前不久|不久前|去年|今年|上半年|下半年|"
+    r"当天|会上|现场|时下|当前|眼下|如今|曾经|过去|记者|据报道|"
     r"数据显示|据统计|例如|比如|以.{1,12}为例|在.{1,16}中|随着|当.{1,16}时|"
     r"从.{1,10}到|一位|有个|这|其|该|另|同时|此外|不过|然而|当然|事实上|"
-    r"令人|值得|无独有偶|与此|正因|由此|结果|最终|于是|比如)"
+    r"令人|值得|无独有偶|与此|正因|由此|结果|最终|于是|比如|走进|来到)"
 )
 # 分论点句式 A：显性并列 / 递进 / 视角标志（段首）
 STRICT_MARKER_RE = re.compile(
@@ -260,6 +261,127 @@ def _parallel_pattern(subs: list[dict]) -> str:
     return "并列式"
 
 
+# ---------- 申论大作文「文风」判定 ----------
+# 结构达标 ≠ 像申论大作文：时评、随笔、现场评论也常具备「总—分—总」。
+# 这里再从标题、开篇、分论点平行度、政论词密度、篇幅五个维度给「申论味」打分（0–100），
+# 供选文时优先挑政论文，而非流畅时评。
+TITLE_ESSAY_POS_RE = re.compile(
+    r"赓续|传承|弘扬|凝聚|激发|培育|构建|完善|推动|深化|强化|夯实|筑牢|激活|释放|"
+    r"绘就|谱写|奋力|答好|走好|开启|擘画|彰显|涵养|锻造|坚持|聚焦|锚定|统筹|"
+    r"以.{1,14}为|之路|之基|新篇|答卷|篇章|新局|蓝图|根基|底色|动能|引擎|"
+    r"格局|体系|机制|治理|现代化|高质量|振兴|共同富裕|新征程|新时代"
+)
+# 时评/口语/比喻式标题（申论大作文极少这样命题）
+TITLE_ESSAY_NEG_RE = re.compile(
+    r"[？?]|何以|为何|凭什么|一纸|攒得|心头事|满意事|烟火气|一池春水|追光|绳结|"
+    r"之水|不断流|澎湃|更需|不妨|莫让|别让|岂能|吗$|呢$|啊$|呀$|"
+    r"也[是需]|更是|又是|才算|才叫|才是|跑出|掂量|解开|拆解|何以|怎样"
+)
+SCENE_OPEN_RE = re.compile(
+    r"沃野|麦浪|稻菽|田间地头|库点|收割机|春耕|秋收|晨曦|清晨|夜幕|走进|来到|日前|近日"
+)
+POLICY_WORDS = [
+    "高质量发展", "以人民为中心", "治理体系", "治理能力", "新发展理念", "钉钉子", "久久为功",
+    "担当作为", "为民", "宗旨", "初心", "使命", "新征程", "中国式现代化", "统筹", "机制",
+    "体系", "格局", "动能", "效能", "人民立场", "根本", "鲜明", "深刻", "实践", "要求",
+    "必须", "坚持", "推动", "落实", "扎实", "持续", "不断", "进一步", "着力", "聚焦",
+    "锚定", "把握", "贯彻", "谋划", "推进", "深化", "强化", "夯实", "基础", "保障",
+]
+
+
+def _title_flavor(title: str) -> tuple[int, list[str]]:
+    t = (title or "").strip()
+    if not t:
+        return 0, []
+    score, reasons = 0, []
+    clauses = [c for c in re.split(r"[，,\s、]+", t) if len(c) >= 4]
+    if len(clauses) >= 2:
+        score += 10
+        reasons.append("双句对仗")
+    if TITLE_ESSAY_POS_RE.search(t):
+        score += 8
+        reasons.append("政论式标题")
+    if TITLE_ESSAY_NEG_RE.search(t):
+        score -= 14
+        reasons.append("时评/口语式标题")
+    if re.search(r"[“”\"']", t):
+        score -= 6
+        reasons.append("引号比喻")
+    return max(0, min(20, score)), reasons
+
+
+def _opening_flavor(firsts: list[str], thesis: dict | None) -> tuple[int, list[str]]:
+    score, reasons = 0, []
+    if thesis and thesis.get("paragraph") == 1:
+        score += 12
+        reasons.append("总论点前置")
+    elif thesis and thesis.get("paragraph") in (2, 3):
+        score += 6
+        reasons.append("总论点靠前")
+    head = firsts[0] if firsts else ""
+    if SCENE_OPEN_RE.search(head) and not THESIS_RE.search(head):
+        score -= 8
+        reasons.append("场景化开篇")
+    return max(0, min(20, score)), reasons
+
+
+def _subthesis_flavor(subs: list[dict], pattern: str) -> tuple[int, list[str]]:
+    k = len(subs)
+    score, reasons = 0, []
+    if k >= 3:
+        score += 10
+        reasons.append("分论点≥3")
+    elif k == 2:
+        score += 4
+    shapes = [s.get("shape") for s in subs]
+    if k >= 3 and len(set(shapes)) == 1 and shapes[0] in ("显性标志", "话题+主张"):
+        score += 10
+        reasons.append("分论点句式平行")
+    elif k >= 3 and "并列" in (pattern or ""):
+        score += 6
+    if k == 2 and "递进" in (pattern or ""):
+        score -= 4
+        reasons.append("仅2个递进分论点")
+    return max(0, min(20, score)), reasons
+
+
+def _register_flavor(text: str) -> int:
+    n = len(re.sub(r"\s", "", text or "")) or 1
+    hits = sum((text or "").count(w) for w in POLICY_WORDS)
+    density = hits / (n / 1000.0)
+    return int(round(min(15.0, density * 1.6)))
+
+
+def _length_flavor(cc: int) -> int:
+    if 1000 <= cc <= 1500:
+        return 10
+    if 900 <= cc < 1000 or 1500 < cc <= 1700:
+        return 6
+    if 800 <= cc < 900 or 1700 < cc <= 2000:
+        return 3
+    return 0
+
+
+def essay_flavor(title: str, paragraphs: list[str], core: dict) -> dict:
+    """衡量文章「像不像申论大作文」（0–100）：标题、开篇、分论点平行度、政论词、篇幅。"""
+    paras = [p for p in (paragraphs or []) if (p or "").strip()]
+    firsts = [first_sentence(p) for p in paras]
+    subs = core.get("subTheses") or []
+    t_score, t_reason = _title_flavor(title)
+    o_score, o_reason = _opening_flavor(firsts, core.get("thesis"))
+    s_score, s_reason = _subthesis_flavor(subs, core.get("pattern") or "")
+    r_score = _register_flavor("".join(paras))
+    l_score = _length_flavor(core.get("charCount") or 0)
+    total = t_score + o_score + s_score + r_score + l_score
+    value = min(100, int(round(total * 100 / 85)))
+    return {
+        "value": value,
+        "title": t_score, "opening": o_score, "subthesis": s_score,
+        "register": r_score, "length": l_score,
+        "reasons": t_reason + o_reason + s_reason,
+    }
+
+
 def _analyze_core(paragraphs: list[str], title: str = "", char_count: int | None = None) -> dict:
     paras = [re.sub(r"\s+", " ", (p or "")).strip() for p in (paragraphs or []) if (p or "").strip()]
     n = len(paras)
@@ -360,8 +482,12 @@ def _analyze_core(paragraphs: list[str], title: str = "", char_count: int | None
         score += 6
     score = min(100, score)
 
-    essay_like = strict_pass and score >= 55
-    if essay_like and k >= 3 and score >= 70:
+    # 「申论味」：结构达标之外，还要求标题/开篇/分论点/政论词/篇幅像大作文
+    flavor = essay_flavor(title, paras, {
+        "thesis": thesis, "subTheses": subs, "pattern": pattern, "charCount": cc,
+    })
+    essay_like = strict_pass and score >= 55 and flavor["value"] >= 55
+    if essay_like and k >= 3 and score >= 70 and flavor["value"] >= 65:
         status = "standard"
     elif essay_like:
         status = "acceptable"
@@ -438,6 +564,7 @@ def _analyze_core(paragraphs: list[str], title: str = "", char_count: int | None
         "outline": outline,
         "missing": missing,
         "pattern": pattern,
+        "essayFlavor": flavor,
         "strict": strict,
         "looseSubTheses": loose,
     }
@@ -520,6 +647,7 @@ def compact(structure: dict | None) -> dict:
         "hasConclusion": bool(s.get("conclusion")),
         "strictPass": bool((s.get("strict") or {}).get("pass")),
         "pattern": s.get("pattern") or "无",
+        "essayFlavor": (s.get("essayFlavor") or {}).get("value", 0),
     }
 
 

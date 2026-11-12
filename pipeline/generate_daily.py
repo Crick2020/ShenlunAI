@@ -115,13 +115,16 @@ def load_used_urls(out_dir: Path, exclude_slug: str | None = None) -> set[str]:
 
 
 def first_qualified(arts: list[dict], used_urls: set[str]) -> dict | None:
-    """结构达标且原文未被用过的第一篇文章。"""
-    for a in arts:
-        if (a.get("url") or "").strip() in used_urls:
-            continue
-        if a.get("structure", {}).get("essayLike"):
+    """结构达标、申论文风达标且原文未被用过的第一篇；无达标者时退回结构达标首篇。"""
+    candidates = [
+        a for a in arts
+        if (a.get("url") or "").strip() not in used_urls
+        and a.get("structure", {}).get("essayLike")
+    ]
+    for a in candidates:
+        if (a.get("structure", {}).get("essayFlavor") or {}).get("value", 0) >= 55:
             return a
-    return None
+    return candidates[0] if candidates else None
 
 
 def build_source(picked: dict, paper_date: str, selection_note: str = "") -> dict:
@@ -448,7 +451,10 @@ def main() -> int:
         else:
             # 窗口内也没有：取结构分最高的议论文，并在讲义里提示结构缺陷
             pool = [a for a in arts if not a.get("structure", {}).get("newsReport")] or arts
-            picked = max(pool, key=lambda a: a.get("structure", {}).get("score", 0))
+            picked = max(pool, key=lambda a: (
+                (a.get("structure", {}).get("essayFlavor") or {}).get("value", 0),
+                a.get("structure", {}).get("score", 0),
+            ))
             picked["picked_by"] = "structure-fallback"
             picked.setdefault("structure", {})["status"] = "partial"
 
