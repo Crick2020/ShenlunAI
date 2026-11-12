@@ -1,5 +1,41 @@
 [
   {
+    "date": "2026-11-12",
+    "slug": "2026-11-12",
+    "edition": 1,
+    "title": "把丰收的底气攒得更足",
+    "keywords": [
+      "粮食安全",
+      "底线思维",
+      "农业现代化",
+      "农民收益",
+      "丰收底气"
+    ],
+    "summary": "《把丰收的底气攒得更足》选自《人民日报》2026年11月12日第05版「人民时评」，围绕粮食安全、底线思维、农业现代化、农民收益展开。文章以秋粮丰收场景引入，提出“粮食连年丰收，为何还要年年抓紧”的总论点，从底线、发展、民生三个维度并列展开分论点，强调把产能基础夯得更实、发展空间拓得更宽、农民收益护得更好，结尾引用名言回扣标题，结构为并列式。",
+    "source": {
+      "newspaper": "人民日报",
+      "paperDate": "2026-11-12",
+      "page": "第 05 版",
+      "column": "人民时评",
+      "author": "常 钦",
+      "charCount": 1116,
+      "originalUrl": "https://paper.people.com.cn/rmrb/pc/content/202611/12/content_30190820.html"
+    },
+    "segmentCount": 10,
+    "structure": {
+      "status": "standard",
+      "score": 100,
+      "subThesisCount": 6,
+      "hasThesis": true,
+      "hasConclusion": true,
+      "strictPass": true,
+      "pattern": "并列式"
+    },
+    "status": "published",
+    "generatedAt": "2026-11-13T01:08:07+08:00",
+    "contentHash": "sha256:0589bb15e3b804dd81ef0d5841b7e0c8388e0a731bfd1751055b7d5a91d10e93"
+  },
+  {
     "date": "2026-11-10",
     "slug": "2026-11-10",
     "edition": 1,
