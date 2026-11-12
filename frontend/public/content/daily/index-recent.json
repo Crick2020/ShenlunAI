@@ -36,6 +36,42 @@
     "contentHash": "sha256:0589bb15e3b804dd81ef0d5841b7e0c8388e0a731bfd1751055b7d5a91d10e93"
   },
   {
+    "date": "2026-11-11",
+    "slug": "2026-11-11",
+    "edition": 1,
+    "title": "一纸凭证何以激活“一池春水”",
+    "keywords": [
+      "数据产权",
+      "数据要素",
+      "确权登记",
+      "数字经济",
+      "法治保障"
+    ],
+    "summary": "《一纸凭证何以激活“一池春水”》选自《人民日报》2026年11月11日第05版「人民时评」，围绕数据产权登记制度展开。文章总论点：全国统一的数据产权登记制度是破解数据确权困局、激活数据要素价值的关键。分论点递进式展开：统一登记破解确权困局；确权才能护创新；确权之后重在运用；制度仍需完善。全文按“引子—总论点—分论点一—过渡—分论点二—分论点三—分论点四—结尾”结构推进，为申论大作文提供范本。",
+    "source": {
+      "newspaper": "人民日报",
+      "paperDate": "2026-11-11",
+      "page": "第 05 版",
+      "column": "人民时评",
+      "author": "黄尹旭",
+      "charCount": 1231,
+      "originalUrl": "https://paper.people.com.cn/rmrb/pc/content/202611/11/content_30190584.html"
+    },
+    "segmentCount": 8,
+    "structure": {
+      "status": "standard",
+      "score": 100,
+      "subThesisCount": 4,
+      "hasThesis": true,
+      "hasConclusion": true,
+      "strictPass": true,
+      "pattern": "递进式"
+    },
+    "status": "published",
+    "generatedAt": "2026-11-13T01:17:04+08:00",
+    "contentHash": "sha256:9f9b3b47881aaf522fba98b52fd058e25f3169911faccc6f3f7885e0407450f1"
+  },
+  {
     "date": "2026-11-10",
     "slug": "2026-11-10",
     "edition": 1,
