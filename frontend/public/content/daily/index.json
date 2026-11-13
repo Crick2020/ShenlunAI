@@ -1,5 +1,42 @@
 [
   {
+    "date": "2026-11-13",
+    "slug": "2026-11-13",
+    "edition": 1,
+    "title": "说老实话、办老实事、做老实人",
+    "keywords": [
+      "老实人",
+      "党性修养",
+      "实事求是",
+      "担当作为",
+      "作风建设"
+    ],
+    "summary": "《说老实话、办老实事、做老实人》选自人民论坛网·人民论坛实评（2026年11月13日），围绕党员干部的“老实”品格展开，核心考点是党性修养、实事求是、担当作为与作风建设。文章以俗语开篇引出总论点，随后引述权威文件界定内涵，主体部分以并列式结构展开五个分论点：对组织对事业老实、说老实话贵在坦诚实事求是、说老实话需勇气与氛围、办老实事贵在脚踏实地、做老实人贵在正派，最后以三个“的是”排比升华收束。全文结构清晰，论证正反结合，是申论大作文的优质范本。",
+    "source": {
+      "newspaper": "人民论坛网",
+      "paperDate": "2026-11-13",
+      "page": "",
+      "column": "人民论坛实评",
+      "author": "",
+      "charCount": 1242,
+      "originalUrl": "https://www.rmlt.com.cn/2026/1113/758191.shtml"
+    },
+    "segmentCount": 9,
+    "structure": {
+      "status": "standard",
+      "score": 100,
+      "subThesisCount": 5,
+      "hasThesis": true,
+      "hasConclusion": true,
+      "strictPass": true,
+      "pattern": "并列式（句式平行）",
+      "essayFlavor": 73
+    },
+    "status": "published",
+    "generatedAt": "2026-11-13T14:51:07+08:00",
+    "contentHash": "sha256:00e5f5488cb41fd6ffd37c93ae302e8ea01c36375b608e50381a0da3a87ff2ac"
+  },
+  {
     "date": "2026-11-12",
     "slug": "2026-11-12",
     "edition": 1,
