@@ -1,5 +1,42 @@
 [
   {
+    "date": "2026-11-14",
+    "slug": "2026-11-14",
+    "edition": 1,
+    "title": "政策更精准，发展增实效",
+    "keywords": [
+      "政策精准性",
+      "财税体制改革",
+      "有效市场与有为政府",
+      "改革方法论",
+      "高质量发展"
+    ],
+    "summary": "《政策更精准，发展增实效》选自《人民日报》2026年11月13日第05版「微观」，围绕政策精准性、财税体制改革、有效市场与有为政府、改革方法论展开。文章以新能源汽车出口退税调整为由头，提出总论点：财税政策因势完善、精准实施，才能适配国家战略导向、激发内生动力。主体部分以并列式结构展开五个分论点：政策着力点因时而变、循着问题调整制度安排、政策兼顾效率与公平、政策调整把准「时」「度」「效」、抓落实要积极主动又扎实稳健，中间穿插过渡段辩证分析规范补贴与有效市场的关系。结尾以小见大，回扣标题，落脚高质量发展。",
+    "source": {
+      "newspaper": "人民日报",
+      "paperDate": "2026-11-13",
+      "page": "第 05 版",
+      "column": "微观",
+      "author": "孟繁哲",
+      "charCount": 1266,
+      "originalUrl": "https://paper.people.com.cn/rmrb/pc/content/202611/13/content_30190972.html"
+    },
+    "segmentCount": 9,
+    "structure": {
+      "status": "standard",
+      "score": 100,
+      "subThesisCount": 5,
+      "hasThesis": true,
+      "hasConclusion": true,
+      "strictPass": true,
+      "pattern": "并列式（句式平行）",
+      "essayFlavor": 72
+    },
+    "status": "published",
+    "generatedAt": "2026-11-14T14:29:34+08:00",
+    "contentHash": "sha256:a986ecb39d57d4a70711cf429080275d79986dad99c127c15490a7a810ffa038"
+  },
+  {
     "date": "2026-11-13",
     "slug": "2026-11-13",
     "edition": 1,
