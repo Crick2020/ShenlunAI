@@ -81,6 +81,8 @@ export interface HistoryRecord {
   id: string;
   paperName: string;
   questionTitle: string;
+  /** 题目类型标签：单一题 / 综合分析 / 公文写作 / 大作文（老记录可能没有，按题干推断） */
+  questionCategory?: '单一题' | '综合分析' | '公文写作' | '大作文';
   score: number;
   timestamp: number;
   result: GradingResult;

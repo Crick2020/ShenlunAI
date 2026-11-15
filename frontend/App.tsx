@@ -12,6 +12,7 @@ import PrivacyConsentModal from './components/PrivacyConsentModal';
 import { Paper, User, Question, HistoryRecord, GradingResult } from './types';
 import { API_BASE } from './constants';
 import { geminiService } from './services/geminiService';
+import { inferQuestionCategory } from './utils/questionCategory';
 import { track } from './services/analytics';
 import { getFeaturedEntry } from './services/dailyService';
 import {
@@ -680,6 +681,7 @@ const App: React.FC = () => {
         id: Math.random().toString(36).substr(2, 9),
         paperName: selectedPaper.name,
         questionTitle: snapshot.question.title,
+        questionCategory: inferQuestionCategory(snapshot.question),
         score: normalizedResult.score,
         timestamp: Date.now(),
         result: normalizedResult,
