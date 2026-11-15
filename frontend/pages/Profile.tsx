@@ -12,6 +12,12 @@ interface ProfileProps {
   onViewRecord: (record: HistoryRecord) => void;
 }
 
+/** 分数展示：整数不带小数点，非整数保留一位 */
+const formatScore = (score: number): string => {
+  if (typeof score !== 'number' || Number.isNaN(score)) return '0';
+  return Number.isInteger(score) ? String(score) : String(Math.round(score * 10) / 10);
+};
+
 const Profile: React.FC<ProfileProps> = ({ history, onViewRecord }) => {
   return (
     <div className="max-w-5xl mx-auto px-4 py-6 md:py-12">
@@ -33,18 +39,19 @@ const Profile: React.FC<ProfileProps> = ({ history, onViewRecord }) => {
                   onViewRecord(record);
                 }}
               >
-                <div className="flex-1 min-w-0 space-y-2 md:space-y-3">
-                  <div className="flex items-start space-x-2">
-                    <span
-                      className="shrink-0 mt-0.5 text-[9px] md:text-[10px] px-2 py-0.5 rounded font-bold tracking-wider"
-                      style={QUESTION_CATEGORY_STYLES[category]}
-                    >{category}</span>
-                    <h3 className="min-w-0 font-bold text-[#1d1d1f] text-sm md:text-lg leading-snug line-clamp-2">{record.questionTitle}</h3>
-                  </div>
-                  <div className="flex items-center space-x-4 pt-0.5 text-[10px] md:text-[11px] text-[#86868b] font-medium">
-                    <span className="shrink-0"><i className="far fa-calendar mr-1.5"></i> {new Date(record.timestamp).toLocaleDateString()}</span>
-                    <span className="shrink-0"><i className="fas fa-keyboard mr-1.5"></i> {record.userAnswer.length} 字</span>
-                    <span className="min-w-0 flex-1 truncate text-right text-[#a1a1a6]" title={record.paperName}>{record.paperName}</span>
+                <div className="flex-1 min-w-0 grid grid-cols-[52px_1fr] md:grid-cols-[62px_1fr] gap-x-2 md:gap-x-2.5 gap-y-1.5 md:gap-y-2 items-start">
+                  <span
+                    className="col-start-1 row-start-1 mt-0.5 inline-block whitespace-nowrap text-[9px] md:text-[10px] px-1.5 py-0.5 rounded font-bold tracking-wide"
+                    style={QUESTION_CATEGORY_STYLES[category]}
+                  >{category}</span>
+                  <h3 className="col-start-2 row-start-1 min-w-0 font-bold text-[#1d1d1f] text-sm md:text-lg leading-snug line-clamp-2">{record.questionTitle}</h3>
+                  <div className="col-start-2 row-start-2 min-w-0 space-y-1">
+                    <p className="truncate text-[10px] md:text-[11px] text-[#a1a1a6]" title={record.paperName}>{record.paperName}</p>
+                    <div className="flex items-center gap-4 text-[10px] md:text-[11px] text-[#86868b] font-medium">
+                      <span className="shrink-0"><i className="far fa-calendar mr-1.5"></i> {new Date(record.timestamp).toLocaleDateString()}</span>
+                      <span className="shrink-0"><i className="fas fa-keyboard mr-1.5"></i> {record.userAnswer.length} 字</span>
+                      <span className="shrink-0">{formatScore(record.score)} 分</span>
+                    </div>
                   </div>
                 </div>
                 <div className="mt-4 md:mt-0 md:ml-8 flex items-center justify-end shrink-0 border-t md:border-t-0 pt-4 md:pt-0">
