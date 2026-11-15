@@ -1,5 +1,42 @@
 [
   {
+    "date": "2026-11-15",
+    "slug": "2026-11-15",
+    "edition": 1,
+    "title": "赓续伟大长征精神 答好新时代基层赶考卷",
+    "keywords": [
+      "长征精神",
+      "基层干部",
+      "信仰忠诚",
+      "为民初心",
+      "斗争担当"
+    ],
+    "summary": "《赓续伟大长征精神 答好新时代基层赶考卷》选自共产党员网·先锋文汇（2026年11月12日），围绕长征精神与基层干部担当展开。文章以习近平总书记「每一代人有每一代人的长征路」开篇立总论点，提出基层干部要从长征精神中汲取奋进力量、交出青春答卷；随后以并列式结构展开两个分论点——筑牢信仰之基答好忠诚卷、涵养为民之心答好初心卷，末段以「砥砺斗争之志」收束并回扣标题。全文采用「总论点—分论点—结尾」的申论大作文骨架，是学习引语开篇、事例排比论证与古今对照写法的范本。",
+    "source": {
+      "newspaper": "共产党员网",
+      "paperDate": "2026-11-12",
+      "page": "",
+      "column": "先锋文汇",
+      "author": "全部作品",
+      "charCount": 1242,
+      "originalUrl": "https://tougao.12371.cn/gaojian.php?tid=6803806"
+    },
+    "segmentCount": 4,
+    "structure": {
+      "status": "acceptable",
+      "score": 95,
+      "subThesisCount": 2,
+      "hasThesis": true,
+      "hasConclusion": true,
+      "strictPass": true,
+      "pattern": "并列式（句式平行）",
+      "essayFlavor": 68
+    },
+    "status": "published",
+    "generatedAt": "2026-11-15T14:38:44+08:00",
+    "contentHash": "sha256:12797d2e6312b8ab63946e5f93f1b3edee92f1d8c01ef8fe83ed0e6743dae367"
+  },
+  {
     "date": "2026-11-14",
     "slug": "2026-11-14",
     "edition": 1,
