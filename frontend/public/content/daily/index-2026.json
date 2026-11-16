@@ -1,5 +1,42 @@
 [
   {
+    "date": "2026-11-16",
+    "slug": "2026-11-16",
+    "edition": 1,
+    "title": "筑牢“根”和“魂” 锻造“顶梁柱”",
+    "keywords": [
+      "国企党建",
+      "根和魂",
+      "顶梁柱",
+      "政治属性",
+      "高质量发展"
+    ],
+    "summary": "《筑牢“根”和“魂” 锻造“顶梁柱”》选自人民论坛网·人民论坛网评（2026年11月16日），围绕国有企业党的建设展开。文章以“顶梁柱”比喻国企地位，以“根”和“魂”比喻党的领导与党的建设，总论点鲜明；主体部分以并列式结构展开，分论点包括坚持党的领导是国企的“根”和“魂”、新形势对国企党建提出新要求、党建是系统工程须抓住重点、落实党中央决策部署、用创新理论凝心铸魂等，辅以事实论据与过渡分析，结尾回扣标题、升华愿景。",
+    "source": {
+      "newspaper": "人民论坛网",
+      "paperDate": "2026-11-16",
+      "page": "",
+      "column": "人民论坛网评",
+      "author": "",
+      "charCount": 1531,
+      "originalUrl": "https://www.rmlt.com.cn/2026/1116/758297.shtml"
+    },
+    "segmentCount": 13,
+    "structure": {
+      "status": "standard",
+      "score": 100,
+      "subThesisCount": 5,
+      "hasThesis": true,
+      "hasConclusion": true,
+      "strictPass": true,
+      "pattern": "并列式",
+      "essayFlavor": 72
+    },
+    "status": "published",
+    "generatedAt": "2026-11-16T14:35:52+08:00",
+    "contentHash": "sha256:bf1ad7ba604038556c2749716f4f54851b5823a6de3908eac197a64c510cdf99"
+  },
+  {
     "date": "2026-11-15",
     "slug": "2026-11-15",
     "edition": 1,
