@@ -77,15 +77,24 @@ function fixEmphasisFlanking(line: string): string {
     .join('');
 }
 
+/** 报告内小节标题的历史文案（旧报告仍带旧文案），展示/复制时统一为新文案 */
+const LEGACY_SECTION_TITLES: Array<[string, string]> = [
+  ['【满分标杆与积累提升】', '【参考答案与积累提升】'],
+];
+
 export function normalizeReportMarkdown(raw: string): string {
   if (!raw || !raw.trim()) return raw;
   // 模型偶发把 Markdown 标记转义成 \*\*...\*\*，会导致页面显示字面量 **。
   // 先做轻量“反转义”，仅处理常见格式标记，避免误改正文中的反斜杠。
-  const preprocessed = raw
+  let preprocessed = raw
     .replace(/\\\*\\\*/g, '**')
     .replace(/\\`/g, '`')
     .replace(/\\#/g, '#')
     .replace(/\\>/g, '>');
+
+  for (const [from, to] of LEGACY_SECTION_TITLES) {
+    preprocessed = preprocessed.split(from).join(to);
+  }
 
   const lines = preprocessed.split('\n');
   let inCodeBlock = false;
