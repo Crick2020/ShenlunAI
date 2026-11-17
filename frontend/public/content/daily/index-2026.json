@@ -1,5 +1,42 @@
 [
   {
+    "date": "2026-11-17",
+    "slug": "2026-11-17",
+    "edition": 1,
+    "title": "践行“四个着力” 谱写国企高质量发展新篇章",
+    "keywords": [
+      "国企党建",
+      "高质量发展",
+      "现代企业制度",
+      "党建业务融合",
+      "干部人才队伍"
+    ],
+    "summary": "《践行“四个着力” 谱写国企高质量发展新篇章》选自共产党员网·先锋文汇（2026年11月16日），围绕国企党建与高质量发展展开。文章以习近平总书记“四个着力”重要指示为总论点，提出以高质量党建引领保障企业高质量发展，并分四个并列分论点展开：完善现代企业制度把牢政治航向、深化党建业务融合提升经营质效、建强干部队伍夯实人才支撑、从严管党治党涵养清风正气，结尾回扣标题升华主题。全文采用并列式结构，是申论大作文“总—分—总”框架的典型范本。",
+    "source": {
+      "newspaper": "共产党员网",
+      "paperDate": "2026-11-16",
+      "page": "",
+      "column": "先锋文汇",
+      "author": "全部作品",
+      "charCount": 1686,
+      "originalUrl": "https://tougao.12371.cn/gaojian.php?tid=6805518"
+    },
+    "segmentCount": 6,
+    "structure": {
+      "status": "standard",
+      "score": 100,
+      "subThesisCount": 4,
+      "hasThesis": true,
+      "hasConclusion": true,
+      "strictPass": true,
+      "pattern": "并列式（句式平行）",
+      "essayFlavor": 76
+    },
+    "status": "published",
+    "generatedAt": "2026-11-17T15:58:43+08:00",
+    "contentHash": "sha256:f1ac8b5de70599e6cfd5ea19dde606ae94e0dc7d112f20add0af3d6f6b9ac7ab"
+  },
+  {
     "date": "2026-11-16",
     "slug": "2026-11-16",
     "edition": 1,
