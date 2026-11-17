@@ -268,7 +268,7 @@ def rewrite_essay(system: str, title: str, paragraphs: list[str], outline: list[
         "{\"title\":\"改写标题\",\"paragraphs\":[{\"role\":\"总论点\",\"text\":\"...\"},"
         "{\"role\":\"分论点一\",\"text\":\"...\"},{\"role\":\"分论点二\",\"text\":\"...\"},"
         "{\"role\":\"分论点三\",\"text\":\"...\"},{\"role\":\"结尾\",\"text\":\"...\"}]}。"
-        "要求：固定 5 段、全文 1100–1400 字（开头 150–220 字、每个分论点段 280–350 字、结尾 120–180 字）；"
+        "要求：固定 5 段、全文 1000–1200 字（开头 130–180 字、每个分论点段 240–300 字、结尾 100–150 字）；"
         "开头由头+判断+总论点（末句预埋三个分论点关键词）；"
         "三个分论点段首句句式对仗、字数一致，每段按「分论点→道理→引言/案例→小结」展开；"
         "结尾回扣标题+收拢三个分论点+升华。保留原文观点、案例、数据、金句，但重新组织语言，不要整段照抄。"
@@ -276,13 +276,27 @@ def rewrite_essay(system: str, title: str, paragraphs: list[str], outline: list[
     if feedback:
         user += f"\n上一轮质量门禁未通过，请针对性修正：\n{feedback}\n"
     data = chat_json(system, user, temperature=0.6, max_tokens=4096)
+    paras = _extract_rewrite_paras(data)
+    total = len(re.sub(r"\s", "", "".join(p["text"] for p in paras)))
+    # 字数偏离 1000–1200 时，带明确反馈重写一次（放宽到 950–1300 才接受）
+    if not (950 <= total <= 1300):
+        retry_user = user + (
+            f"\n上一稿全文约 {total} 字，偏离 1000–1200 字的要求。"
+            "请在保留结构（总论点 + 三个对仗分论点 + 结尾）与核心观点的前提下，"
+            "压缩或扩充到 1000–1200 字，重新返回完整 JSON。")
+        data = chat_json(system, retry_user, temperature=0.5, max_tokens=4096)
+        paras = _extract_rewrite_paras(data)
+    return {"title": str(data.get("title") or title).strip(), "paragraphs": paras}
+
+
+def _extract_rewrite_paras(data) -> list[dict]:
     if not isinstance(data, dict) or not isinstance(data.get("paragraphs"), list):
         raise ValueError(f"改写返回格式错误：{str(data)[:200]}")
     paras = [p for p in data["paragraphs"]
              if isinstance(p, dict) and str(p.get("text") or "").strip()]
     if len(paras) < 3:
         raise ValueError(f"改写段落过少：{len(paras)}")
-    return {"title": str(data.get("title") or title).strip(), "paragraphs": paras}
+    return paras
 
 
 def generate_overview(system: str, title: str, paragraphs: list[str],
