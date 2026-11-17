@@ -32,7 +32,7 @@ function head(doc) {
   const articleLd = {
     '@context': 'https://schema.org',
     '@type': 'Article',
-    headline: `《${doc.title}》申论每日精读：原文与老师逐段解析`,
+    headline: `《${doc.title}》申论每日精读：范文（改写）与老师逐段解析`,
     description: doc.summary,
     datePublished: published,
     dateModified: published,
@@ -129,13 +129,15 @@ function siteFooter() {
 }
 
 function renderSegments(doc) {
+  const isRewrite = !!(doc.source && doc.source.provenance === 'rewrite');
+  const origLabel = isRewrite ? '范文（改写）' : '原文';
   return doc.segments.map((seg) => {
     const devices = (seg.analysis.devices || []).slice(0, 3)
       .map((d) => `<span class="daily-device">${escapeHtml(d)}</span>`).join('');
     return `<section class="daily-segment" id="seg-${seg.index}">
   <div class="daily-original" id="orig-${seg.index}">
     <div class="daily-block__head">
-      <span class="daily-badge daily-badge--original">原文 · 第 ${seg.index} 段</span>
+      <span class="daily-badge daily-badge--original">${origLabel} · 第 ${seg.index} 段</span>
       ${seg.analysis.structureRole ? `<span class="daily-role ${roleClass(seg.analysis.structureRole)}">${escapeHtml(seg.analysis.structureRole)}</span>` : ''}
     </div>
     <div class="daily-block__body">${safeRichHtml(seg.original.html)}</div>
@@ -300,7 +302,7 @@ export function renderArticleMarkdown(doc) {
     '',
     `> ${doc.summary}`,
     '',
-    '## 原文与老师逐段解析',
+    '## 范文（改写）与老师逐段解析',
     '',
   ];
 
@@ -320,8 +322,9 @@ export function renderArticleMarkdown(doc) {
       '');
   }
 
+  const origMdLabel = (doc.source && doc.source.provenance === 'rewrite') ? '**【范文（改写）】**' : '**【原文】**';
   for (const seg of doc.segments) {
-    lines.push(`### 第 ${seg.index} 段（${seg.analysis.structureRole || '段落'}）`, '', '**【原文】**', '', htmlToMarkdown(seg.original.html), '',
+    lines.push(`### 第 ${seg.index} 段（${seg.analysis.structureRole || '段落'}）`, '', origMdLabel, '', htmlToMarkdown(seg.original.html), '',
       `**【老师解析】**（${seg.analysis.function || '段落解析'}）`, '',
       htmlToMarkdown(seg.analysis.html), '');
     if ((seg.analysis.quotes || []).length) {
@@ -372,7 +375,7 @@ export function renderArchiveHtml(entries, years) {
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>申论每日精读归档 · 爱学申论</title>
-<meta name="description" content="每天从人民日报、人民网、人民论坛网、光明网、中国经济网、共产党员网等官媒选一篇申论大作文范文逐段精讲：总论点 + 严格分论点 + 结尾，原文 + 老师解析，按日期归档，共 ${entries.length} 篇。">
+<meta name="description" content="每天从人民日报、人民网、人民论坛网、光明网、中国经济网、共产党员网等官媒选一篇申论大作文范文逐段精讲：总论点 + 严格分论点 + 结尾，范文（改写） + 老师解析，按日期归档，共 ${entries.length} 篇。">
 <link rel="canonical" href="${SITE_URL}/daily/">
 <meta property="og:title" content="申论每日精读归档 · 爱学申论">
 <meta property="og:url" content="${SITE_URL}/daily/">
@@ -388,7 +391,7 @@ ${siteHeader()}
   <nav class="daily-crumb"><a href="${SITE_URL}/">首页</a> / 每日精读</nav>
   <div class="daily-eyebrow">跟着官媒学申论</div>
   <h1 class="daily-title daily-serif">申论每日精读归档</h1>
-  <blockquote class="daily-summary">每天从人民日报、人民网、人民论坛网、光明网、中国经济网、共产党员网等官媒评论栏目，选一篇具备「明确总论点 + 若干严格分论点 + 结尾」的申论大作文范文，产出「原文 + 老师逐段解析」讲义：拆段落功能、论证方式、金句标准表述、举一反三例句与迁移练习。共 ${entries.length} 篇，原文均回链原刊，仅供学习交流。</blockquote>
+  <blockquote class="daily-summary">每天从人民日报、人民网、人民论坛网、光明网、中国经济网、共产党员网等官媒评论栏目，选一篇具备「明确总论点 + 若干严格分论点 + 结尾」的申论大作文范文，产出「范文（按申论规范改写）+ 老师逐段解析」讲义：拆段落功能、论证方式、金句标准表述、举一反三例句与迁移练习。共 ${entries.length} 篇，原文均回链原刊，仅供学习交流。</blockquote>
 
   <h2 class="daily-section-title">按年份浏览</h2>
   <div class="daily-related">${years.map((y) => `<a href="${SITE_URL}/daily/archive/${y}.html">${y} 年 →</a>`).join('')}</div>

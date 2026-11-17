@@ -170,8 +170,16 @@ def source_phrase(source: dict, long_date: bool = False) -> str:
     return f"{label} {date_text}".strip()
 
 
-def build_note(source: dict) -> str:
+def build_note(source: dict, rewritten: bool = False) -> str:
     prefix = source.get("selectionNote") or ""
+    author = f"（作者 {source['author']}）" if source.get("author") else ""
+    if rewritten:
+        return (
+            prefix +
+            f"本文根据{source_phrase(source, long_date=True)}的原题《{source.get('originalTitle','')}》"
+            f"{author}改写而成，按申论大作文规范重组结构（总论点 + 三个对仗分论点 + 结尾），"
+            f"保留原文观点、案例与数据，改写后约 {source.get('charCount', 0)} 字，仅供学习交流使用。"
+        )
     return (
         prefix +
         f"本文选自{source_phrase(source, long_date=True)}，"
@@ -243,6 +251,40 @@ def generate_segments(system: str, title: str, paragraphs: list[str],
     return result
 
 
+def rewrite_essay(system: str, title: str, paragraphs: list[str], outline: list[str],
+                  source_label: str, pattern: str, feedback: str = "") -> dict:
+    """把官媒原文改写成申论大作文范文（总论点 + 三个对仗分论点 + 结尾）。"""
+    full_text = "\n".join(f"【第 {i + 1} 段】{p}" for i, p in enumerate(paragraphs))
+    skeleton = ""
+    if outline:
+        skeleton = "\n原文结构骨架（脚本判定，供改写参考）：\n" + "\n".join(
+            f"第 {i + 1} 段：{role}" for i, role in enumerate(outline))
+    user = (
+        f"原题：《{title}》\n"
+        f"实际来源：{source_label or '官媒评论'}；原文分论点结构关系：{pattern or '无'}\n\n"
+        f"原文全文（仅供改写取材，绝对不要整段照抄）：\n{full_text}\n"
+        f"{skeleton}\n\n"
+        "请把原文改写成一篇申论大作文范文，返回 JSON："
+        "{\"title\":\"改写标题\",\"paragraphs\":[{\"role\":\"总论点\",\"text\":\"...\"},"
+        "{\"role\":\"分论点一\",\"text\":\"...\"},{\"role\":\"分论点二\",\"text\":\"...\"},"
+        "{\"role\":\"分论点三\",\"text\":\"...\"},{\"role\":\"结尾\",\"text\":\"...\"}]}。"
+        "要求：固定 5 段、全文 1100–1400 字（开头 150–220 字、每个分论点段 280–350 字、结尾 120–180 字）；"
+        "开头由头+判断+总论点（末句预埋三个分论点关键词）；"
+        "三个分论点段首句句式对仗、字数一致，每段按「分论点→道理→引言/案例→小结」展开；"
+        "结尾回扣标题+收拢三个分论点+升华。保留原文观点、案例、数据、金句，但重新组织语言，不要整段照抄。"
+    )
+    if feedback:
+        user += f"\n上一轮质量门禁未通过，请针对性修正：\n{feedback}\n"
+    data = chat_json(system, user, temperature=0.6, max_tokens=4096)
+    if not isinstance(data, dict) or not isinstance(data.get("paragraphs"), list):
+        raise ValueError(f"改写返回格式错误：{str(data)[:200]}")
+    paras = [p for p in data["paragraphs"]
+             if isinstance(p, dict) and str(p.get("text") or "").strip()]
+    if len(paras) < 3:
+        raise ValueError(f"改写段落过少：{len(paras)}")
+    return {"title": str(data.get("title") or title).strip(), "paragraphs": paras}
+
+
 def generate_overview(system: str, title: str, paragraphs: list[str],
                       source: dict, segments: list[dict], feedback: str = "",
                       outline: list[str] | None = None) -> dict:
@@ -275,11 +317,21 @@ def generate_overview(system: str, title: str, paragraphs: list[str],
 
 
 def assemble(date: str, slug: str, edition: int, picked: dict, paper_date: str,
-             raw_segments: list[dict], overview: dict, selection_note: str = "") -> dict:
+             raw_segments: list[dict], overview: dict, selection_note: str = "",
+             rewritten_title: str | None = None,
+             rewritten_paragraphs: list[str] | None = None) -> dict:
     source = build_source(picked, paper_date, selection_note)
+    rewritten = bool(rewritten_paragraphs)
+    if rewritten:
+        source["originalParagraphs"] = list(source["paragraphs"])
+        source["paragraphs"] = [p for p in rewritten_paragraphs if (p or "").strip()]
+        source["provenance"] = "rewrite"
+        source["charCount"] = len(re.sub(r"\s", "", "".join(source["paragraphs"])))
+        source["structure"] = article_structure.analyze(
+            source["paragraphs"], rewritten_title or source["originalTitle"], source["charCount"])
     paragraphs = source["paragraphs"]
     outline = (source.get("structure") or {}).get("outline") or []
-    title = source["originalTitle"] or picked.get("title", "")
+    title = rewritten_title or source["originalTitle"] or picked.get("title", "")
     segments: list[dict] = []
 
     for item in raw_segments:
@@ -357,7 +409,7 @@ def assemble(date: str, slug: str, edition: int, picked: dict, paper_date: str,
         "summary": summary,
         "segments": segments,
         "extras": extras,
-        "note": build_note(source),
+        "note": build_note(source, rewritten=rewritten),
         "faq": faq,
         "relatedSlugs": [],
         "status": "published",
@@ -494,11 +546,11 @@ def main() -> int:
                           "selectionNote": selection_note}, ensure_ascii=False, indent=2))
         return 0
 
-    # 2) 逐段生成解析（原文不交给 LLM）+ 全篇概览
+    # 2) 改写为申论大作文 + 逐段生成解析 + 全篇概览
     system = load_system()
-    paragraphs = list(picked.get("paragraphs") or [])
-    if len(paragraphs) < 3:
-        print(json.dumps({"error": "原文段落过少", "paragraphs": len(paragraphs)}, ensure_ascii=False))
+    original_paragraphs = list(picked.get("paragraphs") or [])
+    if len(original_paragraphs) < 3:
+        print(json.dumps({"error": "原文段落过少", "paragraphs": len(original_paragraphs)}, ensure_ascii=False))
         return 2
 
     source_preview = build_source(picked, paper_date, selection_note)
@@ -507,9 +559,8 @@ def main() -> int:
     if picked.get("structure", {}).get("status") == "partial":
         missing = "、".join(picked.get("structure", {}).get("missing") or [])
         structure_warning = (
-            f"\n注意：本文结构不完全符合申论大作文规范（{missing}）。"
-            "请在第 1 段解析里如实提示同学「这篇是评论文章，结构上与考场大作文有差别」，"
-            "并给出若改写成大作文应如何补齐结构。"
+            f"\n注意：原文结构不完全符合申论大作文规范（{missing}）。"
+            "改写时请补齐结构（总论点 + 三个对仗分论点 + 结尾），并在第 1 段解析里提示同学这是改写范文。"
         )
 
     report = {"passed": False, "checks": []}
@@ -519,8 +570,17 @@ def main() -> int:
             f"{c['id']}: {c['detail']}" for c in report.get("checks", []) if not c["ok"]
         ]
         feedback = "；".join(failed) + structure_warning
+        rw = rewrite_essay(
+            system, picked["title"], original_paragraphs, outline,
+            source_preview.get("sourceLabel") or "",
+            (source_preview.get("structure") or {}).get("pattern") or "",
+            feedback,
+        )
+        rw_title = rw["title"]
+        rw_paragraphs = [p["text"] for p in rw["paragraphs"]]
+        rw_outline = [str(p.get("role") or "") for p in rw["paragraphs"]]
         raw_segments = generate_segments(
-            system, picked["title"], paragraphs, outline, feedback,
+            system, rw_title, rw_paragraphs, rw_outline, feedback,
             source_preview.get("sourceLabel") or "",
             (source_preview.get("structure") or {}).get("pattern") or "",
         )
@@ -531,10 +591,11 @@ def main() -> int:
                           "devices": s.get("devices") or []}}
             for s in raw_segments
         ]
-        overview = generate_overview(system, picked["title"], paragraphs,
-                                     source_preview, preview, feedback, outline)
+        overview = generate_overview(system, rw_title, rw_paragraphs,
+                                     source_preview, preview, feedback, rw_outline)
         doc = assemble(date, slug, args.edition, picked, paper_date,
-                       raw_segments, overview, selection_note)
+                       raw_segments, overview, selection_note,
+                       rewritten_title=rw_title, rewritten_paragraphs=rw_paragraphs)
         report = validate_doc(doc)
         report["retries"] = attempt
         if report["passed"]:

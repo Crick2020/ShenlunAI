@@ -29,7 +29,7 @@ function structureStatusLabel(status?: string): string {
 
 function roleClass(role: string): string {
   if (role.startsWith('分论点')) return 'daily-role--sub';
-  if (role === '总论点' || role === '结尾') return 'daily-role--key';
+  if (role === '总论点' || role === '结尾' || role.includes('总论点') || role.includes('结尾')) return 'daily-role--key';
   return '';
 }
 
@@ -108,6 +108,7 @@ const DailyReader: React.FC<DailyReaderProps> = ({ slug, onSelectSlug, onBack })
   }
 
   const src = lecture.source;
+  const isRewrite = src.provenance === 'rewrite';
   const extras = lecture.extras || {} as DailyLecture['extras'];
   const accumulation = extras.accumulation;
   const exercise = extras.exercise;
@@ -181,7 +182,7 @@ const DailyReader: React.FC<DailyReaderProps> = ({ slug, onSelectSlug, onBack })
               <section className="daily-segment" id={`seg-${seg.index}`} key={seg.index}>
                 <div className="daily-original" id={`orig-${seg.index}`}>
                   <div className="daily-block__head">
-                    <span className="daily-badge daily-badge--original">原文 · 第 {seg.index} 段</span>
+                    <span className="daily-badge daily-badge--original">{isRewrite ? '范文（改写）' : '原文'} · 第 {seg.index} 段</span>
                     {seg.analysis.structureRole && (
                       <span className={`daily-role ${roleClass(seg.analysis.structureRole)}`}>
                         {seg.analysis.structureRole}

@@ -102,7 +102,8 @@ QUESTION_RE = re.compile(r"[？?]\s*$")
 STRONG_CLAIM_RE = re.compile(
     r"必须|应当|不应|不能|不可|岂能|既要|也要|更要|不仅要|不是.{0,16}而是|"
     r"并非.{0,16}而是|关键在于|根本在于|取决于|决定了|离不开|唯有|方能|才是|"
-    r"需要|要求|应当|应|需|贵在|重在|旨在|说到底"
+    r"需要|要求|应当|应|需|贵在|重在|旨在|说到底|"
+    r"以.{2,12}(?:确保|推动|促进|实现|夯实|筑牢|提升|助力|引领|赋能|激活|激发|续写|书写|锻造|凝聚|倒逼|激励|鞭策|护航|保障|支撑|驱动|带动|撬动|破解|化解|守护)"
 )
 
 # 文末非正文附注（摘编说明、责编、来源标注），不参与结构判定
@@ -413,6 +414,16 @@ def _analyze_core(paragraphs: list[str], title: str = "", char_count: int | None
                     r"答案|关键|根子|在于|取决于|藏|源于|靠的是|说到底", sent)):
                 thesis = {"paragraph": i + 1, "sentence": sent,
                           "signals": ["前段短判断句 / 点题句"]}
+                break
+    if thesis is None:
+        # 申论开头「由头 + 判断 + 总论点」：总论点常在首段（或第 2 段）末句
+        for i in range(min(2, n)):
+            sents = [s.strip() for s in re.split(r"[。！？]", paras[i]) if len(s.strip()) >= 8]
+            if not sents:
+                continue
+            last = sents[-1] + "。"
+            if looks_like_thesis(last) and (THESIS_RE.search(last) or JUDGE_RE.search(last)):
+                thesis = {"paragraph": i + 1, "sentence": last, "signals": ["段末总论点"]}
                 break
 
     # 2) 结尾：最后两段里找收束词或标题回扣（先定出来，分论点不占用首尾段）

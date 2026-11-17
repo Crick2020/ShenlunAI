@@ -165,7 +165,7 @@ function buildRss(entries, distDir) {
 <channel>
   <title>爱学申论 · 申论每日精读</title>
   <link>${SITE_URL}/daily/</link>
-  <description>每天从人民日报等官媒选一篇申论大作文范文（总论点 + 严格分论点 + 结尾）逐段精讲：原文 + 老师解析 + 金句积累 + 迁移练习。</description>
+  <description>每天从人民日报等官媒选一篇申论大作文范文（总论点 + 严格分论点 + 结尾）逐段精讲：范文（改写）+ 老师解析 + 金句积累 + 迁移练习。</description>
   <language>zh-CN</language>
   <lastBuildDate>${rfc822(entries[0]?.generatedAt)}</lastBuildDate>
   <atom:link href="${SITE_URL}/rss.xml" rel="self" type="application/rss+xml" />
@@ -179,7 +179,7 @@ function buildLlms(entries, years, distDir) {
   const header = `# 爱学申论 · 申论每日精读
 
 > 每天从人民日报、人民网、人民论坛网、光明网、中国经济网、共产党员网等官媒评论栏目，
-> 选一篇具备「明确总论点 + 若干严格分论点 + 结尾」的申论大作文范文，产出「原文 + 老师逐段解析」讲义：
+> 选一篇具备「明确总论点 + 若干严格分论点 + 结尾」的申论大作文范文，产出「范文（按申论规范改写）+ 老师逐段解析」讲义：
 > 段落功能、论证方式、金句标准表述、举一反三例句、考点关联与迁移练习。
 > 全部内容公开可抓取，原文均回链原刊，仅供学习交流使用。
 > 站点：${SITE_URL} ｜ 归档：${SITE_URL}/daily/
