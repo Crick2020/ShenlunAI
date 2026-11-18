@@ -89,7 +89,13 @@ jobs:
           SRC="${INPUT_SOURCES:-$DAILY_SOURCES}"
           [ -n "$SRC" ] && ARGS+=(--sources "$SRC")
           [ -n "$ESSAY_LOOKBACK_DAYS" ] && ARGS+=(--essay-lookback "$ESSAY_LOOKBACK_DAYS")
-          python3 pipeline/generate_daily.py "${ARGS[@]}"
+          # 偶发的 LLM 限流/网络抖动会抛异常退出（exit 1），隔 30s 自动重试一次。
+          # 401/402（key 无效/余额不足）重试无意义但仍会再试一次，日志已能看清具体原因。
+          if ! python3 pipeline/generate_daily.py "${ARGS[@]}"; then
+            echo "[daily] 首次生成失败，30 秒后自动重试一次…" >&2
+            sleep 30
+            python3 pipeline/generate_daily.py "${ARGS[@]}"
+          fi
 
       - name: 全量质量校验
         if: steps.guard.outputs.skip != 'true'

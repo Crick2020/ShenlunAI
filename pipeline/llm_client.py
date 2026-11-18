@@ -12,6 +12,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import sys
 import time
 import urllib.error
 import urllib.request
@@ -54,8 +55,27 @@ MAX_RETRIES = 3
 def _post(url: str, payload: dict, headers: dict, timeout: int = 120) -> dict:
     body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
     req = urllib.request.Request(url, data=body, headers=headers, method="POST")
-    with urllib.request.urlopen(req, timeout=timeout) as resp:
-        return json.loads(resp.read().decode("utf-8", errors="replace"))
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            return json.loads(resp.read().decode("utf-8", errors="replace"))
+    except urllib.error.HTTPError as exc:
+        # 把 HTTP 状态码与响应体带进异常：401/402/429 是 CI 上最常见的失败原因，
+        # 以前被笼统地包成「所有模型调用失败」，日志里看不到真实错误。
+        detail = ""
+        try:
+            detail = exc.read().decode("utf-8", errors="replace")[:500]
+        except Exception:  # noqa: BLE001
+            pass
+        hint = ""
+        if exc.code == 401:
+            hint = "（API Key 无效或未配置，请检查密钥）"
+        elif exc.code == 402:
+            hint = "（账户余额不足，请充值）"
+        elif exc.code == 429:
+            hint = "（请求过于频繁/限流，稍后重试）"
+        elif exc.code >= 500:
+            hint = "（服务端错误，稍后重试）"
+        raise RuntimeError(f"HTTP {exc.code}{hint}: {detail}") from exc
 
 
 def _deepseek(system: str, user: str, temperature: float, max_tokens: int, json_mode: bool) -> str:
@@ -118,6 +138,10 @@ def chat(system: str, user: str, *, temperature: float = 0.4,
             except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError,
                     RuntimeError, ValueError, KeyError) as exc:
                 last_error = exc
+                # 每次失败都打到 stderr：GitHub Actions 日志可直接看到具体原因，
+                # 而不是最终只剩一句「Process completed with exit code 1」。
+                print(f"[llm] {provider.__name__} 第 {attempt + 1}/{MAX_RETRIES} 次调用失败：{exc}",
+                      file=sys.stderr, flush=True)
                 if attempt < MAX_RETRIES - 1:
                     time.sleep(2 ** attempt)
                     continue

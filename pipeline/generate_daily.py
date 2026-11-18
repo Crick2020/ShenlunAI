@@ -654,4 +654,21 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    try:
+        sys.exit(main())
+    except SystemExit:
+        raise
+    except Exception as exc:  # noqa: BLE001
+        # 未捕获异常（如 LLM 全部失败）在 CI 日志里以结构化 JSON 输出真实原因，
+        # 避免只剩「Process completed with exit code 1」难以定位。
+        print(json.dumps({
+            "error": "generate_daily 未捕获异常",
+            "exception": type(exc).__name__,
+            "message": str(exc),
+            "env": {
+                "has_deepseek_key": bool((os.getenv("DEEPSEEK_API_KEY") or "").strip()),
+                "has_gemini_key": bool((os.getenv("GEMINI_API_KEY") or "").strip()),
+                "model": os.getenv("DEEPSEEK_MODEL") or "deepseek-chat",
+            },
+        }, ensure_ascii=False, indent=2), file=sys.stderr, flush=True)
+        raise
