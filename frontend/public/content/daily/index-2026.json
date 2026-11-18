@@ -1,5 +1,42 @@
 [
   {
+    "date": "2026-11-18",
+    "slug": "2026-11-18",
+    "edition": 1,
+    "title": "以高质量党建锻造国企发展硬支撑",
+    "keywords": [
+      "国企党建",
+      "制度固本",
+      "融合赋能",
+      "队伍筑基",
+      "高质量发展"
+    ],
+    "summary": "《以高质量党建锻造国企发展硬支撑》根据共产党员网·先锋文汇2026年11月16日文章《践行“四个着力” 谱写国企高质量发展新篇章》改写而成，围绕习近平总书记关于国企党建“四个着力”重要要求，以“党建强则企业强”为总论点，按“总—分—总”结构展开三个并列分论点：以制度固本把牢政治航向、以融合赋能提升经营质效、以队伍筑基夯实人才支撑，结尾回扣标题、收拢分论点并升华愿景，为国企党建类申论写作提供可迁移的框架与表达。",
+    "source": {
+      "newspaper": "共产党员网",
+      "paperDate": "2026-11-16",
+      "page": "",
+      "column": "先锋文汇",
+      "author": "全部作品",
+      "charCount": 1349,
+      "originalUrl": "https://tougao.12371.cn/gaojian.php?tid=6805518"
+    },
+    "segmentCount": 5,
+    "structure": {
+      "status": "standard",
+      "score": 100,
+      "subThesisCount": 3,
+      "hasThesis": true,
+      "hasConclusion": true,
+      "strictPass": true,
+      "pattern": "并列式（句式平行）",
+      "essayFlavor": 76
+    },
+    "status": "published",
+    "generatedAt": "2026-11-18T16:00:15+08:00",
+    "contentHash": "sha256:28e0ddd6f056a87fae41d2aba3b0f2b807009592237bb1ea0ce6af1c394ca5d8"
+  },
+  {
     "date": "2026-11-17",
     "slug": "2026-11-17",
     "edition": 1,
