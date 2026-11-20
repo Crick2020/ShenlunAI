@@ -1,5 +1,42 @@
 [
   {
+    "date": "2026-11-20",
+    "slug": "2026-11-20",
+    "edition": 1,
+    "title": "以自主为魂、以规律为基、以规范为径，构建中国自主经济学知识体系",
+    "keywords": [
+      "自主知识体系",
+      "经济学",
+      "理论创新",
+      "学术规范",
+      "文化自信"
+    ],
+    "summary": "《以自主为魂、以规律为基、以规范为径，构建中国自主经济学知识体系》根据《人民日报》2026-11-18 第 09 版（原题《构建中国自主经济学知识体系的着力点》）改写而成，围绕构建中国自主经济学知识体系这一主题，提出总论点：唯有以自主为魂、以规律为基、以规范为径，才能构建起以习近平经济思想的标识性概念、原创性理论为主干的中国自主经济学知识体系。全文按“总论点—分论点一（以自主为魂，摆脱依附）—分论点二（以规律为基，夯实底色）—分论点三（以规范为径，形成特色）—结尾（回扣升华）”的并列式结构展开，三个分论点句式对仗、逻辑递进，共同服务于整体构建的系统工程。",
+    "source": {
+      "newspaper": "人民日报",
+      "paperDate": "2026-11-18",
+      "page": "第 09 版",
+      "column": "",
+      "author": "高培勇",
+      "charCount": 1272,
+      "originalUrl": "https://paper.people.com.cn/rmrb/pc/content/202611/18/content_30191831.html"
+    },
+    "segmentCount": 5,
+    "structure": {
+      "status": "standard",
+      "score": 100,
+      "subThesisCount": 3,
+      "hasThesis": true,
+      "hasConclusion": true,
+      "strictPass": true,
+      "pattern": "并列式（句式平行）",
+      "essayFlavor": 88
+    },
+    "status": "published",
+    "generatedAt": "2026-11-20T15:22:57+08:00",
+    "contentHash": "sha256:aa011814a8ad058459f23efc142f6e45f7bf8644adb2e426369f2b58af20b2f1"
+  },
+  {
     "date": "2026-11-19",
     "slug": "2026-11-19",
     "edition": 1,
