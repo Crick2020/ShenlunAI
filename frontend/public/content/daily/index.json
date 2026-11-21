@@ -1,5 +1,42 @@
 [
   {
+    "date": "2026-11-21",
+    "slug": "2026-11-21",
+    "edition": 1,
+    "title": "以珍惜守初心 以进取开新局 以实干答好卷",
+    "keywords": [
+      "珍惜时代",
+      "锐意进取",
+      "实干担当",
+      "正确政绩观",
+      "自我革命"
+    ],
+    "summary": "《以珍惜守初心 以进取开新局 以实干答好卷》根据共产党员网·先锋文汇（2026-11-20）原题《牢记殷殷嘱托 以实干担当书写时代答卷》改写而成，围绕习近平总书记对创新创业者的殷殷嘱托，提炼出“珍惜—进取—实干”三个并列分论点。总论点为唯有以珍惜涵养初心、以进取破局开路、以实干书写答卷，才能把关怀厚爱转化为奋进动力；三个分论点分别从读懂时代校准坐标、攻坚克难锻造本领、为民造福创造实绩展开，结构为并列式，结尾回扣标题收束全文。",
+    "source": {
+      "newspaper": "共产党员网",
+      "paperDate": "2026-11-20",
+      "page": "",
+      "column": "先锋文汇",
+      "author": "全部作品",
+      "charCount": 1336,
+      "originalUrl": "https://tougao.12371.cn/gaojian.php?tid=6809575"
+    },
+    "segmentCount": 5,
+    "structure": {
+      "status": "standard",
+      "score": 100,
+      "subThesisCount": 3,
+      "hasThesis": true,
+      "hasConclusion": true,
+      "strictPass": true,
+      "pattern": "并列式（句式平行）",
+      "essayFlavor": 88
+    },
+    "status": "published",
+    "generatedAt": "2026-11-21T15:14:41+08:00",
+    "contentHash": "sha256:7456a18bd1342c43ba5e897aae536052096199f9cb53559ea7c252f717c66b91"
+  },
+  {
     "date": "2026-11-20",
     "slug": "2026-11-20",
     "edition": 1,
