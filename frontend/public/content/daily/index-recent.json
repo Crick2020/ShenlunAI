@@ -1,5 +1,42 @@
 [
   {
+    "date": "2026-11-22",
+    "slug": "2026-11-22",
+    "edition": 1,
+    "title": "读懂“银发需求”，做优“银发经济”",
+    "keywords": [
+      "银发经济",
+      "品质化消费",
+      "供需适配",
+      "民生保障",
+      "多方协同"
+    ],
+    "summary": "《读懂“银发需求”，做优“银发经济”》根据中国经济网·经点热评（2026-11-20）《经纬度｜锚定品质化消费需求，培育银发经济新增长点》改写而成，围绕我国60岁及以上老年人口达3.23亿、消费需求从“生存型”向“品质型”跃迁的背景，提出唯有以需求之变打开消费新空间、以供给提质回应品质新期待、以多方协同凝聚发展新合力，才能把“银发浪潮”转化为高质量发展新增长点。全文按“总论点—三个并列分论点—结尾”结构展开，分论点分别从需求识别、供给提质、多方协同三个维度递进论证，结尾回扣标题、收拢全文并升华愿景。",
+    "source": {
+      "newspaper": "中国经济网",
+      "paperDate": "2026-11-20",
+      "page": "",
+      "column": "经点热评",
+      "author": "",
+      "charCount": 1655,
+      "originalUrl": "http://views.ce.cn/view/ent/202611/t20261120_3301083.shtml"
+    },
+    "segmentCount": 5,
+    "structure": {
+      "status": "standard",
+      "score": 100,
+      "subThesisCount": 3,
+      "hasThesis": true,
+      "hasConclusion": true,
+      "strictPass": true,
+      "pattern": "并列式（句式平行）",
+      "essayFlavor": 67
+    },
+    "status": "published",
+    "generatedAt": "2026-11-22T14:55:05+08:00",
+    "contentHash": "sha256:7e8412881ea200bb4de3b7ce880ef9c1357a66db9897f5fd236ea23360e3f766"
+  },
+  {
     "date": "2026-11-21",
     "slug": "2026-11-21",
     "edition": 1,
