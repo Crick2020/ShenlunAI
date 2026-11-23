@@ -1,5 +1,42 @@
 [
   {
+    "date": "2026-11-23",
+    "slug": "2026-11-23",
+    "edition": 1,
+    "title": "三次主场标注中国与亚太同行的新刻度",
+    "keywords": [
+      "开放合作",
+      "区域一体化",
+      "创新共赢",
+      "亚太共同体",
+      "主场外交"
+    ],
+    "summary": "《三次主场标注中国与亚太同行的新刻度》根据中国经济网·经点热评（2026-11-23）改写而成，围绕中国与APEC携手同行二十五年展开。文章以开放凝心聚力、以规划擘画长远、以创新共赢未来为三个并列分论点，论证中国从参与者到贡献者再到推动者的角色跃升，结构为总论点加三个对仗分论点加结尾，落脚于建设亚太共同体、共享发展成果。",
+    "source": {
+      "newspaper": "中国经济网",
+      "paperDate": "2026-11-23",
+      "page": "",
+      "column": "经点热评",
+      "author": "",
+      "charCount": 1242,
+      "originalUrl": "http://views.ce.cn/view/ent/202611/t20261123_3302250.shtml"
+    },
+    "segmentCount": 5,
+    "structure": {
+      "status": "standard",
+      "score": 100,
+      "subThesisCount": 3,
+      "hasThesis": true,
+      "hasConclusion": true,
+      "strictPass": true,
+      "pattern": "并列式（句式平行）",
+      "essayFlavor": 67
+    },
+    "status": "published",
+    "generatedAt": "2026-11-23T15:44:39+08:00",
+    "contentHash": "sha256:019f7fe194aed3c0aa2fb4ff5e79b3fe1028cd3a500d4c9cef52469ca9a4dea2"
+  },
+  {
     "date": "2026-11-22",
     "slug": "2026-11-22",
     "edition": 1,
