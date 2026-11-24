@@ -1,5 +1,42 @@
 [
   {
+    "date": "2026-11-24",
+    "slug": "2026-11-24",
+    "edition": 1,
+    "title": "以长征精神铸魂 在基层一线挺膺担当",
+    "keywords": [
+      "长征精神",
+      "基层担当",
+      "理想信念",
+      "为民情怀",
+      "青年干部"
+    ],
+    "summary": "《以长征精神铸魂 在基层一线挺膺担当》根据共产党员网·先锋文汇（2026-11-24）原题《弘扬伟大长征精神 在基层一线挺膺青春担当》改写而成，围绕青年干部如何把伟大长征精神转化为基层实践展开。总论点为唯有以坚定信仰铸魂、以为民情怀扎根、以担当锐气破难，才能走好新时代长征路；三个分论点以并列式展开：筑牢信仰之基、厚植为民之情、扛起担当之责，结尾回扣标题、收束升华。",
+    "source": {
+      "newspaper": "共产党员网",
+      "paperDate": "2026-11-24",
+      "page": "",
+      "column": "先锋文汇",
+      "author": "全部作品",
+      "charCount": 1295,
+      "originalUrl": "https://tougao.12371.cn/gaojian.php?tid=6811946"
+    },
+    "segmentCount": 5,
+    "structure": {
+      "status": "standard",
+      "score": 100,
+      "subThesisCount": 3,
+      "hasThesis": true,
+      "hasConclusion": true,
+      "strictPass": true,
+      "pattern": "并列式（句式平行）",
+      "essayFlavor": 79
+    },
+    "status": "published",
+    "generatedAt": "2026-11-24T17:58:29+08:00",
+    "contentHash": "sha256:221144ab10790115b488430267d14f152cb5812f8384f80620b56367079292fc"
+  },
+  {
     "date": "2026-11-23",
     "slug": "2026-11-23",
     "edition": 1,
