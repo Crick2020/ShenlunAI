@@ -1,5 +1,42 @@
 [
   {
+    "date": "2026-11-25",
+    "slug": "2026-11-25",
+    "edition": 1,
+    "title": "锤炼党性修养 书写基层奋斗答卷",
+    "keywords": [
+      "党性修养",
+      "基层奋斗",
+      "理论滋养",
+      "实干担当",
+      "自省自律"
+    ],
+    "summary": "《锤炼党性修养 书写基层奋斗答卷》根据共产党员网·先锋文汇2026年11月24日文章《锤炼党性修养 扎根基层岗位书写新的奋斗答卷》改写而成，围绕基层党员干部如何锤炼党性修养展开。总论点：唯有以理论滋养固本培元、以实干攻坚砥砺担当、以自省自警守住本色，才能把党性锤炼融入日常、落到实处。三个分论点并列展开：以理论滋养固本培元，在常学常新中筑牢信仰之基；以实干攻坚砥砺担当，在知责担责中淬炼党性之纯；以自省自警守住本色，在慎独慎微中涵养党性之洁。结构为总—分—总，分论点并列式。",
+    "source": {
+      "newspaper": "共产党员网",
+      "paperDate": "2026-11-24",
+      "page": "",
+      "column": "先锋文汇",
+      "author": "全部作品",
+      "charCount": 1252,
+      "originalUrl": "https://tougao.12371.cn/gaojian.php?tid=6812851"
+    },
+    "segmentCount": 5,
+    "structure": {
+      "status": "standard",
+      "score": 100,
+      "subThesisCount": 3,
+      "hasThesis": true,
+      "hasConclusion": true,
+      "strictPass": true,
+      "pattern": "并列式（句式平行）",
+      "essayFlavor": 86
+    },
+    "status": "published",
+    "generatedAt": "2026-11-25T16:40:57+08:00",
+    "contentHash": "sha256:bdad5a7eee3efa0dc6f6a9bc802e39ca5c1b832ead6a15a6a9c114a3a5b4d4c0"
+  },
+  {
     "date": "2026-11-24",
     "slug": "2026-11-24",
     "edition": 1,
