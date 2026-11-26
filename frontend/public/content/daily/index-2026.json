@@ -1,5 +1,42 @@
 [
   {
+    "date": "2026-11-26",
+    "slug": "2026-11-26",
+    "edition": 1,
+    "title": "以信仰铸魂 以斗争开路 以为民立心——走好新时代的长征路",
+    "keywords": [
+      "长征精神",
+      "信仰信念",
+      "斗争精神",
+      "人民至上",
+      "基层担当"
+    ],
+    "summary": "《以信仰铸魂 以斗争开路 以为民立心——走好新时代的长征路》根据共产党员网·先锋文汇2026年11月23日文章《砥砺青春梦想 在新征程上赓续伟大长征精神》改写而成，围绕新时代如何传承伟大长征精神展开。总论点：唯有以信仰铸魂、以斗争开路、以为民立心，才能把长征精神转化为奋进力量，走好新的长征路。三个分论点并列展开：以信仰铸魂，在常学常新中把稳思想之舵；以斗争开路，在攻坚克难中锤炼实干之功；以为民立心，在鱼水情深中厚植执政之基。结尾以“舵·桨·帆”比喻收束，回扣标题。",
+    "source": {
+      "newspaper": "共产党员网",
+      "paperDate": "2026-11-23",
+      "page": "",
+      "column": "先锋文汇",
+      "author": "全部作品",
+      "charCount": 1285,
+      "originalUrl": "https://tougao.12371.cn/gaojian.php?tid=6811010"
+    },
+    "segmentCount": 5,
+    "structure": {
+      "status": "standard",
+      "score": 100,
+      "subThesisCount": 3,
+      "hasThesis": true,
+      "hasConclusion": true,
+      "strictPass": true,
+      "pattern": "并列式（句式平行）",
+      "essayFlavor": 88
+    },
+    "status": "published",
+    "generatedAt": "2026-11-26T16:25:51+08:00",
+    "contentHash": "sha256:f2ec4670ae341ec5e8278f18d1ad493e392d9b4eaf7da2a897274e9e83ed7d86"
+  },
+  {
     "date": "2026-11-25",
     "slug": "2026-11-25",
     "edition": 1,
