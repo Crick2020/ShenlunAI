@@ -1,5 +1,42 @@
 [
   {
+    "date": "2026-11-27",
+    "slug": "2026-11-27",
+    "edition": 1,
+    "title": "以板凳座谈走实群众路线",
+    "keywords": [
+      "群众路线",
+      "基层治理",
+      "俯身亲民",
+      "问计于民",
+      "闭环落实"
+    ],
+    "summary": "《以板凳座谈走实群众路线》根据人民论坛网·人民论坛网评（2026年11月27日）原题《面对面听民声，心贴心办实事》改写而成，围绕基层治理中如何走实群众路线展开。总论点：唯有以俯身亲民拉近距离、以倾听民声汇聚合力、以务实笃行办好实事，才能把群众工作做到群众心坎上。三个分论点按并列式展开：俯身亲民是第一步，倾听民声汇聚治理智慧，务实笃行闭环落实回应期盼。全文按「总论点—三个分论点—结尾」结构重组，保留原文案例与金句，供申论大作文学习使用。",
+    "source": {
+      "newspaper": "人民论坛网",
+      "paperDate": "2026-11-27",
+      "page": "",
+      "column": "人民论坛网评",
+      "author": "",
+      "charCount": 1232,
+      "originalUrl": "https://www.rmlt.com.cn/2026/1127/758765.shtml"
+    },
+    "segmentCount": 5,
+    "structure": {
+      "status": "standard",
+      "score": 100,
+      "subThesisCount": 3,
+      "hasThesis": true,
+      "hasConclusion": true,
+      "strictPass": true,
+      "pattern": "并列式（句式平行）",
+      "essayFlavor": 67
+    },
+    "status": "published",
+    "generatedAt": "2026-11-27T16:39:59+08:00",
+    "contentHash": "sha256:a70e23ecc949a60e35b2df7a4a76b3d740c012e1306e09f76fda7215bca76310"
+  },
+  {
     "date": "2026-11-26",
     "slug": "2026-11-26",
     "edition": 1,
