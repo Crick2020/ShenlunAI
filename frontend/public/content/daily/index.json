@@ -1,5 +1,42 @@
 [
   {
+    "date": "2026-11-28",
+    "slug": "2026-11-28",
+    "edition": 1,
+    "title": "赓续长征精神 走好新的长征路",
+    "keywords": [
+      "长征精神",
+      "信仰铸魂",
+      "为民固本",
+      "实干攻坚",
+      "红色基因"
+    ],
+    "summary": "《赓续长征精神 走好新的长征路》根据共产党员网·先锋文汇2026年11月27日文章《赓续伟大长征精神 笃行实干走好新的长征路》改写而成，围绕红军长征胜利90周年，提炼出以信仰铸魂、以为民固本、以实干攻坚三个并列分论点，论证如何把伟大长征精神转化为走好新时代长征路的实际行动。全文按“总论点—三个分论点—结尾”的申论大作文结构展开，三个分论点句式对仗、逻辑并列，共同支撑“笃行实干走好新的长征路”这一总论点。",
+    "source": {
+      "newspaper": "共产党员网",
+      "paperDate": "2026-11-27",
+      "page": "",
+      "column": "先锋文汇",
+      "author": "全部作品",
+      "charCount": 1399,
+      "originalUrl": "https://tougao.12371.cn/gaojian.php?tid=6814993"
+    },
+    "segmentCount": 5,
+    "structure": {
+      "status": "standard",
+      "score": 100,
+      "subThesisCount": 3,
+      "hasThesis": true,
+      "hasConclusion": true,
+      "strictPass": true,
+      "pattern": "并列式（句式平行）",
+      "essayFlavor": 88
+    },
+    "status": "published",
+    "generatedAt": "2026-11-28T15:54:55+08:00",
+    "contentHash": "sha256:d102785fe08a6c286cdd6fef16472be9a2bfff2415c6394b9dfa395337b470d3"
+  },
+  {
     "date": "2026-11-27",
     "slug": "2026-11-27",
     "edition": 1,
